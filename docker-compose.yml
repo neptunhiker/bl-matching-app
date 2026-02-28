@@ -1,0 +1,21 @@
+services:
+  web:
+    build: .
+    restart: always
+    environment:
+      - ALLOWED_HOSTS=localhost,127.0.0.1,123.45.67.89,matching.beginnerluft.de
+
+caddy:
+    image: caddy:latest
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    command: caddy reverse-proxy --from matching.beginnerluft.de --to web:8000
+
+volumes:
+  caddy_data:
+  caddy_config:
