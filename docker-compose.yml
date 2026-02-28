@@ -5,7 +5,7 @@ services:
     environment:
       - ALLOWED_HOSTS=localhost,127.0.0.1,123.45.67.89,matching.beginnerluft.de
 
-caddy:
+  caddy:
     image: caddy:latest
     restart: always
     ports:
