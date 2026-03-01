@@ -11,3 +11,9 @@ staticfiles/
 .coverage
 htmlcov/
 node_modules/
+
+# Generated Tailwind CSS (built by CLI — not committed)
+static/css/tailwind.css
+
+# Local Tailwind CLI binary
+tailwindcss
