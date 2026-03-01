@@ -1,8 +1,13 @@
 .venv/
 *.pyc
 __pycache__/
-db.sqlite3
+*.sqlite3
 media/
 staticfiles/
 .env
+.env.*
 .DS_Store
+*.log
+.coverage
+htmlcov/
+node_modules/
