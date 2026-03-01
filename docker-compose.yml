@@ -1,9 +1,23 @@
 services:
+  db:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
   web:
     build: .
     restart: always
     environment:
-      - ALLOWED_HOSTS=localhost,127.0.0.1,123.45.67.89,matching.beginnerluft.de
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      ALLOWED_HOSTS: localhost,127.0.0.1,123.45.67.89,matching.beginnerluft.de
 
   caddy:
     image: caddy:latest
@@ -17,5 +31,6 @@ services:
     command: caddy reverse-proxy --from matching.beginnerluft.de --to web:8000
 
 volumes:
+  postgres_data:
   caddy_data:
   caddy_config:
