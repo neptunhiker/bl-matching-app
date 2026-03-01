@@ -16,7 +16,7 @@ class Language(models.Model):
         return self.name
 
 
-class CoachProfile(models.Model):
+class Coach(models.Model):
     class Status(models.TextChoices):
         VERFUEGBAR = 'verfuegbar', 'Verfügbar'
         AUSGEBUCHT = 'ausgebucht', 'Ausgebucht'
@@ -49,21 +49,21 @@ class CoachProfile(models.Model):
 
     class Meta:
         ordering = ['last_name', 'first_name']
-        verbose_name = 'Coach-Profil'
-        verbose_name_plural = 'Coach-Profile'
+        verbose_name = 'Coach'
+        verbose_name_plural = 'Coaches'
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
 
-class CoacheeProfile(models.Model):
+class Participant(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     first_name = models.CharField(max_length=150, verbose_name='Vorname')
     last_name = models.CharField(max_length=150, verbose_name='Nachname')
     email = models.EmailField(unique=True, verbose_name='E-Mail')
     city = models.CharField(max_length=100, verbose_name='Stadt')
     languages = models.ManyToManyField(
-        Language, related_name='coachees', blank=True, verbose_name='Sprachen'
+        Language, related_name='participants', blank=True, verbose_name='Sprachen'
     )
     coaching_format_online = models.BooleanField(default=False, verbose_name='Online')
     coaching_format_presence = models.BooleanField(default=False, verbose_name='Präsenz')
@@ -72,8 +72,8 @@ class CoacheeProfile(models.Model):
 
     class Meta:
         ordering = ['last_name', 'first_name']
-        verbose_name = 'Teilnehmer-Profil'
-        verbose_name_plural = 'Teilnehmer-Profile'
+        verbose_name = 'Teilnehmer:in'
+        verbose_name_plural = 'Teilnehmer:innen'
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
