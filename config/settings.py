@@ -36,6 +36,11 @@ DEBUG = os.environ.get('DEBUG', 'False').lower() in ('1', 'true', 'yes')
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1').split(',')
 
+# Required when running behind a reverse proxy (Caddy) — Django 4.0+
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    'CSRF_TRUSTED_ORIGINS', 'http://127.0.0.1,http://localhost'
+).split(',')
+
 
 # Application definition
 
