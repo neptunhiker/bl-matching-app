@@ -1,0 +1,26 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2>Hallo {{ recipient_name }},</h2>
+<p>wir freuen uns, dir mitteilen zu können, dass wir einen passenden Coach für dich gefunden haben.</p>
+
+<table style="width:100%;border-collapse:collapse;margin:24px 0">
+  <tr>
+    <td style="padding:8px 0;color:#888;width:140px">Coach</td>
+    <td style="padding:8px 0;font-weight:600">{{ coach_name }}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:#888">Stadt</td>
+    <td style="padding:8px 0">{{ coach_city }}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:#888">Format</td>
+    <td style="padding:8px 0">{{ coaching_format }}</td>
+  </tr>
+</table>
+
+<p>Dein Coach wird sich in Kürze bei dir melden, um einen ersten Termin zu vereinbaren.</p>
+<p>Bei Fragen kannst du uns jederzeit unter <a href="mailto:info@beginnerluft.de">info@beginnerluft.de</a> erreichen.</p>
+
+<p>Herzliche Grüße,<br>Das BeginnerLuft-Team</p>
+{% endblock %}
