@@ -1,0 +1,10 @@
+matching.beginnerluft.de {
+    # Serve collected Django static files directly (no Django hit needed)
+    handle /static/* {
+        root * /srv
+        file_server
+    }
+
+    # All other requests go to Django/Gunicorn
+    reverse_proxy web:8000
+}

@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:latest
+    image: postgres:16
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -8,19 +8,30 @@ services:
       POSTGRES_DB: ${DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   web:
     build: .
     restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env # loads all .env vars (DB_*, SECRET_KEY, DEBUG, …)
     environment:
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
+      # Override vars that differ inside Docker vs local dev
+      DB_HOST: db
+      DEBUG: 'False'
       ALLOWED_HOSTS: localhost,127.0.0.1,123.45.67.89,matching.beginnerluft.de
+      SECRET_KEY: ${SECRET_KEY}
+    volumes:
+      - static_files:/app/staticfiles   # shared with caddy for static file serving
 
   caddy:
-    image: caddy:latest
+    image: caddy:2
     restart: always
     ports:
       - "80:80"
@@ -28,9 +39,11 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
-    command: caddy reverse-proxy --from matching.beginnerluft.de --to web:8000
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - static_files:/srv/static:ro
 
 volumes:
   postgres_data:
   caddy_data:
   caddy_config:
+  static_files:
