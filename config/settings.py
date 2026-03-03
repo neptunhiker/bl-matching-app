@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'accounts.apps.AccountsConfig',
     'profiles.apps.ProfilesConfig',
     'emails.apps.EmailsConfig',
+    'matching.apps.MatchingConfig',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
