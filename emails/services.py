@@ -1,5 +1,6 @@
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+from django.conf import settings
 from .models import EmailLog
 
 
@@ -30,7 +31,8 @@ def send_email(
     log = EmailLog(to=to, subject=subject, html_body=html_body, sent_by=sent_by)
 
     try:
-        msg = EmailMultiAlternatives(subject=subject, body=plain_body, to=[to])
+        bcc = [settings.EMAIL_BCC] if getattr(settings, 'EMAIL_BCC', None) else []
+        msg = EmailMultiAlternatives(subject=subject, body=plain_body, to=[to], bcc=bcc)
         msg.attach_alternative(html_body, 'text/html')
         msg.send()
         log.status = EmailLog.Status.SENT

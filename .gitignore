@@ -11,6 +11,7 @@ staticfiles/
 .coverage
 htmlcov/
 node_modules/
+rtp.py
 
 # Generated Tailwind CSS (built by CLI — not committed)
 static/css/tailwind.css
