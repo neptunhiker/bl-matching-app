@@ -7,6 +7,10 @@ class EmailLog(models.Model):
     class Status(models.TextChoices):
         SENT = 'sent', 'Gesendet'
         FAILED = 'failed', 'Fehlgeschlagen'
+        DELIVERED = 'delivered', 'Zugestellt'
+        BOUNCED = 'bounced', 'Bounce'
+        SPAM = 'spam', 'Spam'
+        BLOCKED = 'blocked', 'Blockiert'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     to = models.EmailField(verbose_name='Empfänger')
@@ -20,6 +24,7 @@ class EmailLog(models.Model):
     )
     error_message = models.TextField(blank=True, verbose_name='Fehlermeldung')
     sent_at = models.DateTimeField(auto_now_add=True, verbose_name='Gesendet am')
+    delivered_at = models.DateTimeField(null=True, blank=True, verbose_name='Zugestellt am')
     sent_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,

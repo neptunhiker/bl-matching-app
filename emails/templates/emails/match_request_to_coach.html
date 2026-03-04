@@ -1,0 +1,13 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+
+<h2>Hallo {{ recipient_name }},</h2>
+<p> Lust auf ein Coaching mit {{ participant_name }}?</p>
+
+<p> {{ participant_name }} hat Interesse an einem Coaching mit dir bekundet. Bitte logge dich in dein Profil ein, um die Anfrage zu prüfen und zu entscheiden, ob du das Coaching annehmen möchtest.</p>
+
+<p>Viele Grüße,<br>
+{{ author }}</p>
+
+{% endblock %}

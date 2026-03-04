@@ -1,0 +1,14 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+<h2>Hallo {{ recipient_name }},</h2>
+
+<p>
+  Friendly Reminder: Willst du das Coaching mit {{ participant_name }} annehmen?
+</p>
+
+<p>
+Viele Grüße, <br>
+{{ author }}
+</p>
+{% endblock %}

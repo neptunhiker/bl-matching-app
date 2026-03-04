@@ -30,8 +30,6 @@ class Coach(models.Model):
         on_delete=models.CASCADE,
         related_name='coach_profile',
     )
-    first_name = models.CharField(max_length=150, verbose_name='Vorname')
-    last_name = models.CharField(max_length=150, verbose_name='Nachname')
     city = models.CharField(max_length=100, verbose_name='Stadt')
     languages = models.ManyToManyField(
         Language, related_name='coaches', blank=True, verbose_name='Sprachen'
@@ -47,13 +45,29 @@ class Coach(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    @property
+    def full_name(self):
+        return f"{self.user.first_name} {self.user.last_name}"
+
+    @property
+    def first_name(self):
+        return self.user.first_name
+    
+    @property
+    def last_name(self):
+        return self.user.last_name
+    
+    @property
+    def email(self):
+        return self.user.email
+    
     class Meta:
-        ordering = ['last_name', 'first_name']
+        ordering = ['user__last_name', 'user__first_name']
         verbose_name = 'Coach'
         verbose_name_plural = 'Coaches'
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+        return self.full_name
 
 
 class Participant(models.Model):
