@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block body %}
+
+<h1 class="text-2xl font-bold mb-4">Matching für {{ matching_attempt.participant }}</h1>
+
+<div>Status: {{ matching_attempt.get_status_display }}</div>
+
+<div>Anfragen an Coaches</div>
+{% for request_to_coach in matching_attempt.coach_requests.all %}
+  <div>
+    {{ request_to_coach.coach }} - {{ request_to_coach.get_status_display }} - <a href="{% url 'request_to_coach_detail' request_to_coach.id %}" class="text-blue-500 hover:underline">Details ansehen</a>
+  </div>
+{% endfor %}
+{% endblock %}

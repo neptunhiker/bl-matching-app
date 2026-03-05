@@ -23,5 +23,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('profiles/', include('profiles.urls')),
     path('emails/', include('emails.urls')),
+    path('matching/', include('matching.urls')),
     path('', TemplateView.as_view(template_name='landing.html'), name='landing'),
 ]

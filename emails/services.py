@@ -10,16 +10,20 @@ def send_email(
     template_name: str,
     context: dict,
     sent_by=None,
+    request_to_coach=None,
+    matching_attempt=None,
 ) -> EmailLog:
     """
     Render an HTML email template, send it, and log the result.
 
     Args:
-        to:            Recipient email address.
-        subject:       Email subject line.
-        template_name: Path to the HTML template (relative to templates/).
-        context:       Template context dict.
-        sent_by:       User instance triggering the send (optional).
+        to:               Recipient email address.
+        subject:          Email subject line.
+        template_name:    Path to the HTML template (relative to templates/).
+        context:          Template context dict.
+        sent_by:          User instance triggering the send (optional).
+        request_to_coach: RequestToCoach instance this email relates to (optional).
+        matching_attempt: MatchingAttempt instance this email relates to (optional).
 
     Returns:
         EmailLog instance with status 'sent' or 'failed'.
@@ -31,7 +35,14 @@ def send_email(
     # Save first so we have a UUID to tag the outgoing message with.
     # Brevo echoes X-Mailin-Tag back in webhook payloads, letting us look up
     # this log entry when the delivery/bounce event arrives.
-    log = EmailLog(to=to, subject=subject, html_body=html_body, sent_by=sent_by)
+    log = EmailLog(
+        to=to,
+        subject=subject,
+        html_body=html_body,
+        sent_by=sent_by,
+        request_to_coach=request_to_coach,
+        matching_attempt=matching_attempt,
+    )
     log.save()
 
     try:

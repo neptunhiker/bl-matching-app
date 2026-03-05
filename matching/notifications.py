@@ -18,6 +18,7 @@ def send_first_coach_request_email(request_to_coach: RequestToCoach):
             'participant_name': request_to_coach.matching_attempt.participant.first_name,
             'author': author,
         },
+        request_to_coach=request_to_coach,
     )
     
 def send_reminder_coach_request_email(request_to_coach: RequestToCoach):
@@ -35,4 +36,5 @@ def send_reminder_coach_request_email(request_to_coach: RequestToCoach):
             'participant_name': request_to_coach.matching_attempt.participant.first_name,
             'author': author,
         },
+        request_to_coach=request_to_coach,
     )

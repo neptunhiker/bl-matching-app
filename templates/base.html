@@ -12,6 +12,9 @@
     {% block extra_head %}{% endblock %}
   </head>
   <body class="min-h-screen bg-gradient-to-br from-purple-50 to-purple-200 font-sans text-purple-950">
+    <nav>
+      <a href="{% url 'admin:index' %}">Admin</a>
+    </nav>
     {% block body %}{% endblock %}
   </body>
 </html>

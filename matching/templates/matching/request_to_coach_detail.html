@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load tz %}
+
+{% block body %}
+<h1 class="text-2xl font-bold mb-4">Anfrage an Coach {{ request_to_coach.coach }} für ein Coaching mit {{ request_to_coach.matching_attempt.participant }}</h1>
+
+<div>Status: {{ request_to_coach.get_status_display }}</div>
+
+<div>Benachrichtigungen</div>
+{% for email in request_to_coach.email_logs.all %}
+  <div>
+    {{ email.sent_at|localtime|date:"d.m.Y H:i" }} Uhr - {{ email.subject }}
+  </div>
+{% endfor %}
+{% endblock %}
