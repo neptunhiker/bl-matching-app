@@ -1,4 +1,4 @@
-from time import timezone
+from datetime import timedelta
 
 from django.db import models
 import uuid
@@ -64,7 +64,7 @@ class RequestToCoach(models.Model):
     @property
     def deadline(self):
         if self.first_sent_at:
-            return self.first_sent_at + timezone.timedelta(hours=24)
+            return self.first_sent_at + timedelta(hours=24)
         return None
     
     def on_save(self, *args, **kwargs):

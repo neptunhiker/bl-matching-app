@@ -48,7 +48,11 @@ class Coach(models.Model):
     @property
     def full_name(self):
         return f"{self.user.first_name} {self.user.last_name}"
-
+    
+    @property
+    def email(self):
+        return self.user.email
+    
     @property
     def first_name(self):
         return self.user.first_name
@@ -56,11 +60,7 @@ class Coach(models.Model):
     @property
     def last_name(self):
         return self.user.last_name
-    
-    @property
-    def email(self):
-        return self.user.email
-    
+
     class Meta:
         ordering = ['user__last_name', 'user__first_name']
         verbose_name = 'Coach'
