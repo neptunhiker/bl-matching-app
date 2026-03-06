@@ -1,6 +1,40 @@
 from django import forms
-from django.contrib.auth.forms import ReadOnlyPasswordHashField
+from django.contrib.auth.forms import AuthenticationForm, ReadOnlyPasswordHashField
 from .models import User
+
+
+class EmailAuthenticationForm(AuthenticationForm):
+    """Login form using email instead of username."""
+
+    error_messages = {
+        'invalid_login': 'E-Mail oder Passwort falsch.',
+        'inactive': 'Dieses Konto ist deaktiviert.',
+    }
+
+    username = forms.EmailField(
+        label='E-Mail',
+        widget=forms.EmailInput(attrs={
+            'autofocus': True,
+            'placeholder': 'deine@email.de',
+            'class': (
+                'w-full px-3 py-2 rounded-lg border border-neutral-300 '
+                'focus:outline-none focus:ring-2 focus:ring-neutral-400 '
+                'bg-white text-neutral-900 placeholder-neutral-400 text-sm'
+            ),
+        }),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['password'].label = 'Passwort'
+        self.fields['password'].widget = forms.PasswordInput(attrs={
+            'placeholder': '••••••••',
+            'class': (
+                'w-full px-3 py-2 rounded-lg border border-neutral-300 '
+                'focus:outline-none focus:ring-2 focus:ring-neutral-400 '
+                'bg-white text-neutral-900 placeholder-neutral-400 text-sm'
+            ),
+        })
 
 
 class UserCreationForm(forms.ModelForm):

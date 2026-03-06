@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Anmelden – BL-Matching{% endblock %}
+
+{% block extra_head %}
+  <style>body { background: #ffffff !important; }</style>
+{% endblock %}
+
+{% block body %}
+  <div class="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] py-12">
+
+    <!-- Logo -->
+    <img src="{% static 'img/bl_logo_schwarz.png' %}"
+         alt="BeginnerLuft"
+         style="height:64px; width:auto; object-fit:contain;"
+         class="mb-10" />
+
+    <!-- Form -->
+    <div class="w-full" style="max-width:320px;">
+
+      {% if form.non_field_errors %}
+        <div class="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" novalidate class="flex flex-col gap-4">
+        {% csrf_token %}
+
+        <div>
+          <label for="{{ form.username.id_for_label }}"
+                 class="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
+            {{ form.username.label }}
+          </label>
+          {{ form.username }}
+          {% if form.username.errors %}
+            <p class="mt-1 text-xs text-red-600">{{ form.username.errors|join:', ' }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="{{ form.password.id_for_label }}"
+                 class="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
+            {{ form.password.label }}
+          </label>
+          {{ form.password }}
+          {% if form.password.errors %}
+            <p class="mt-1 text-xs text-red-600">{{ form.password.errors|join:', ' }}</p>
+          {% endif %}
+        </div>
+
+        <button type="submit"
+                style="background:#171717; color:#ffffff;"
+                class="mt-2 w-full py-2.5 rounded-lg font-semibold text-sm transition-opacity hover:opacity-80">
+          Anmelden
+        </button>
+
+        {% if next %}<input type="hidden" name="next" value="{{ next }}" />{% endif %}
+      </form>
+
+    </div>
+  </div>
+{% endblock %}

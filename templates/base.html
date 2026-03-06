@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{% static 'css/tailwind.css' %}?v={% now 'U' %}" />
     {% block extra_head %}{% endblock %}
   </head>
-  <body class="min-h-screen bg-gradient-to-br from-secondary-100 via-primary-100 to-primary-200 font-sans text-neutral-800">
+  <body class="min-h-screen bg-gradient-to-br from-secondary-100 via-primary-100 to-primary-200 font-sans text-neutral-800 flex flex-col">
 
     <!-- ===== Navbar ===== -->
     <nav class="bg-bl-gradient border-b border-white/30 shadow-sm sticky top-0 z-50">
@@ -47,6 +47,18 @@
                 Admin
               </a>
             </li>
+            {% if user.is_authenticated %}
+            <li>
+              <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit"
+                        class="ml-2 px-4 py-2 rounded-lg text-sm text-white/80
+                               hover:bg-white/30 hover:text-white transition-colors cursor-pointer">
+                  Abmelden
+                </button>
+              </form>
+            </li>
+            {% endif %}
           </ul>
 
           <!-- Mobile hamburger -->
@@ -93,6 +105,18 @@
               Admin
             </a>
           </li>
+          {% if user.is_authenticated %}
+          <li>
+            <form method="post" action="{% url 'logout' %}">
+              {% csrf_token %}
+              <button type="submit"
+                      class="flex items-center py-3 text-sm
+                             text-tertiary-700 hover:text-primary-600 transition-colors cursor-pointer w-full">
+                Abmelden
+              </button>
+            </form>
+          </li>
+          {% endif %}
         </ul>
       </div>
     </nav>
@@ -110,6 +134,12 @@
       })();
     </script>
 
-    {% block body %}{% endblock %}
+    <main class="flex-1">
+      {% block body %}{% endblock %}
+    </main>
+
+    <footer class="bg-white/40 border-t border-white/30 text-center text-xs text-purple-800/50 py-3">
+      &copy; {% now "Y" %} BeginnerLuft
+    </footer>
   </body>
 </html>

@@ -1,4 +1,4 @@
-from django.contrib.auth.mixins import UserPassesTestMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse
 from django.views.generic import DetailView, ListView, CreateView
 
@@ -24,17 +24,17 @@ class MatchingAttemptCreateView(StaffRequiredMixin, CreateView):
         return reverse('matching_attempt_detail', kwargs={'pk': self.object.pk})
 
 
-class MatchingAttemptDetailView(DetailView):
+class MatchingAttemptDetailView(LoginRequiredMixin, DetailView):
     model = MatchingAttempt
     template_name = 'matching/matching_attempt_detail.html'
     context_object_name = 'matching_attempt'
 
-class MatchingAttemptListView(ListView):
+class MatchingAttemptListView(LoginRequiredMixin, ListView):
     model = MatchingAttempt
     template_name = 'matching/matchings.html'
     context_object_name = 'matching_attempts'
     
-class RequestToCoachDetailView(DetailView):
+class RequestToCoachDetailView(LoginRequiredMixin, DetailView):
     model = RequestToCoach
     template_name = 'matching/request_to_coach_detail.html'
     context_object_name = 'request_to_coach'
