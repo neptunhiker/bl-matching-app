@@ -5,16 +5,111 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}BL-Matching{% endblock %}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}" />
+    <link rel="icon" type="image/png" href="{% static 'img/bl_logo_schwarz.png' %}" />
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}?v={% now 'U' %}" />
     {% block extra_head %}{% endblock %}
   </head>
-  <body class="min-h-screen bg-gradient-to-br from-purple-50 to-purple-200 font-sans text-purple-950">
-    <nav>
-      <a href="{% url 'admin:index' %}">Admin</a>
+  <body class="min-h-screen bg-gradient-to-br from-secondary-100 via-primary-100 to-primary-200 font-sans text-neutral-800">
+
+    <!-- ===== Navbar ===== -->
+    <nav class="bg-bl-gradient border-b border-white/30 shadow-sm sticky top-0 z-50">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6">
+        <div class="flex items-center justify-between h-16">
+
+          <!-- Wordmark -->
+          <a href="/" class="shrink-0">
+            <img src="{% static 'img/bl_logo_schwarz.png' %}"
+                 alt="BeginnerLuft"
+                 style="height: 36px; width: auto; display: block;" />
+          </a>
+
+          <!-- Desktop links (sm and up) -->
+          <ul class="hidden sm:flex items-center gap-1">
+            <li>
+              <a href="{% url 'matching_attempts' %}"
+                 class="px-4 py-2 rounded-lg text-sm text-tertiary-700
+                        hover:bg-white/30 hover:text-tertiary-900 transition-colors">
+                Matchings
+              </a>
+            </li>
+            <li>
+              <a href="https://coaching-hub.beginnerluft.de"
+                 target="_blank" rel="noopener noreferrer"
+                 class="px-4 py-2 rounded-lg text-sm text-tertiary-700
+                        hover:bg-white/30 hover:text-tertiary-900 transition-colors">
+                Coaching&#8209;Hub ↗
+              </a>
+            </li>
+            <li>
+              <a href="{% url 'admin:index' %}"
+                 class="ml-2 px-4 py-2 rounded-lg text-sm text-white
+                         hover:bg-white/30 font-semibold transition-colors">
+                Admin
+              </a>
+            </li>
+          </ul>
+
+          <!-- Mobile hamburger -->
+          <button id="nav-toggle"
+                  class="sm:hidden p-2 rounded-lg text-tertiary-700
+                         hover:bg-white/30 transition-colors"
+                  aria-label="Menü öffnen">
+            <svg id="icon-open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+            <svg id="icon-close" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none"
+                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- Mobile dropdown -->
+      <div id="nav-menu"
+           class="hidden sm:hidden border-t border-white/30 bg-white/90 backdrop-blur-sm">
+        <ul class="flex flex-col divide-y divide-primary-100 px-4 py-2">
+          <li>
+            <a href="{% url 'matching_attempts' %}"
+               class="flex items-center py-3 text-sm
+                      text-tertiary-700 hover:text-primary-600 transition-colors">
+              Matchings
+            </a>
+          </li>
+          <li>
+            <a href="https://coaching-hub.beginnerluft.de"
+               target="_blank" rel="noopener noreferrer"
+               class="flex items-center py-3 text-sm 
+                      text-tertiary-700 hover:text-secondary-600 transition-colors">
+              Coaching&#8209;Hub ↗
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'admin:index' %}"
+               class="flex items-center py-3 text-sm 
+                      text-tertiary-700 hover:text-tertiary-900 transition-colors">
+              Admin
+            </a>
+          </li>
+        </ul>
+      </div>
     </nav>
+    <script>
+      (function () {
+        var btn   = document.getElementById('nav-toggle');
+        var menu  = document.getElementById('nav-menu');
+        var open  = document.getElementById('icon-open');
+        var close = document.getElementById('icon-close');
+        btn.addEventListener('click', function () {
+          var isHidden = menu.classList.toggle('hidden');
+          open.classList.toggle('hidden', !isHidden);
+          close.classList.toggle('hidden',  isHidden);
+        });
+      })();
+    </script>
+
     {% block body %}{% endblock %}
   </body>
 </html>

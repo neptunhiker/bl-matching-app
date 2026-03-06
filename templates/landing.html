@@ -1,18 +1,43 @@
 {% extends "base.html" %}
 
-{% block title %}BL-Matching{% endblock %}
+{% block title %}BeginnerLuft Matching{% endblock %}
 
 {% block body %}
-  <div class="min-h-screen flex items-center justify-center p-4">
-    <main class="text-center bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-12 max-w-xl w-full">
-      <h1 class="text-3xl font-bold mb-2 text-purple-950">Willkommen zum BL&#8209;Matching</h1>
-      <p class="text-purple-900/80">Hier entsteht die neue BeginnerLuft Matching&#8209;App.</p>
-      <a href="#"
-         class="inline-block mt-6 px-6 py-2.5 rounded-lg font-semibold text-white
-                bg-gradient-to-r from-brand to-brand-light
-                hover:opacity-90 transition-opacity">
-        Jetzt starten
-      </a>
+  <div class="flex flex-col items-center justify-center px-4 py-12 sm:py-20">
+
+    <main class="w-full max-w-2xl">
+
+      <!-- Badge -->
+      <div class="flex justify-center mb-6 sm:mb-8">
+        <span class="inline-flex items-center gap-2 px-5 py-2 rounded-full
+                     bg-primary-600 text-white text-sm font-semibold tracking-wide shadow-md">
+          ✦ BeginnerLuft
+        </span>
+      </div>
+
+      <!-- Hero card -->
+      <div class="bg-white rounded-2xl sm:rounded-3xl shadow-2xl
+                  border-2 border-secondary-200 px-6 py-8 sm:px-10 sm:py-12 text-center">
+
+        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-neutral-800 mb-3 sm:mb-4">
+          Willkommen zum
+          <span class="text-primary-600 whitespace-nowrap">BL&#8209;Matching</span>
+        </h1>
+
+        <p class="text-neutral-500 text-base sm:text-lg leading-relaxed max-w-md mx-auto mb-8 sm:mb-10">
+          Hier entsteht die neue BeginnerLuft Matching&#8209;App
+        </p>
+
+        <!-- CTA buttons -->
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+          <a href="{% url 'matching_attempts' %}"
+             class="w-full sm:w-auto px-8 py-3 rounded-xl font-semibold text-white text-center
+                    bg-primary-600 hover:bg-primary-700 shadow-md transition-all duration-200">
+            Zu den Matchings
+          </a>
+        </div>
+      </div>
+
     </main>
   </div>
 {% endblock %}
