@@ -9,3 +9,7 @@ sqlparse==0.5.5
 uvicorn==0.41.0
 
 python-dotenv
+
+# Testing
+pytest==9.0.2
+pytest-django==4.12.0

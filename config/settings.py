@@ -167,6 +167,16 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 # BCC address for every outgoing email — receives a copy in their inbox
 EMAIL_BCC = os.environ.get('EMAIL_BCC', '')
 
+# Shared secret appended to the Brevo webhook URL as ?secret=<value>.
+# Must be set in .env — if missing the endpoint will reject all requests.
+BREVO_WEBHOOK_SECRET = os.environ.get('BREVO_WEBHOOK_SECRET', '')
+
+# Brevo webhook IP allowlist. Comma-separated CIDRs.
+# Set to empty string in .env to disable the check (local dev / ngrok smoke test).
+# Leave unset in .env to enforce Brevo's published ranges in production.
+_brevo_ip_ranges_env = os.environ.get('BREVO_WEBHOOK_IP_RANGES', '1.179.112.0/20,172.246.240.0/20')
+BREVO_WEBHOOK_IP_RANGES = _brevo_ip_ranges_env if _brevo_ip_ranges_env else None
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

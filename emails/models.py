@@ -5,19 +5,32 @@ from django.conf import settings
 
 class EmailLog(models.Model):
     class Status(models.TextChoices):
+        # Internal states (set by Django, not Brevo)
         SENT = 'sent', 'Gesendet'
         FAILED = 'failed', 'Fehlgeschlagen'
+        # Brevo delivery events
         DELIVERED = 'delivered', 'Zugestellt'
-        BOUNCED = 'bounced', 'Bounce'
-        SPAM = 'spam', 'Spam'
+        DEFERRED = 'deferred', 'Verzögert'
+        SOFT_BOUNCED = 'soft_bounce', 'Soft Bounce'
+        HARD_BOUNCED = 'hard_bounce', 'Hard Bounce'
         BLOCKED = 'blocked', 'Blockiert'
+        INVALID = 'invalid', 'Ungültige E-Mail'
+        ERROR = 'error', 'Fehler'
+        SPAM = 'spam', 'Spam'
+        UNSUBSCRIBED = 'unsubscribed', 'Abgemeldet'
+        # Brevo engagement events
+        OPENED = 'opened', 'Geöffnet'
+        FIRST_OPENING = 'first_open', 'Erstöffnung'
+        CLICKED = 'clicked', 'Geklickt'
+        PROXY_OPEN = 'proxy_open', 'Proxy-Öffnung'
+        UNIQUE_PROXY_OPEN = 'proxy_unique', 'Einmalige Proxy-Öffnung'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     to = models.EmailField(verbose_name='Empfänger')
     subject = models.CharField(max_length=255, verbose_name='Betreff')
     html_body = models.TextField(verbose_name='HTML-Inhalt')
     status = models.CharField(
-        max_length=10,
+        max_length=20,
         choices=Status.choices,
         default=Status.SENT,
         verbose_name='Status',
@@ -25,6 +38,7 @@ class EmailLog(models.Model):
     error_message = models.TextField(blank=True, verbose_name='Fehlermeldung')
     sent_at = models.DateTimeField(auto_now_add=True, verbose_name='Gesendet am')
     delivered_at = models.DateTimeField(null=True, blank=True, verbose_name='Zugestellt am')
+    opened_at = models.DateTimeField(null=True, blank=True, verbose_name='Erstmals geöffnet am')
     sent_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
