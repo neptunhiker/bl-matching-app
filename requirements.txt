@@ -9,6 +9,7 @@ sqlparse==0.5.5
 uvicorn==0.41.0
 
 python-dotenv
+django-anymail[brevo]
 
 # Testing
 pytest==9.0.2

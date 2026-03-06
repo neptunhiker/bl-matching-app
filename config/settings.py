@@ -52,6 +52,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Third-party
+    'anymail',
     # Local apps
     'accounts.apps.AccountsConfig',
     'profiles.apps.ProfilesConfig',
@@ -150,20 +152,23 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Use custom user model (email as username)
 AUTH_USER_MODEL = 'accounts.User'
 
-# Email backend — set EMAIL_BACKEND in .env to override.
-# Defaults to console in DEBUG mode, SMTP otherwise.
+# Email backend — defaults to console in DEBUG mode, Brevo API otherwise.
+# Set EMAIL_BACKEND explicitly in .env to override (e.g. to test real sends locally).
 _default_email_backend = (
     'django.core.mail.backends.console.EmailBackend' if DEBUG
-    else 'django.core.mail.backends.smtp.EmailBackend'
+    else 'anymail.backends.brevo.EmailBackend'
 )
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', _default_email_backend)
 
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp-relay.brevo.com')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+_brevo_api_key = os.environ.get('BREVO_API_KEY', '')
+if not DEBUG and not _brevo_api_key:
+    raise ValueError('Missing BREVO_API_KEY environment variable')
+
+ANYMAIL = {
+    'BREVO_API_KEY': _brevo_api_key,
+}
+
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', '')
 # BCC address for every outgoing email — receives a copy in their inbox
 EMAIL_BCC = os.environ.get('EMAIL_BCC', '')
 

@@ -1,6 +1,6 @@
 import logging
 
-from django.core.mail import EmailMultiAlternatives
+from anymail.message import AnymailMessage
 from django.template.loader import render_to_string
 from django.conf import settings
 from .models import EmailLog
@@ -59,10 +59,10 @@ def send_email(
 
     try:
         bcc = [settings.EMAIL_BCC] if getattr(settings, 'EMAIL_BCC', None) else []
-        msg = EmailMultiAlternatives(subject=subject, body=plain_body, to=[to], bcc=bcc)
+        msg = AnymailMessage(subject=subject, body=plain_body, to=[to], bcc=bcc)
         msg.attach_alternative(html_body, 'text/html')
         # Tag with log UUID so Brevo webhooks can reference this log entry.
-        msg.extra_headers['X-Mailin-Tag'] = str(log.id)
+        msg.tags = [str(log.id)]
         result = msg.send()
         logger.info(
             "send_email: msg.send() returned %s for log_id=%s (to=%s)",
