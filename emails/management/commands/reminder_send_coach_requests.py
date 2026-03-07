@@ -23,7 +23,7 @@ class Command(BaseCommand):
         for coach_request in pending:
             now = timezone.now()
             deadline = coach_request.deadline
-            if now > deadline:
+            if deadline is not None and now > deadline:
                 coach_request.status = RequestToCoach.Status.NO_RESPONSE_UNTIL_DEADLINE
                 coach_request.save(update_fields=['status'])
                 self.stdout.write(

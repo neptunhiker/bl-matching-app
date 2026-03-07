@@ -1,5 +1,5 @@
 """
-Auth-gating tests for all login-required views.
+Auth-gating tests for all login-required views, plus CoachRespondView.
 
 Covers for each protected URL:
   1. Unauthenticated request  → 302 redirect to the login page
@@ -8,11 +8,24 @@ Covers for each protected URL:
 Additionally, for MatchingAttemptCreateView (staff-only):
   3. Non-staff authenticated  → 403 Forbidden
   4. Staff authenticated      → 200 OK
+
+CoachRespondView (public, token-gated):
+  - Invalid token         → invalid template
+  - Accept on time        → ACCEPTED_ON_TIME + success template
+  - Accept late           → ACCEPTED_LATE + success template
+  - Decline on time       → REJECTED_ON_TIME + success template
+  - Token already used    → already-used template, status unchanged
+  - Terminal status guard → already-used template (cross-email scenario)
+  - No deadline           → treated as on-time
 """
+import secrets
+from datetime import timedelta
+
 import pytest
+from django.utils import timezone
 
 from accounts.models import User
-from matching.models import MatchingAttempt, RequestToCoach
+from matching.models import CoachActionToken, MatchingAttempt, RequestToCoach
 from profiles.models import Coach, Participant
 
 LOGIN_URL = '/accounts/login/'
@@ -156,3 +169,140 @@ class TestRequestToCoachDetailView:
         client.force_login(user)
         response = client.get(f'/matching/request-to-coach/{request_to_coach.pk}/')
         assert response.status_code == 200
+
+
+# ── CoachRespondView (/matching/response_coach/<token>/) ──────────────────────
+
+@pytest.mark.django_db
+class TestCoachRespondView:
+
+    def _make_token(self, request_to_coach, action, used_at=None):
+        return CoachActionToken.objects.create(
+            token=secrets.token_urlsafe(48),
+            request_to_coach=request_to_coach,
+            action=action,
+            used_at=used_at,
+        )
+
+    def _url(self, token_str):
+        return f'/matching/response_coach/{token_str}/'
+
+    # ── Invalid token ─────────────────────────────────────────────────────────
+
+    def test_invalid_token_renders_invalid_template(self, client):
+        response = client.get(self._url('notavalidtoken'))
+        assert response.status_code == 200
+        assert 'matching/coach_response_invalid.html' in [t.name for t in response.templates]
+
+    # ── Accept / Decline — on time ────────────────────────────────────────────
+
+    def test_accept_on_time(self, client, request_to_coach):
+        request_to_coach.deadline = timezone.now() + timedelta(hours=1)
+        request_to_coach.save()
+        token = self._make_token(request_to_coach, CoachActionToken.Action.ACCEPT)
+
+        response = client.get(self._url(token.token))
+
+        assert response.status_code == 200
+        assert 'matching/coach_response_success.html' in [t.name for t in response.templates]
+        request_to_coach.refresh_from_db()
+        assert request_to_coach.status == RequestToCoach.Status.ACCEPTED_ON_TIME
+
+    def test_decline_on_time(self, client, request_to_coach):
+        request_to_coach.deadline = timezone.now() + timedelta(hours=1)
+        request_to_coach.save()
+        token = self._make_token(request_to_coach, CoachActionToken.Action.DECLINE)
+
+        response = client.get(self._url(token.token))
+
+        assert response.status_code == 200
+        assert 'matching/coach_response_success.html' in [t.name for t in response.templates]
+        request_to_coach.refresh_from_db()
+        assert request_to_coach.status == RequestToCoach.Status.REJECTED_ON_TIME
+
+    # ── Accept / Decline — late ───────────────────────────────────────────────
+
+    def test_accept_late(self, client, request_to_coach):
+        request_to_coach.deadline = timezone.now() - timedelta(hours=1)
+        request_to_coach.save()
+        token = self._make_token(request_to_coach, CoachActionToken.Action.ACCEPT)
+
+        response = client.get(self._url(token.token))
+
+        assert response.status_code == 200
+        request_to_coach.refresh_from_db()
+        assert request_to_coach.status == RequestToCoach.Status.ACCEPTED_LATE
+
+    def test_decline_late(self, client, request_to_coach):
+        request_to_coach.deadline = timezone.now() - timedelta(hours=1)
+        request_to_coach.save()
+        token = self._make_token(request_to_coach, CoachActionToken.Action.DECLINE)
+
+        response = client.get(self._url(token.token))
+
+        assert response.status_code == 200
+        request_to_coach.refresh_from_db()
+        assert request_to_coach.status == RequestToCoach.Status.REJECTED_LATE
+
+    # ── No deadline → on time ─────────────────────────────────────────────────
+
+    def test_no_deadline_treated_as_on_time(self, client, request_to_coach):
+        assert request_to_coach.deadline is None
+        token = self._make_token(request_to_coach, CoachActionToken.Action.ACCEPT)
+
+        response = client.get(self._url(token.token))
+
+        assert response.status_code == 200
+        request_to_coach.refresh_from_db()
+        assert request_to_coach.status == RequestToCoach.Status.ACCEPTED_ON_TIME
+
+    # ── Already-used token ────────────────────────────────────────────────────
+
+    def test_already_used_token_shows_already_used_template(self, client, request_to_coach):
+        token = self._make_token(
+            request_to_coach,
+            CoachActionToken.Action.ACCEPT,
+            used_at=timezone.now() - timedelta(minutes=5),
+        )
+
+        response = client.get(self._url(token.token))
+
+        assert response.status_code == 200
+        assert 'matching/coach_response_already_used.html' in [t.name for t in response.templates]
+
+    def test_already_used_token_does_not_change_status(self, client, request_to_coach):
+        token = self._make_token(
+            request_to_coach,
+            CoachActionToken.Action.ACCEPT,
+            used_at=timezone.now() - timedelta(minutes=5),
+        )
+        original_status = request_to_coach.status
+
+        client.get(self._url(token.token))
+
+        request_to_coach.refresh_from_db()
+        assert request_to_coach.status == original_status
+
+    # ── Terminal status guard (cross-email scenario) ──────────────────────────
+
+    def test_terminal_status_shows_already_used_template(self, client, request_to_coach):
+        # Coach already responded via a different token; this new (unused) token
+        # should still land on already-used because the RTC is resolved.
+        request_to_coach.status = RequestToCoach.Status.ACCEPTED_ON_TIME
+        request_to_coach.save()
+        token = self._make_token(request_to_coach, CoachActionToken.Action.DECLINE)
+
+        response = client.get(self._url(token.token))
+
+        assert response.status_code == 200
+        assert 'matching/coach_response_already_used.html' in [t.name for t in response.templates]
+
+    def test_terminal_status_does_not_change_status(self, client, request_to_coach):
+        request_to_coach.status = RequestToCoach.Status.REJECTED_ON_TIME
+        request_to_coach.save()
+        token = self._make_token(request_to_coach, CoachActionToken.Action.ACCEPT)
+
+        client.get(self._url(token.token))
+
+        request_to_coach.refresh_from_db()
+        assert request_to_coach.status == RequestToCoach.Status.REJECTED_ON_TIME

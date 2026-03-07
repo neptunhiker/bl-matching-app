@@ -177,6 +177,18 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', '')
 # BCC address for every outgoing email — receives a copy in their inbox
 EMAIL_BCC = os.environ.get('EMAIL_BCC', '')
 
+# --- Matching / coach request settings ---
+# Default number of business hours (weekends skipped) used to pre-fill the
+# deadline when a coach invitation is triggered. Staff can override the
+# pre-filled value before confirming the send.
+COACH_REQUEST_DEFAULT_DEADLINE_HOURS = 24
+
+# Base URL of this site — used to build absolute URLs in emails sent from
+# management commands / cron jobs where no HttpRequest is available.
+# Must NOT have a trailing slash.
+# Examples: http://localhost:8000  |  https://yourdomain.com
+SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')
+
 # Shared secret appended to the Brevo webhook URL as ?secret=<value>.
 # Must be set in .env — if missing the endpoint will reject all requests.
 BREVO_WEBHOOK_SECRET = os.environ.get('BREVO_WEBHOOK_SECRET', '')

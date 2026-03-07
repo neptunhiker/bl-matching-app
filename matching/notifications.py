@@ -1,13 +1,30 @@
 import logging
 
+from django.conf import settings
+from django.urls import reverse
+from django.utils import timezone
+
 from emails.services import send_email
 from .models import RequestToCoach
+from .tokens import generate_coach_action_tokens
+from .utils import add_business_hours
 
 logger = logging.getLogger(__name__)
 
 
-
 def send_first_coach_request_email(request_to_coach: RequestToCoach):
+    # Stamp the deadline on first send if not already set.
+    # Uses business-hours calculation so weekends are skipped automatically.
+    if request_to_coach.deadline is None:
+        request_to_coach.deadline = add_business_hours(
+            timezone.now(),
+            settings.COACH_REQUEST_DEFAULT_DEADLINE_HOURS,
+        )
+        request_to_coach.save(update_fields=['deadline'])
+
+    accept_url, decline_url = generate_coach_action_tokens(request_to_coach)
+    learn_more_url = settings.SITE_URL.rstrip('/') + reverse('landing')
+
     author = "BeginnerLuft Roboti"
     subject = f"Matching-Anfrage für {request_to_coach.matching_attempt.participant}"
     recipient = request_to_coach.coach.user.email
@@ -21,11 +38,21 @@ def send_first_coach_request_email(request_to_coach: RequestToCoach):
             'recipient_name': request_to_coach.coach.first_name,
             'participant_name': request_to_coach.matching_attempt.participant.first_name,
             'author': author,
+            'accept_url': accept_url,
+            'decline_url': decline_url,
+            'learn_more_url': learn_more_url,
+            'deadline': request_to_coach.deadline,
         },
         request_to_coach=request_to_coach,
     )
-    
+
+
 def send_reminder_coach_request_email(request_to_coach: RequestToCoach):
+    # Generate a fresh token pair for this reminder email.
+    # The deadline is not changed — reminders share the original cutoff.
+    accept_url, decline_url = generate_coach_action_tokens(request_to_coach)
+    learn_more_url = settings.SITE_URL.rstrip('/') + reverse('landing')
+
     author = "BeginnerLuft Roboti"
     subject = f"Reminder: Matching-Anfrage für {request_to_coach.matching_attempt.participant}"
     recipient = request_to_coach.coach.user.email
@@ -39,6 +66,10 @@ def send_reminder_coach_request_email(request_to_coach: RequestToCoach):
             'recipient_name': request_to_coach.coach.first_name,
             'participant_name': request_to_coach.matching_attempt.participant.first_name,
             'author': author,
+            'accept_url': accept_url,
+            'decline_url': decline_url,
+            'learn_more_url': learn_more_url,
+            'deadline': request_to_coach.deadline,
         },
         request_to_coach=request_to_coach,
     )

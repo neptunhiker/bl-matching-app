@@ -3,9 +3,36 @@
 {% block content %}
 
 <h2>Hallo {{ recipient_name }},</h2>
-<p> Lust auf ein Coaching mit {{ participant_name }}?</p>
+<p>Lust auf ein Coaching mit {{ participant_name }}?</p>
 
-<p> {{ participant_name }} hat Interesse an einem Coaching mit dir bekundet. Bitte logge dich in dein Profil ein, um die Anfrage zu prüfen und zu entscheiden, ob du das Coaching annehmen möchtest.</p>
+<p>{{ participant_name }} hat Interesse an einem Coaching mit dir bekundet.
+  Bitte teile uns mit, ob du das Coaching annehmen möchtest.</p>
+
+{% if deadline %}
+<p style="color:#6b7280; font-size:0.9rem;">
+  <strong>Antwortfrist:</strong> {{ deadline|date:"l, d. F Y, H:i" }} Uhr
+</p>
+{% endif %}
+
+<!-- Action buttons -->
+<table border="0" cellpadding="0" cellspacing="0" class="btn-row">
+  <tr>
+    <td>
+      <a href="{{ accept_url }}" class="btn-accept">Coaching annehmen</a>
+    </td>
+    <td>
+      <a href="{{ decline_url }}" class="btn-decline">Ablehnen</a>
+    </td>
+  </tr>
+</table>
+
+<p style="margin-top:14px; font-size:0.8rem; color:#9ca3af;">
+  <a href="{{ learn_more_url }}" style="color:#9ca3af;">Mehr über den Teilnehmer erfahren</a>
+</p>
+
+<p style="font-size:0.85rem; color:#6b7280; margin-top:20px;">
+  Du kannst auch direkt auf diese E-Mail antworten oder uns anrufen, wenn du Fragen hast.
+</p>
 
 <p>Viele Grüße,<br>
 {{ author }}</p>
