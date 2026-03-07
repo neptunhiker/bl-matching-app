@@ -132,13 +132,13 @@ class TestMatchingAttemptCreateView:
 class TestMatchingAttemptDetailView:
 
     def test_unauthenticated_redirects_to_login(self, client, matching_attempt):
-        url = f'/matching/matching-attempt/{matching_attempt.pk}/'
+        url = f'/matching/matching/{matching_attempt.pk}/'
         response = client.get(url)
         assert_login_redirect(response)
 
     def test_authenticated_gets_200(self, client, user, matching_attempt):
         client.force_login(user)
-        response = client.get(f'/matching/matching-attempt/{matching_attempt.pk}/')
+        response = client.get(f'/matching/matching/{matching_attempt.pk}/')
         assert response.status_code == 200
 
 

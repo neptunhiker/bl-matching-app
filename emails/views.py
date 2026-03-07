@@ -4,15 +4,23 @@ import logging
 import secrets
 from datetime import datetime, timezone as dt_timezone
 
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import DetailView
 from django.conf import settings
 
 from .models import EmailLog
+
+
+class EmailLogDetailView(LoginRequiredMixin, DetailView):
+    model = EmailLog
+    template_name = 'emails/email_log_detail.html'
+    context_object_name = 'email_log'
 
 logger = logging.getLogger(__name__)
 

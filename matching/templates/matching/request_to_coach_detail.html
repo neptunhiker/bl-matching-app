@@ -1,15 +1,262 @@
 {% extends "base.html" %}
 {% load tz %}
 
+{% block title %}Anfrage an {{ request_to_coach.coach }}{% endblock %}
+
 {% block body %}
-<h1 class="text-2xl font-bold mb-4">Anfrage an Coach {{ request_to_coach.coach }} für ein Coaching mit {{ request_to_coach.matching_attempt.participant }}</h1>
+<div class="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8">
 
-<div>Status: {{ request_to_coach.get_status_display }}</div>
+  {# ── Back link ──────────────────────────────────────────────────────── #}
+  <a href="{% url 'matching_attempt_detail' request_to_coach.matching_attempt.pk %}"
+     class="inline-flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-800 transition-colors">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+    Zurück zum Matching für {{ request_to_coach.matching_attempt.participant }}
+  </a>
 
-<div>Benachrichtigungen</div>
-{% for email in request_to_coach.email_logs.all %}
-  <div>
-    {{ email.sent_at|localtime|date:"d.m.Y H:i" }} Uhr - {{ email.subject }}
+  {# ── Hero card ──────────────────────────────────────────────────────── #}
+  <div class="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-200 overflow-hidden">
+    <div class="h-2 bg-bl-gradient"></div>
+
+    <div class="p-6 sm:p-8 space-y-6">
+
+      {# Heading + status badge #}
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p class="text-xs font-jakarta font-semibold uppercase tracking-widest text-primary-500 mb-1">
+            Anfrage an Coach
+          </p>
+          <h1 class="text-2xl sm:text-3xl font-bold text-tertiary-700 leading-tight">
+            {{ request_to_coach.coach }}
+          </h1>
+          <p class="mt-1 text-sm text-neutral-500">
+            Coaching mit
+            <span class="font-semibold text-neutral-700">{{ request_to_coach.matching_attempt.participant }}</span>
+          </p>
+        </div>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold
+          {% if request_to_coach.status == 'accepted_on_time' or request_to_coach.status == 'accepted_late' %}
+            bg-green-100 text-green-700
+          {% elif request_to_coach.status == 'rejected_on_time' or request_to_coach.status == 'rejected_late' %}
+            bg-red-100 text-red-600
+          {% elif request_to_coach.status == 'awaiting_reply' %}
+            bg-primary-100 text-primary-700
+          {% elif request_to_coach.status == 'no_response_until_deadline' %}
+            bg-amber-100 text-amber-700
+          {% elif request_to_coach.status == 'cancelled' %}
+            bg-neutral-100 text-neutral-500
+          {% else %}
+            bg-secondary-100 text-secondary-700
+          {% endif %}">
+          <span class="w-2 h-2 rounded-full
+            {% if request_to_coach.status == 'accepted_on_time' or request_to_coach.status == 'accepted_late' %}
+              bg-green-500
+            {% elif request_to_coach.status == 'rejected_on_time' or request_to_coach.status == 'rejected_late' %}
+              bg-red-400
+            {% elif request_to_coach.status == 'awaiting_reply' %}
+              bg-primary-500
+            {% elif request_to_coach.status == 'no_response_until_deadline' %}
+              bg-amber-400
+            {% elif request_to_coach.status == 'cancelled' %}
+              bg-neutral-400
+            {% else %}
+              bg-secondary-400
+            {% endif %}"></span>
+          {{ request_to_coach.get_status_display }}
+        </span>
+      </div>
+
+      {# Coach detail strip #}
+      <div class="flex flex-wrap gap-3">
+        {% if request_to_coach.coach.city %}
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 text-xs text-neutral-600">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-neutral-400" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          {{ request_to_coach.coach.city }}
+        </span>
+        {% endif %}
+        {% if request_to_coach.coach.coaching_format_online %}
+        <span class="inline-flex items-center px-3 py-1 rounded-full bg-primary-50 text-xs text-primary-700">Online</span>
+        {% endif %}
+        {% if request_to_coach.coach.coaching_format_presence %}
+        <span class="inline-flex items-center px-3 py-1 rounded-full bg-primary-50 text-xs text-primary-700">Präsenz</span>
+        {% endif %}
+        {% if request_to_coach.coach.coaching_format_hybrid %}
+        <span class="inline-flex items-center px-3 py-1 rounded-full bg-primary-50 text-xs text-primary-700">Hybrid</span>
+        {% endif %}
+        {% for lang in request_to_coach.coach.languages.all %}
+        <span class="inline-flex items-center px-3 py-1 rounded-full bg-secondary-100 text-xs text-secondary-700">{{ lang }}</span>
+        {% endfor %}
+      </div>
+
+      {# Meta grid #}
+      <dl class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+
+        <div class="bg-neutral-50 rounded-xl p-3">
+          <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Erstellt am</dt>
+          <dd class="text-sm font-semibold text-neutral-800">{{ request_to_coach.created_at|localtime|date:"d.m.Y" }}</dd>
+          <dd class="text-xs text-neutral-500">{{ request_to_coach.created_at|localtime|time:"H:i" }} Uhr</dd>
+        </div>
+
+        <div class="bg-neutral-50 rounded-xl p-3">
+          <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Anfragen gesendet</dt>
+          <dd class="text-sm font-semibold text-neutral-800">
+            {{ request_to_coach.number_of_requests_sent }}
+            <span class="text-neutral-400 font-normal">/ {{ request_to_coach.max_number_of_requests }}</span>
+          </dd>
+        </div>
+
+        <div class="bg-neutral-50 rounded-xl p-3">
+          <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Erstmals gesendet</dt>
+          <dd class="text-sm font-semibold text-neutral-800">
+            {% if request_to_coach.first_sent_at %}
+              {{ request_to_coach.first_sent_at|localtime|date:"d.m.Y" }}
+              <span class="block text-xs text-neutral-500">{{ request_to_coach.first_sent_at|localtime|time:"H:i" }} Uhr</span>
+            {% else %}
+              &mdash;
+            {% endif %}
+          </dd>
+        </div>
+
+        <div class="bg-neutral-50 rounded-xl p-3">
+          <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Zuletzt gesendet</dt>
+          <dd class="text-sm font-semibold text-neutral-800">
+            {% if request_to_coach.last_sent_at %}
+              {{ request_to_coach.last_sent_at|localtime|date:"d.m.Y" }}
+              <span class="block text-xs text-neutral-500">{{ request_to_coach.last_sent_at|localtime|time:"H:i" }} Uhr</span>
+            {% else %}
+              &mdash;
+            {% endif %}
+          </dd>
+        </div>
+
+        <div class="bg-neutral-50 rounded-xl p-3">
+          <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Deadline</dt>
+          <dd class="text-sm font-semibold {% if request_to_coach.deadline %}text-amber-600{% else %}text-neutral-400{% endif %}">
+            {% if request_to_coach.deadline %}
+              {{ request_to_coach.deadline|localtime|date:"d.m.Y" }}
+              <span class="block text-xs">{{ request_to_coach.deadline|localtime|time:"H:i" }} Uhr</span>
+            {% else %}
+              &mdash;
+            {% endif %}
+          </dd>
+        </div>
+
+        <div class="bg-neutral-50 rounded-xl p-3">
+          <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Zuletzt gesendet von</dt>
+          <dd class="text-sm font-semibold text-neutral-800">
+            {% if request_to_coach.last_sent_by %}
+              {% with u=request_to_coach.last_sent_by %}
+                {% if u.first_name %}
+                  {{ u.first_name }}{% if u.last_name %} {{ u.last_name|slice:":1" }}.{% endif %}
+                {% else %}
+                  {{ u.email }}
+                {% endif %}
+              {% endwith %}
+            {% else %}
+              &mdash;
+            {% endif %}
+          </dd>
+        </div>
+
+      </dl>
+    </div>
   </div>
-{% endfor %}
+
+  {# ── E-Mail Accordion ───────────────────────────────────────────────── #}
+  <section>
+    <h2 class="text-lg font-bold text-tertiary-700 mb-4 flex items-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary-500" fill="none"
+           viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+      </svg>
+      E-Mails
+      <span class="ml-1 text-xs font-jakarta font-semibold bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">
+        {{ email_logs|length }}
+      </span>
+    </h2>
+
+    {% if email_logs %}
+    <details class="group bg-white rounded-2xl shadow-sm ring-1 ring-neutral-200 overflow-hidden">
+
+      <summary class="flex items-center justify-between px-5 sm:px-6 py-4 cursor-pointer select-none
+                      hover:bg-neutral-50 transition-colors list-none">
+        <span class="text-sm font-semibold text-tertiary-700">
+          {{ email_logs|length }} E-Mail{% if email_logs|length != 1 %}s{% endif %} anzeigen
+        </span>
+        <svg xmlns="http://www.w3.org/2000/svg"
+             class="h-5 w-5 text-neutral-400 transition-transform duration-200 group-open:rotate-180"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </summary>
+
+      <div class="divide-y divide-neutral-100 border-t border-neutral-100">
+        {% for email in email_logs %}
+        <div class="px-5 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
+
+          {# Timestamp #}
+          <div class="shrink-0 w-36">
+            <p class="text-xs font-semibold text-neutral-700">{{ email.sent_at|localtime|date:"d.m.Y" }}</p>
+            <p class="text-xs text-neutral-400">{{ email.sent_at|localtime|time:"H:i" }} Uhr</p>
+          </div>
+
+          {# Status badge #}
+          <div class="shrink-0 w-28">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold
+              {% if email.status == 'delivered' or email.status == 'opened' or email.status == 'first_open' or email.status == 'clicked' %}
+                bg-green-100 text-green-700
+              {% elif email.status == 'sent' %}
+                bg-primary-100 text-primary-700
+              {% elif email.status == 'failed' or email.status == 'hard_bounce' or email.status == 'blocked' or email.status == 'spam' or email.status == 'error' or email.status == 'invalid' %}
+                bg-red-100 text-red-600
+              {% elif email.status == 'soft_bounce' or email.status == 'deferred' %}
+                bg-amber-100 text-amber-700
+              {% else %}
+                bg-neutral-100 text-neutral-500
+              {% endif %}">
+              {{ email.get_status_display }}
+            </span>
+          </div>
+
+          {# Subject + recipient #}
+          <div class="flex-1 min-w-0">
+            <p class="text-sm text-neutral-800 font-medium truncate" title="{{ email.subject }}">
+              {{ email.subject }}
+            </p>
+            <p class="text-xs text-neutral-400 mt-0.5">An: {{ email.to }}</p>
+          </div>
+
+          {# Open link #}
+          <div class="shrink-0">
+            <a href="{% url 'emails:email_log_detail' email.id %}"
+               class="inline-flex items-center gap-1 text-xs font-semibold text-primary-600
+                      hover:text-primary-800 transition-colors whitespace-nowrap">
+              Öffnen
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none"
+                   viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+              </svg>
+            </a>
+          </div>
+
+        </div>
+        {% endfor %}
+      </div>
+
+    </details>
+    {% else %}
+      <p class="text-sm text-neutral-500 italic">Noch keine E-Mails vorhanden.</p>
+    {% endif %}
+
+  </section>
+
+</div>
 {% endblock %}
