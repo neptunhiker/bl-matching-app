@@ -24,6 +24,10 @@ class EmailLog(models.Model):
         CLICKED = 'clicked', 'Geklickt'
         PROXY_OPEN = 'proxy_open', 'Proxy-Öffnung'
         UNIQUE_PROXY_OPEN = 'proxy_unique', 'Einmalige Proxy-Öffnung'
+        
+    class EmailTrigger(models.TextChoices):
+        AUTOMATED = 'automtic', 'Automatisch'
+        MANUAL = 'manual', 'Manuell'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     to = models.EmailField(verbose_name='Empfänger')
@@ -35,18 +39,17 @@ class EmailLog(models.Model):
         default=Status.SENT,
         verbose_name='Status',
     )
+    email_trigger = models.CharField(
+        max_length=20,
+        choices=EmailTrigger.choices,
+        default=EmailTrigger.AUTOMATED,
+        verbose_name='Typ (automatisch oder manuell)',
+    )
     error_message = models.TextField(blank=True, verbose_name='Fehlermeldung')
     sent_at = models.DateTimeField(auto_now_add=True, verbose_name='Gesendet am')
     delivered_at = models.DateTimeField(null=True, blank=True, verbose_name='Zugestellt am')
     opened_at = models.DateTimeField(null=True, blank=True, verbose_name='Erstmals geöffnet am')
-    sent_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='sent_emails',
-        verbose_name='Gesendet von',
-    )
+    sent_by = models.CharField(max_length=255, blank=True, verbose_name='Gesendet von')  # e.g. "User:123" or "System"
     request_to_coach = models.ForeignKey(
         'matching.RequestToCoach',
         null=True,

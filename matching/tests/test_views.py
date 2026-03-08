@@ -197,7 +197,7 @@ class TestCoachRespondView:
     # ── Accept / Decline — on time ────────────────────────────────────────────
 
     def test_accept_on_time(self, client, request_to_coach):
-        request_to_coach.deadline = timezone.now() + timedelta(hours=1)
+        request_to_coach.deadline_at = timezone.now() + timedelta(hours=1)
         request_to_coach.save()
         token = self._make_token(request_to_coach, CoachActionToken.Action.ACCEPT)
 
@@ -209,7 +209,7 @@ class TestCoachRespondView:
         assert request_to_coach.status == RequestToCoach.Status.ACCEPTED_ON_TIME
 
     def test_decline_on_time(self, client, request_to_coach):
-        request_to_coach.deadline = timezone.now() + timedelta(hours=1)
+        request_to_coach.deadline_at = timezone.now() + timedelta(hours=1)
         request_to_coach.save()
         token = self._make_token(request_to_coach, CoachActionToken.Action.DECLINE)
 
@@ -223,7 +223,7 @@ class TestCoachRespondView:
     # ── Accept / Decline — late ───────────────────────────────────────────────
 
     def test_accept_late(self, client, request_to_coach):
-        request_to_coach.deadline = timezone.now() - timedelta(hours=1)
+        request_to_coach.deadline_at = timezone.now() - timedelta(hours=1)
         request_to_coach.save()
         token = self._make_token(request_to_coach, CoachActionToken.Action.ACCEPT)
 
@@ -234,7 +234,7 @@ class TestCoachRespondView:
         assert request_to_coach.status == RequestToCoach.Status.ACCEPTED_LATE
 
     def test_decline_late(self, client, request_to_coach):
-        request_to_coach.deadline = timezone.now() - timedelta(hours=1)
+        request_to_coach.deadline_at = timezone.now() - timedelta(hours=1)
         request_to_coach.save()
         token = self._make_token(request_to_coach, CoachActionToken.Action.DECLINE)
 
@@ -247,7 +247,7 @@ class TestCoachRespondView:
     # ── No deadline → on time ─────────────────────────────────────────────────
 
     def test_no_deadline_treated_as_on_time(self, client, request_to_coach):
-        assert request_to_coach.deadline is None
+        assert request_to_coach.deadline_at is None
         token = self._make_token(request_to_coach, CoachActionToken.Action.ACCEPT)
 
         response = client.get(self._url(token.token))

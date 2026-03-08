@@ -13,7 +13,8 @@ def send_email(
     subject: str,
     template_name: str,
     context: dict,
-    sent_by=None,
+    sent_by: str,
+    email_trigger: str = "automated",
     request_to_coach=None,
     matching_attempt=None,
 ) -> EmailLog:
@@ -25,7 +26,7 @@ def send_email(
         subject:          Email subject line.
         template_name:    Path to the HTML template (relative to templates/).
         context:          Template context dict.
-        sent_by:          User instance triggering the send (optional).
+        sent_by:          Who/what is sending this email (e.g. "User:123" or "System")
         request_to_coach: RequestToCoach instance this email relates to (optional).
         matching_attempt: MatchingAttempt instance this email relates to (optional).
 
@@ -46,6 +47,7 @@ def send_email(
         sent_by=sent_by,
         request_to_coach=request_to_coach,
         matching_attempt=matching_attempt,
+        email_trigger=email_trigger,
     )
     log.save()
 

@@ -38,6 +38,7 @@ def _send(**kwargs) -> EmailLog:
         subject="Test Subject",
         template_name=TEMPLATE,
         context={},
+        sent_by="System",
     )
     defaults.update(kwargs)
     with patch("emails.services.render_to_string", return_value=FAKE_HTML):

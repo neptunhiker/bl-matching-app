@@ -137,7 +137,7 @@ class CoachRespondView(View):
         now = timezone.now()
         is_accept = token_instance.action == CoachActionToken.Action.ACCEPT
 
-        if rtc.deadline is None or now <= rtc.deadline:
+        if rtc.deadline_at is None or now <= rtc.deadline_at:
             on_time = True
             new_status = (
                 RequestToCoach.Status.ACCEPTED_ON_TIME if is_accept
@@ -161,7 +161,7 @@ class CoachRespondView(View):
                 'action': token_instance.action,        # 'accept' or 'decline'
                 'is_accept': is_accept,
                 'on_time': on_time,
-                'deadline': rtc.deadline,
+                'deadline': rtc.deadline_at,
             },
         )
 
