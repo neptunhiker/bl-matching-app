@@ -1,9 +1,12 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.shortcuts import render
+from django.db.models import Max, Q
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import DetailView, ListView, CreateView, View
 
+from profiles.models import Coach
 from .models import CoachActionToken, MatchingAttempt, RequestToCoach
 from .tokens import consume_token
 
@@ -48,7 +51,119 @@ class MatchingAttemptDetailView(LoginRequiredMixin, DetailView):
             reverse=True,
         )
         context['all_emails'] = all_emails
+        context['transitions'] = list(
+            matching_attempt.transitions.select_related('triggered_by_user').order_by('created_at')
+        )
         return context
+
+class ToggleAutomationView(StaffRequiredMixin, View):
+    """Enable or disable automation on a MatchingAttempt.
+
+    POST /matching/<pk>/automation/
+    Body: action=enable  or  action=disable
+    """
+
+    def post(self, request, pk):
+        matching_attempt = get_object_or_404(MatchingAttempt, pk=pk)
+        action = request.POST.get("action")
+
+        if action == "enable":
+            matching_attempt.enable_automation()
+        elif action == "disable":
+            matching_attempt.disable_automation()
+
+        return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
+
+
+class CoachAutocompleteView(StaffRequiredMixin, View):
+    """JSON endpoint: GET /matching/coaches/search/?q=<term>
+    Returns up to 20 coaches whose name or email matches the query.
+    """
+
+    def get(self, request):
+        q = request.GET.get("q", "").strip()
+        qs = Coach.objects.select_related("user").order_by(
+            "user__last_name", "user__first_name"
+        )
+        if q:
+            qs = qs.filter(
+                Q(user__first_name__icontains=q)
+                | Q(user__last_name__icontains=q)
+                | Q(user__email__icontains=q)
+            )
+        results = [
+            {
+                "id": str(coach.pk),
+                "name": coach.full_name,
+                "email": coach.email,
+                "status": coach.get_status_display(),
+            }
+            for coach in qs[:20]
+        ]
+        return JsonResponse({"results": results})
+
+
+class RequestToCoachCreateView(StaffRequiredMixin, View):
+    """Create a new RequestToCoach for a given MatchingAttempt.
+
+    GET  /matching/<pk>/add-coach/   → render form
+    POST /matching/<pk>/add-coach/   → validate & create, redirect to detail
+    """
+
+    def _next_priority(self, matching_attempt):
+        agg = matching_attempt.coach_requests.aggregate(max_p=Max("priority"))
+        current_max = agg["max_p"]
+        return (current_max + 10) if current_max is not None else 10
+
+    def get(self, request, pk):
+        matching_attempt = get_object_or_404(MatchingAttempt, pk=pk)
+        return render(request, "matching/request_to_coach_form.html", {
+            "matching_attempt": matching_attempt,
+            "next_priority": self._next_priority(matching_attempt),
+        })
+
+    def post(self, request, pk):
+        matching_attempt = get_object_or_404(MatchingAttempt, pk=pk)
+        coach_id = request.POST.get("coach_id", "").strip()
+        max_requests = request.POST.get("max_number_of_requests", "3").strip()
+
+        errors = {}
+
+        coach = None
+        if not coach_id:
+            errors["coach"] = "Bitte einen Coach auswählen."
+        else:
+            try:
+                coach = Coach.objects.get(pk=coach_id)
+            except (Coach.DoesNotExist, ValueError):
+                errors["coach"] = "Ungültiger Coach."
+
+        try:
+            max_requests = int(max_requests)
+            if max_requests < 1:
+                raise ValueError
+        except (ValueError, TypeError):
+            errors["max_number_of_requests"] = "Muss eine positive Zahl sein."
+
+        if errors:
+            return render(request, "matching/request_to_coach_form.html", {
+                "matching_attempt": matching_attempt,
+                "next_priority": self._next_priority(matching_attempt),
+                "errors": errors,
+                "posted_coach_name": request.POST.get("coach_name", ""),
+                "posted_coach_id": coach_id,
+                "posted_max_requests": request.POST.get("max_number_of_requests", "3"),
+            })
+
+        priority = self._next_priority(matching_attempt)
+        RequestToCoach.objects.create(
+            matching_attempt=matching_attempt,
+            coach=coach,
+            priority=priority,
+            max_number_of_requests=max_requests,
+        )
+        return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
+
 
 class MatchingAttemptListView(LoginRequiredMixin, ListView):
     model = MatchingAttempt
@@ -63,6 +178,9 @@ class RequestToCoachDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['email_logs'] = self.object.email_logs.order_by('-sent_at').select_related('request_to_coach__coach')
+        context['transitions'] = list(
+            self.object.transitions.select_related('triggered_by_user').order_by('created_at')
+        )
         return context
 
 

@@ -1,7 +1,7 @@
-```python
 from django.core.management.base import BaseCommand
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.utils import timezone
 
 from matching.models import RequestToCoach, MatchingAttempt
 from matching.notifications import send_first_coach_request_email
@@ -14,7 +14,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        self.stdout.write("Starting coach request sender")
+        self.stdout.write(f"Starting coach request sender at {timezone.now()}")
 
         sent = 0
         skipped = 0

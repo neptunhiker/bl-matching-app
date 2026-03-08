@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Coach hinzufügen – {{ matching_attempt.participant }}{% endblock %}
+
+{% block body %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+
+  {# ── Back link ─────────────────────────────────────────────────── #}
+  <a href="{% url 'matching_attempt_detail' matching_attempt.pk %}"
+     class="inline-flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-800 transition-colors">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+    Zurück zum Matching für {{ matching_attempt.participant }}
+  </a>
+
+  {# ── Form card ─────────────────────────────────────────────────── #}
+  <div class="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-200 overflow-hidden">
+    <div class="h-2 bg-bl-gradient"></div>
+
+    <div class="p-6 sm:p-8">
+      <p class="text-xs font-jakarta font-semibold uppercase tracking-widest text-primary-500 mb-1">Neuer Eintrag</p>
+      <h1 class="text-2xl font-bold text-tertiary-700 mb-6">Coach hinzufügen</h1>
+
+      <form method="post" action="{% url 'request_to_coach_create' matching_attempt.pk %}" novalidate>
+        {% csrf_token %}
+
+        {# ── Coach search ──────────────────────────────────────────── #}
+        <div class="mb-6">
+          <label class="block text-sm font-semibold text-neutral-700 mb-1" for="coach-search">
+            Coach <span class="text-red-500">*</span>
+          </label>
+
+          {# Hidden field submitted with the form #}
+          <input type="hidden" name="coach_id" id="coach-id-input"
+                 value="{{ posted_coach_id|default:'' }}">
+          <input type="hidden" name="coach_name" id="coach-name-input"
+                 value="{{ posted_coach_name|default:'' }}">
+
+          <div class="relative" id="coach-autocomplete-wrapper">
+            <input
+              type="text"
+              id="coach-search"
+              autocomplete="off"
+              placeholder="Name oder E-Mail eingeben …"
+              value="{{ posted_coach_name|default:'' }}"
+              class="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm
+                     focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent
+                     {% if errors.coach %}border-red-400{% endif %}">
+
+            {# Dropdown list #}
+            <ul id="coach-dropdown"
+                class="hidden absolute z-20 w-full mt-1 bg-white border border-neutral-200 rounded-xl
+                       shadow-lg max-h-64 overflow-y-auto text-sm divide-y divide-neutral-100">
+            </ul>
+          </div>
+
+          {% if errors.coach %}
+            <p class="mt-1.5 text-xs text-red-500">{{ errors.coach }}</p>
+          {% endif %}
+        </div>
+
+        {# ── Max requests ──────────────────────────────────────────── #}
+        <div class="mb-8">
+          <label class="block text-sm font-semibold text-neutral-700 mb-1" for="max-requests">
+            Max. Anzahl Anfragen
+          </label>
+          <input
+            type="number"
+            id="max-requests"
+            name="max_number_of_requests"
+            min="1"
+            value="{{ posted_max_requests|default:'3' }}"
+            class="w-32 rounded-xl border border-neutral-300 px-4 py-2.5 text-sm
+                   focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent
+                   {% if errors.max_number_of_requests %}border-red-400{% endif %}">
+          <p class="mt-1 text-xs text-neutral-400">
+            Priorität wird automatisch zugewiesen (nächste: {{ next_priority }}).
+          </p>
+          {% if errors.max_number_of_requests %}
+            <p class="mt-1.5 text-xs text-red-500">{{ errors.max_number_of_requests }}</p>
+          {% endif %}
+        </div>
+
+        {# ── Actions ───────────────────────────────────────────────── #}
+        <div class="flex items-center gap-3">
+          <button type="submit"
+                  class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
+                         bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm">
+            Anfrage erstellen
+          </button>
+          <a href="{% url 'matching_attempt_detail' matching_attempt.pk %}"
+             class="text-sm text-neutral-500 hover:text-neutral-700 transition-colors">
+            Abbrechen
+          </a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const searchInput  = document.getElementById('coach-search');
+  const dropdown     = document.getElementById('coach-dropdown');
+  const coachIdInput = document.getElementById('coach-id-input');
+  const coachNameInput = document.getElementById('coach-name-input');
+  const autocompleteUrl = "{% url 'coach_autocomplete' %}";
+
+  let debounceTimer = null;
+  let selectedId = coachIdInput.value || null;
+
+  function showDropdown(results) {
+    dropdown.innerHTML = '';
+    if (!results.length) {
+      const li = document.createElement('li');
+      li.className = 'px-4 py-3 text-neutral-400 italic';
+      li.textContent = 'Keine Ergebnisse';
+      dropdown.appendChild(li);
+    } else {
+      results.forEach(function (coach) {
+        const li = document.createElement('li');
+        li.className = 'px-4 py-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-neutral-50 transition-colors';
+        li.innerHTML =
+          '<span class="font-semibold text-neutral-800">' + escapeHtml(coach.name) + '</span>' +
+          '<span class="text-xs text-neutral-400 truncate">' + escapeHtml(coach.email) + ' &middot; ' + escapeHtml(coach.status) + '</span>';
+        li.addEventListener('mousedown', function (e) {
+          e.preventDefault(); // prevent blur before click registers
+          selectCoach(coach);
+        });
+        dropdown.appendChild(li);
+      });
+    }
+    dropdown.classList.remove('hidden');
+  }
+
+  function hideDropdown() {
+    dropdown.classList.add('hidden');
+  }
+
+  function selectCoach(coach) {
+    selectedId = coach.id;
+    coachIdInput.value = coach.id;
+    coachNameInput.value = coach.name;
+    searchInput.value = coach.name;
+    hideDropdown();
+  }
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  searchInput.addEventListener('input', function () {
+    const q = searchInput.value.trim();
+
+    // Clear selection if user edits text
+    selectedId = null;
+    coachIdInput.value = '';
+    coachNameInput.value = '';
+
+    clearTimeout(debounceTimer);
+    if (!q) { hideDropdown(); return; }
+
+    debounceTimer = setTimeout(function () {
+      fetch(autocompleteUrl + '?q=' + encodeURIComponent(q), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) { showDropdown(data.results); })
+        .catch(function () { hideDropdown(); });
+    }, 200);
+  });
+
+  searchInput.addEventListener('focus', function () {
+    if (searchInput.value.trim() && !selectedId) {
+      searchInput.dispatchEvent(new Event('input'));
+    }
+  });
+
+  searchInput.addEventListener('blur', function () {
+    // Small delay so mousedown on a list item fires first
+    setTimeout(hideDropdown, 150);
+  });
+})();
+</script>
+
+{% endblock %}

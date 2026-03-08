@@ -217,6 +217,19 @@ class MatchingAttempt(models.Model):
 
         return locked
 
+    def handle_expired_requests(self, triggered_by="system"):
+        now = timezone.now()
+
+        expired_requests = self.coach_requests.filter(
+            status=RequestToCoach.Status.AWAITING_REPLY,
+            deadline_at__lt=now,
+        )
+
+        for request in expired_requests:
+            request.transition_to(new_status=RequestToCoach.Status.NO_RESPONSE_UNTIL_DEADLINE, triggered_by=triggered_by)
+
+
+            
     # ------------------------------------------------------------------
     # Automation Control Methods
     # ------------------------------------------------------------------
@@ -328,7 +341,8 @@ class MatchingAttemptTransition(models.Model):
 
     def __str__(self):
         return f"{self.from_status} → {self.to_status} ({self.triggered_by})"
-
+        
+        
 class RequestToCoach(models.Model):
 
     class Status(models.TextChoices):

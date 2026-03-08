@@ -98,6 +98,8 @@ def send_first_coach_request_email(rtc: RequestToCoach, email_trigger: str = "au
     rtc.save()
     
     rtc = rtc.transition_to(RequestToCoach.Status.AWAITING_REPLY)
+    if not rtc.matching_attempt.is_active:
+        ma = rtc.matching_attempt.transition_to(MatchingAttempt.Status.MATCHING_ACTIVE)
     
     return rtc
     
