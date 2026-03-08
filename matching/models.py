@@ -168,7 +168,7 @@ class RequestToCoach(models.Model):
     # ------------------------------------------------------------------
 
     @transaction.atomic
-    def transition_to(self, new_status, triggered_by="system", note=None) -> "RequestToCoach":
+    def transition_to(self, new_status, triggered_by="system", note="") -> "RequestToCoach":
         """
         Perform a validated state transition and log it.
         """
