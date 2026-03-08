@@ -213,7 +213,7 @@ class RequestToCoach(models.Model):
     # ------------------------------------------------------------------
     
     
-    def accept(self, triggered_by="coach"):
+    def accept(self, triggered_by="coach") -> "RequestToCoach":
 
         if self.status != self.Status.AWAITING_REPLY:
             raise ValidationError("Cannot accept request in this state")
@@ -235,7 +235,9 @@ class RequestToCoach(models.Model):
             triggered_by=triggered_by,
         )
         
-    def reject(self, triggered_by: str = "coach"):
+        return updated_rtc
+        
+    def reject(self, triggered_by: str = "coach") -> "RequestToCoach":
 
         if self.status != self.Status.AWAITING_REPLY:
             raise ValidationError("Cannot reject request in this state")
@@ -256,6 +258,8 @@ class RequestToCoach(models.Model):
             event_type=RequestToCoachEvent.EventType.REJECTED,
             triggered_by=triggered_by,
         )
+
+        return updated_rtc
 
     # ------------------------------------------------------------------
     # Django Metadata
