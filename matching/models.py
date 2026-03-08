@@ -1,48 +1,333 @@
+from typing import List
 import uuid
+
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.db.models import Q
 from django.utils import timezone
 
 
 from accounts.models import User
+from .locks import _get_locked_matching_attempt
 from profiles.models import Participant, Coach
 
 
-
-
-
 class MatchingAttempt(models.Model):
-    
+
     class Status(models.TextChoices):
-        PENDING = 'in_prep', 'In Vorbereitung'
-        AWAITING_PARTICIPANT_REPLY = 'awaiting_participant_reply', 'Warten auf TN-Antwort'
-        AWAITING_COACH_REPLY = 'awaiting_coach_reply', 'Warten auf Coach-Antwort'
-        MATCHED = 'matched', 'Matched'
-        CANCELLED = 'cancelled', 'Matching abgebrochen'
+        DRAFT = "draft", "In Vorbereitung"
+        READY_FOR_MATCHING = "ready_for_matching", "Bereit für Matching"
+        MATCHING_ACTIVE = "matching_active", "Matching läuft"
+        AWAITING_CHEMISTRY_CONFIRMATION = "awaiting_chemistry_confirmation", "Kennenlerngespräch läuft"
+        MATCH_CONFIRMED = "match_confirmed", "Match bestätigt"
+        FAILED = "failed", "Kein Coach gefunden"
+        CANCELLED = "cancelled", "Matching abgebrochen"
+
+    ACTIVE_MATCHING_ATTEMPT_STATUSES = frozenset({
+        Status.DRAFT,
+        Status.READY_FOR_MATCHING,
+        Status.MATCHING_ACTIVE,
+        Status.AWAITING_CHEMISTRY_CONFIRMATION,
+    })
     
-    class ParticipantReply(models.TextChoices):
-        ACCEPTED = 'accepted', 'Akzeptiert'
-        REJECTED = 'rejected', 'Abgelehnt'
-        PENDING = 'pending', 'Ausstehend'
-        
+    # ------------------------------------------------------------------
+    # State Machine
+    # ------------------------------------------------------------------
+
+    ALLOWED_TRANSITIONS = {
+
+        Status.DRAFT: frozenset({
+            Status.READY_FOR_MATCHING,
+            Status.CANCELLED,
+        }),
+
+        Status.READY_FOR_MATCHING: frozenset({
+            Status.MATCHING_ACTIVE,
+            Status.CANCELLED,
+        }),
+
+        Status.MATCHING_ACTIVE: frozenset({
+            Status.AWAITING_CHEMISTRY_CONFIRMATION,
+            Status.FAILED,
+            Status.CANCELLED,
+        }),
+
+        Status.AWAITING_CHEMISTRY_CONFIRMATION: frozenset({
+            Status.MATCH_CONFIRMED,
+            Status.MATCHING_ACTIVE,  # coach declined after chemistry
+            Status.CANCELLED,
+        }),
+
+        Status.MATCH_CONFIRMED: frozenset(),
+
+        Status.FAILED: frozenset(),
+
+        Status.CANCELLED: frozenset(),
+    }
+
+    # ------------------------------------------------------------------
+    # Core Fields
+    # ------------------------------------------------------------------
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    participant = models.ForeignKey(Participant, on_delete=models.CASCADE, related_name='matching_attempts')
+
+    participant = models.ForeignKey(
+        Participant,
+        on_delete=models.CASCADE,
+        related_name="matching_attempts",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='created_matching_attempts')
-    status = models.CharField(max_length=30, choices=Status.choices, default=Status.PENDING)
-    matched_coach = models.ForeignKey(Coach, null=True, blank=True, on_delete=models.SET_NULL, related_name='matched_attempts')
-    participant_status = models.CharField(max_length=10, choices=ParticipantReply.choices, default=ParticipantReply.PENDING)
+
+    created_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_matching_attempts",
+    )
+
+    status = models.CharField(
+        max_length=50,
+        choices=Status.choices,
+        default=Status.DRAFT,
+        db_index=True,
+    )
+
+    # ------------------------------------------------------------------
+    # Automation Control
+    # ------------------------------------------------------------------
+
+    automation_enabled = models.BooleanField(
+        default=False,
+        help_text="Wenn aktiviert, werden automatisch Coach-Anfragen verschickt und Erinnerungen gesendet. Kann jederzeit ein- und ausgeschaltet werden.",
+    )
+
+    automation_enabled_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
     
+    @property
+    def automation_is_allowed(self):
+        return (
+            self.automation_enabled and
+            self.status in {
+                self.Status.READY_FOR_MATCHING,
+                self.Status.MATCHING_ACTIVE,
+            }
+        )
+
+    # ------------------------------------------------------------------
+    # Match Outcome
+    # ------------------------------------------------------------------
+
+    matched_coach = models.ForeignKey(
+        "profiles.Coach",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="successful_matches",
+    )
+
+    chemistry_confirmation_received_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    cancelled_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    # ------------------------------------------------------------------
+    # Django Metadata
+    # ------------------------------------------------------------------
+
     class Meta:
-        ordering = ['-created_at']
-        verbose_name = 'Matching'
-        verbose_name_plural = 'Matchings'
-        
-    def __str__(self):
-        return f"Matching für {self.participant} - Status: {self.get_status_display()}"
+        ordering = ["-created_at"]
+
+        verbose_name = "Matching"
+        verbose_name_plural = "Matchings"
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["participant"],
+                condition=Q(
+                    status__in=[
+                        "draft",
+                        "ready_for_matching",
+                        "matching_active",
+                        "awaiting_chemistry_confirmation",
+                    ]
+                ),
+                name="unique_active_matching_attempt_per_participant",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["participant", "created_at"]),
+        ]
+
+    # ------------------------------------------------------------------
+    # State Machine Helpers
+    # ------------------------------------------------------------------
+
+    @property
+    def allowed_transitions(self):
+        return self.ALLOWED_TRANSITIONS.get(self.status, frozenset())
     
+    @property
+    def is_active(self):
+        
+        return self.status in self.ACTIVE_MATCHING_ATTEMPT_STATUSES
 
+    def can_transition_to(self, new_status):
+        return new_status in self.allowed_transitions
 
+    def _validate_transition(self, new_status):
+        if not self.can_transition_to(new_status):
+            raise ValidationError(
+                f"Transition {self.status} → {new_status} not allowed."
+            )
+
+    @transaction.atomic
+    def transition_to(self, new_status, triggered_by="system", triggered_by_user: User = None) -> "MatchingAttempt":
+        
+        if triggered_by not in ["system", "staff", "coach"]:
+            raise ValueError("triggered_by must be one of: 'system', 'staff', 'coach'")
+        
+        if triggered_by_user and triggered_by not in  ["staff", "coach"]:
+            raise ValueError("triggered_by_user can only be set if triggered_by is 'staff' or 'coach'")
+
+        locked = _get_locked_matching_attempt(self)
+
+        locked._validate_transition(new_status)
+
+        old_status = locked.status
+        locked.status = new_status
+        locked.save(update_fields=["status"])
+
+        MatchingAttemptTransition.objects.create(
+            matching_attempt=locked,
+            from_status=old_status,
+            to_status=new_status,
+            triggered_by=triggered_by,
+            triggered_by_user=triggered_by_user,
+        )
+
+        return locked
+
+    # ------------------------------------------------------------------
+    # Automation Control Methods
+    # ------------------------------------------------------------------
+
+    def enable_automation(self):
+
+        if self.automation_enabled:
+            return
+
+        self.automation_enabled = True
+        self.automation_enabled_at = timezone.now()
+
+        self.save(update_fields=["automation_enabled", "automation_enabled_at"])
+
+    def disable_automation(self):
+
+        if not self.automation_enabled:
+            return
+
+        self.automation_enabled = False
+        self.save(update_fields=["automation_enabled"])
+
+    # ------------------------------------------------------------------
+    # Queue Helpers (Coach Requests)
+    # ------------------------------------------------------------------
+
+    def get_active_requests(self) -> List["RequestToCoach"]:
+        """
+        Return the currently active coach requests.
+        Only one should ever exist.
+        """
+        
+        return list(self.coach_requests.filter(
+            status=RequestToCoach.Status.AWAITING_REPLY
+        ).all())
+
+    def get_next_request(self):
+        """
+        Return the next coach request that has not yet been sent.
+        """
+        return (
+            self.coach_requests
+            .filter(status=RequestToCoach.Status.IN_PREPARATION)
+            .order_by("priority")
+            .first()
+        )
+
+    def has_remaining_requests(self):
+        return self.coach_requests.filter(
+            status=RequestToCoach.Status.IN_PREPARATION
+        ).exists()
+
+    # ------------------------------------------------------------------
+    # Representation
+    # ------------------------------------------------------------------
+
+    def __str__(self):
+        return (
+            f"Matching für {self.participant} "
+            f"- Status: {self.get_status_display()}"
+        )
+    
+    
+class MatchingAttemptTransition(models.Model):
+
+    matching_attempt = models.ForeignKey(
+        MatchingAttempt,
+        on_delete=models.CASCADE,
+        related_name="transitions"
+    )
+
+    from_status = models.CharField(max_length=50, choices=MatchingAttempt.Status.choices)
+    to_status = models.CharField(max_length=50, choices=MatchingAttempt.Status.choices)
+
+    triggered_by = models.CharField(
+        max_length=20,
+        choices=[
+            ("system", "System"),
+            ("staff", "BL Mitarbeiter:in"),
+            ("coach", "Coach"),
+        ],
+    )
+    
+    triggered_by_user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        
+        indexes = [models.Index(fields=["matching_attempt", "created_at"])]
+        
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(triggered_by="system", triggered_by_user__isnull=True) |
+                    Q(triggered_by__in=["staff", "coach"], triggered_by_user__isnull=False)
+                ),
+                name="transition_actor_consistency",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.from_status} → {self.to_status} ({self.triggered_by})"
 
 class RequestToCoach(models.Model):
 
@@ -100,6 +385,10 @@ class RequestToCoach(models.Model):
         "MatchingAttempt",
         on_delete=models.CASCADE,
         related_name="coach_requests",
+    )
+    
+    priority = models.PositiveIntegerField(
+        help_text="Kleiner Wert = höhere Priorität. Bestimmt die Reihenfolge, in der Coaches kontaktiert werden.",
     )
 
     coach = models.ForeignKey(
@@ -168,13 +457,19 @@ class RequestToCoach(models.Model):
     # ------------------------------------------------------------------
 
     @transaction.atomic
-    def transition_to(self, new_status, triggered_by="system", note="") -> "RequestToCoach":
+    def transition_to(self, new_status, triggered_by="system", triggered_by_user: User = None) -> "RequestToCoach":
         """
         Perform a validated state transition and log it.
         """
-        from .notifications import _get_locked_request
+        from .locks import _get_locked_request_to_coach
+        
+        if triggered_by not in ["system", "staff", "coach"]:
+            raise ValueError("triggered_by must be one of: 'system', 'staff', 'coach'")
+        
+        if triggered_by_user and triggered_by not in  ["staff", "coach"]:
+            raise ValueError("triggered_by_user can only be set if triggered_by is 'staff' or 'coach'")
 
-        locked = _get_locked_request(self)
+        locked = _get_locked_request_to_coach(self)
 
         locked._validate_transition(new_status)
 
@@ -187,7 +482,7 @@ class RequestToCoach(models.Model):
             from_status=old_status,
             to_status=new_status,
             triggered_by=triggered_by,
-            note=note,
+            triggered_by_user=triggered_by_user,
         )
 
         return locked
@@ -266,15 +561,28 @@ class RequestToCoach(models.Model):
     # ------------------------------------------------------------------
 
     class Meta:
-        ordering = ["-created_at"]
-        verbose_name = "Anfrage an Coach"
-        verbose_name_plural = "Anfragen an Coaches"
-
+        ordering = ["priority"]
+        verbose_name = "Matching-Anfrage an Coach"
+        verbose_name_plural = "Matching-Anfragen an Coaches"
+        
         constraints = [
             models.UniqueConstraint(
                 fields=["matching_attempt", "coach"],
-                name="unique_coach_request_per_matching_attempt",
+                name="unique_coach_per_matching_attempt",
+            ),
+            models.UniqueConstraint(
+                fields=["matching_attempt", "priority"],
+                name="unique_priority_for_requests_to_coaches",
+            ),
+            models.UniqueConstraint(
+                fields=["matching_attempt"],
+                condition=Q(status="awaiting_reply"),
+                name="one_request_awaiting_reply_per_attempt",
             )
+        ]
+        
+        indexes = [
+            models.Index(fields=["matching_attempt", "status"])
         ]
 
     # ------------------------------------------------------------------
@@ -307,6 +615,13 @@ class RequestToCoachTransition(models.Model):
             ("staff", "BL Mitarbeiter:in"),
             ("coach", "Coach"),
         ],
+    )
+    
+    triggered_by_user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -391,11 +706,12 @@ class CoachActionToken(models.Model):
 class RequestToCoachEvent(models.Model):
 
     class EventType(models.TextChoices):
-        REQUEST_SENT = "request_sent", "Request sent"
-        REMINDER_SENT = "reminder_sent", "Reminder sent"
-        ACCEPTED = "accepted", "Accepted"
-        REJECTED = "rejected", "Rejected"
-        CANCELLED = "cancelled", "Cancelled"
+        REQUEST_SENT = "request_sent", "Matching-Anfrage gesendet"
+        REMINDER_SENT = "reminder_sent", "Reminder gesendet"
+        ACCEPTED = "accepted", "Matching-Anfrage akzeptiert"
+        REJECTED = "rejected", "Matching-Anfrage abgelehnt"
+        TIMED_OUT = "timed_out", "Deadline überschritten"
+        CANCELLED = "cancelled", "Abgebrochen"
 
     request = models.ForeignKey(
         "RequestToCoach",

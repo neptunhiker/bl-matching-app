@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.utils import timezone
 
-from matching.models import RequestToCoach, RequestToCoachTransition, RequestToCoachEvent, CoachActionToken
+from matching.models import MatchingAttempt, MatchingAttemptTransition, RequestToCoach, RequestToCoachTransition, RequestToCoachEvent, CoachActionToken
 
 
 @pytest.mark.django_db
@@ -142,7 +142,29 @@ def test_cannot_send_reminder_after_deadline(rtc):
     assert rtc.can_send_reminder() is False
     
     
+@pytest.mark.django_db
+def test_get_active_request(matching_attempt, coach, coach_2):
+    rtc_1 = RequestToCoach.objects.create(
+        matching_attempt=matching_attempt,
+        coach=coach,
+        status=RequestToCoach.Status.AWAITING_REPLY,
+        priority=1,
+    )
+    
+    rtc_2 = RequestToCoach.objects.create(
+        matching_attempt=matching_attempt,
+        coach=coach_2,
+        status=RequestToCoach.Status.ACCEPTED_ON_TIME,
+        priority=30,
+    )
 
+    assert matching_attempt.get_active_requests() == [rtc_1]
+    
+    def test_get_next_request_returns_lowest_priority(matching_attempt, rtc, rtc_high_priority):
+
+        next_req = matching_attempt.get_next_request()
+
+        assert next_req == rtc_high_priority
 
 
 @pytest.mark.django_db
@@ -151,12 +173,14 @@ def test_unique_coach_request_per_matching_attempt(matching_attempt, coach):
     RequestToCoach.objects.create(
         matching_attempt=matching_attempt,
         coach=coach,
+        priority=1,
     )
 
     with pytest.raises(IntegrityError):
         RequestToCoach.objects.create(
             matching_attempt=matching_attempt,
             coach=coach,
+            priority=2,
         )
         
 @pytest.mark.django_db
@@ -215,3 +239,117 @@ def test_token_belongs_to_request(rtc):
     )
 
     assert token.request_to_coach == rtc
+    
+
+class TestMatchingAttempt:
+    def test_draft_to_ready_for_matching_allowed(self, matching_attempt):
+
+        matching_attempt = matching_attempt.transition_to(
+            MatchingAttempt.Status.READY_FOR_MATCHING
+        )
+
+        assert matching_attempt.status == MatchingAttempt.Status.READY_FOR_MATCHING
+        
+    def test_draft_to_match_confirmed_not_allowed(self, matching_attempt):
+        with pytest.raises(ValidationError):
+            matching_attempt.transition_to(MatchingAttempt.Status.MATCH_CONFIRMED)
+            
+    def test_no_transition_from_match_confirmed(self, matching_attempt):
+        matching_attempt.status = MatchingAttempt.Status.MATCH_CONFIRMED
+
+        with pytest.raises(ValidationError):
+            matching_attempt.transition_to(MatchingAttempt.Status.MATCHING_ACTIVE)
+            
+    def test_only_one_active_matching_attempt_per_participant(self, participant):
+        MatchingAttempt.objects.create(
+            participant=participant,
+            status=MatchingAttempt.Status.DRAFT
+        )
+
+        with pytest.raises(IntegrityError):
+            MatchingAttempt.objects.create(
+                participant=participant,
+                status=MatchingAttempt.Status.READY_FOR_MATCHING
+            )
+            
+    def test_new_attempt_allowed_after_failure(self, participant):
+        MatchingAttempt.objects.create(
+            participant=participant,
+            status=MatchingAttempt.Status.FAILED
+        )
+
+        MatchingAttempt.objects.create(
+            participant=participant,
+            status=MatchingAttempt.Status.DRAFT
+        )
+        
+    def test_is_active_property(self, matching_attempt):
+        matching_attempt.status = MatchingAttempt.Status.MATCHING_ACTIVE
+        matching_attempt.save()
+
+        assert matching_attempt.is_active is True
+        
+    def test_string_representation(self, matching_attempt):
+
+        assert str(matching_attempt).startswith("Matching für")
+            
+class TestMatchingAttemptTransition:
+    
+    def test_transition_creates_transition_record(self, matching_attempt):
+        matching_attempt.transition_to(MatchingAttempt.Status.READY_FOR_MATCHING)
+
+        transition = MatchingAttemptTransition.objects.get()
+
+        assert transition.from_status == MatchingAttempt.Status.DRAFT
+        assert transition.to_status == MatchingAttempt.Status.READY_FOR_MATCHING
+        
+    def test_invalid_triggered_by_raises(self, matching_attempt):
+
+        with pytest.raises(ValueError):
+            matching_attempt.transition_to(
+                MatchingAttempt.Status.READY_FOR_MATCHING,
+                triggered_by="alien"
+            )
+            
+    def test_triggered_by_user_requires_staff_or_coach(self, matching_attempt, coach_user):
+
+        with pytest.raises(ValueError):
+            matching_attempt.transition_to(
+                MatchingAttempt.Status.READY_FOR_MATCHING,
+                triggered_by="system",
+                triggered_by_user=coach_user
+            )
+            
+    def test_transition_actor_constraint(self, matching_attempt, coach_user):
+        with pytest.raises(IntegrityError):
+            MatchingAttemptTransition.objects.create(
+                matching_attempt=matching_attempt,
+                from_status="draft",
+                to_status="ready_for_matching",
+                triggered_by="system",
+                triggered_by_user=coach_user,
+            )
+            
+class TestAutomationControl:
+    
+    def test_enable_automation_sets_timestamp(self, matching_attempt):
+
+        matching_attempt.enable_automation()
+
+        assert matching_attempt.automation_enabled is True
+        assert matching_attempt.automation_enabled_at is not None
+        
+    def test_disable_automation(self, matching_attempt):
+        matching_attempt.enable_automation()
+
+        matching_attempt.disable_automation()
+
+        assert matching_attempt.automation_enabled is False
+        
+    def test_automation_allowed_only_in_active_states(self, matching_attempt):
+        matching_attempt.status = MatchingAttempt.Status.MATCH_CONFIRMED
+        matching_attempt.save()
+
+        matching_attempt.enable_automation()
+
+        assert matching_attempt.automation_is_allowed is False

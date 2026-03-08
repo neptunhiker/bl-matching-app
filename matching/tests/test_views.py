@@ -75,6 +75,7 @@ def request_to_coach(db, matching_attempt, coach):
     return RequestToCoach.objects.create(
         matching_attempt=matching_attempt,
         coach=coach,
+        priority=10,
     )
 
 

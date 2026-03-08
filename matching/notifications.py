@@ -9,24 +9,16 @@ from django.db import transaction
 
 
 from emails.services import send_email
-from .models import RequestToCoach, RequestToCoachEvent
+from .locks import _get_locked_request_to_coach
+from .models import RequestToCoach, RequestToCoachEvent, MatchingAttempt
 from .tokens import generate_coach_action_tokens
 from .utils import add_business_hours
 
 logger = logging.getLogger(__name__)
 
-def _get_locked_request(rtc: RequestToCoach) -> RequestToCoach:
-        return (
-        RequestToCoach.objects
-        .select_for_update()
-        .select_related(
-            "coach",
-            "coach__user",
-            "matching_attempt",
-            "matching_attempt__participant",
-        )
-        .get(pk=rtc.pk)
-    )
+
+
+
 
 def _build_email_context(
     rtc: RequestToCoach,
@@ -76,7 +68,7 @@ def _send_request_email(
 def send_first_coach_request_email(rtc: RequestToCoach, email_trigger: str = "automated") -> RequestToCoach:
     """Send the first coach request email and update status accordingly."""
     
-    rtc = _get_locked_request(rtc)
+    rtc = _get_locked_request_to_coach(rtc)
     
     if rtc.first_sent_at:
         raise ValidationError(f"First request email has already been sent on {rtc.first_sent_at}. Please send a reminder email instead.")
@@ -113,7 +105,7 @@ def send_first_coach_request_email(rtc: RequestToCoach, email_trigger: str = "au
 def send_reminder_coach_request_email(rtc: RequestToCoach, email_trigger: str = "automated") -> RequestToCoach:
     """Send a reminder email to the coach and update status accordingly."""
     
-    rtc = _get_locked_request(rtc)
+    rtc = _get_locked_request_to_coach(rtc)
     
     if not rtc.can_send_reminder():
         raise ValidationError(f"Cannot send reminder email for RequestToCoach {rtc.id} in its current state. Status: {rtc.get_status_display()}, Deadline passed: {rtc.is_deadline_passed()}, Requests sent: {rtc.requests_sent}.")
