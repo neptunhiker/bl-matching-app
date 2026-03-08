@@ -1,65 +1,103 @@
 from django.core.management.base import BaseCommand
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.utils import timezone
 
-from emails.models import EmailLog
-from matching.models import RequestToCoach
+from matching.models import RequestToCoach, MatchingAttempt
 from matching.notifications import send_reminder_coach_request_email
 
-MAX_NUMBER_OF_REQUESTS = 3
 
 class Command(BaseCommand):
     help = "Send reminder email to coaches for pending matching requests"
 
+    MAX_PER_RUN = 5
+
     def handle(self, *args, **options):
-        pending = RequestToCoach.objects.filter(
-            status=RequestToCoach.Status.AWAITING_REPLY,
-            first_sent_at__isnull=False,
-            number_of_requests_sent__lt=MAX_NUMBER_OF_REQUESTS,
-        ).select_related('coach__user', 'matching_attempt__participant')
 
-        if not pending.exists():
-            return
+        self.stdout.write("Starting coach reminder sender")
 
-        for coach_request in pending:
-            now = timezone.now()
-            deadline = coach_request.deadline
-            if deadline is not None and now > deadline:
-                coach_request.status = RequestToCoach.Status.NO_RESPONSE_UNTIL_DEADLINE
-                coach_request.save(update_fields=['status'])
+        reminders_sent = 0
+        timed_out = 0
+        skipped = 0
+        failed = 0
+
+        pending = (
+            RequestToCoach.objects.filter(
+                status=RequestToCoach.Status.AWAITING_REPLY,
+                matching_attempt__automation_enabled=True,
+                matching_attempt__status__in=[
+                    MatchingAttempt.Status.READY_FOR_MATCHING,
+                    MatchingAttempt.Status.MATCHING_ACTIVE,
+                ],
+            )
+            .select_related("coach__user", "matching_attempt__participant")
+            .order_by("deadline_at", "id")
+        )[:self.MAX_PER_RUN]
+
+        for rtc in pending.iterator():
+            try:
+
+                # Handle timeout
+                if rtc.is_deadline_passed():
+
+                    rtc.transition_to(
+                        RequestToCoach.Status.NO_RESPONSE_UNTIL_DEADLINE
+                    )
+
+                    timed_out += 1
+
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"Request {rtc.id} timed out for coach {rtc.coach_id}"
+                        )
+                    )
+
+                    continue
+
+                # Skip if reminder should not be sent
+                if not rtc.can_send_reminder():
+                    skipped += 1
+                    continue
+
+                send_reminder_coach_request_email(rtc)
+
+                reminders_sent += 1
+
                 self.stdout.write(
-                    self.style.WARNING(
-                        f"RequestToCoach {coach_request.id} has passed the deadline without response. "
-                        f"Status updated to 'No Response Until Deadline'."
+                    self.style.SUCCESS(
+                        f"Reminder sent for request {rtc.id} "
+                        f"to coach {rtc.coach.user.email}"
                     )
                 )
-                continue
-            
-            time_since_last_reminder = now - coach_request.last_sent_at
-            # Only send a reminder if at least 2 minutes have passed since the last reminder
-            if time_since_last_reminder < timezone.timedelta(minutes=2):
-                self.stdout.write(
-                    f"Skipping RequestToCoach {coach_request.id} for Coach {coach_request.coach} "
-                    f"— last reminder sent {time_since_last_reminder.seconds} seconds ago."
-                )
-                continue
-                
-            # Otherwise, send a reminder email
-            log = send_reminder_coach_request_email(request_to_coach=coach_request)
 
-            if log.status == EmailLog.Status.FAILED:
+            except ValidationError as exc:
+                skipped += 1
+
+                self.stderr.write(
+                    self.style.WARNING(
+                        f"Skipped RequestToCoach {rtc.id}: {exc}"
+                    )
+                )
+
+            except IntegrityError as exc:
+                skipped += 1
+
+                self.stderr.write(
+                    self.style.WARNING(
+                        f"Race condition prevented reminder for {rtc.id}: {exc}"
+                    )
+                )
+
+            except Exception as exc:
+                failed += 1
+
                 self.stderr.write(
                     self.style.ERROR(
-                        f"Failed to send reminder email for RequestToCoach {coach_request.id}: {log.error_message}"
+                        f"Error processing RequestToCoach {rtc.id}: {exc}"
                     )
                 )
-                continue
 
-            coach_request.last_sent_at = timezone.now()
-            coach_request.number_of_requests_sent += 1
-            coach_request.save(update_fields=['last_sent_at', 'number_of_requests_sent'])
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"Sent reminder email to Coach {coach_request.coach} for RequestToCoach {coach_request.id} "
-                    f"— total reminders sent: {coach_request.number_of_requests_sent}"
-                )
-            )
+        self.stdout.write(
+            f"Finished: {reminders_sent} reminders sent, "
+            f"{timed_out} timed out, {skipped} skipped, {failed} failed"
+        )
