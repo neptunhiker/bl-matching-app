@@ -18,8 +18,6 @@ class MatchingAttempt(models.Model):
         IN_PREPARATION = "in_preparation", "In Vorbereitung"
         READY_FOR_MATCHING = "ready_for_matching", "Bereit für Matching"
         MATCHING_ONGOING= "matching_ongoing", "Matching läuft"
-        CHEMISTRY_PENDING = "chemistry_pending", "Kennenlerngespräch läuft"
-        CHEMISTRY_TIMEOUT = "chemistry_timeout", "Kennenlerngespräch nicht bestätigt"
         MATCHING_CONFIRMED = "matching_confirmed", "Matching bestätigt"
         FAILED = "failed", "Kein Coach gefunden"
         CANCELLED = "cancelled", "Matching abgebrochen"
@@ -28,7 +26,6 @@ class MatchingAttempt(models.Model):
         Status.IN_PREPARATION,
         Status.READY_FOR_MATCHING,
         Status.MATCHING_ONGOING,
-        Status.CHEMISTRY_PENDING,
     })
 
     ALLOWED_TRANSITIONS = {
@@ -44,20 +41,7 @@ class MatchingAttempt(models.Model):
         }),
 
         Status.MATCHING_ONGOING: frozenset({
-            Status.CHEMISTRY_PENDING,
             Status.FAILED,
-            Status.CANCELLED,
-        }),
-
-        Status.CHEMISTRY_PENDING: frozenset({
-            Status.MATCHING_CONFIRMED,
-            Status.MATCHING_ONGOING,
-            Status.CHEMISTRY_TIMEOUT,
-            Status.CANCELLED,
-        }),
-
-        Status.CHEMISTRY_TIMEOUT: frozenset({
-            Status.MATCHING_ONGOING,
             Status.CANCELLED,
         }),
 
@@ -145,11 +129,10 @@ class MatchingAttempt(models.Model):
                     status__in=[
                         "in_preparation",
                         "ready_for_matching",
-                        "matching_active",
-                        "chemistry_pending",
+                        "matching_ongoing",
                     ]
                 ),
-                name="unique_active_matching_attempt_per_participant",
+                name="unique_ongoing_matching_attempt_per_participant",
             )
         ]
 
