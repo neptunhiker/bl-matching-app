@@ -17,7 +17,7 @@ class MatchingAttempt(models.Model):
     class Status(models.TextChoices):
         IN_PREPARATION = "in_preparation", "In Vorbereitung"
         READY_FOR_MATCHING = "ready_for_matching", "Bereit für Matching"
-        MATCHING_ACTIVE = "matching_active", "Matching läuft"
+        MATCHING_ONGOING= "matching_ongoing", "Matching läuft"
         CHEMISTRY_PENDING = "chemistry_pending", "Kennenlerngespräch läuft"
         CHEMISTRY_TIMEOUT = "chemistry_timeout", "Kennenlerngespräch nicht bestätigt"
         MATCH_CONFIRMED = "match_confirmed", "Match bestätigt"
@@ -27,7 +27,7 @@ class MatchingAttempt(models.Model):
     ACTIVE_MATCHING_ATTEMPT_STATUSES = frozenset({
         Status.IN_PREPARATION,
         Status.READY_FOR_MATCHING,
-        Status.MATCHING_ACTIVE,
+        Status.MATCHING_ONGOING,
         Status.CHEMISTRY_PENDING,
     })
 
@@ -39,11 +39,11 @@ class MatchingAttempt(models.Model):
         }),
 
         Status.READY_FOR_MATCHING: frozenset({
-            Status.MATCHING_ACTIVE,
+            Status.MATCHING_ONGOING,
             Status.CANCELLED,
         }),
 
-        Status.MATCHING_ACTIVE: frozenset({
+        Status.MATCHING_ONGOING: frozenset({
             Status.CHEMISTRY_PENDING,
             Status.FAILED,
             Status.CANCELLED,
@@ -51,13 +51,13 @@ class MatchingAttempt(models.Model):
 
         Status.CHEMISTRY_PENDING: frozenset({
             Status.MATCH_CONFIRMED,
-            Status.MATCHING_ACTIVE,
+            Status.MATCHING_ONGOING,
             Status.CHEMISTRY_TIMEOUT,
             Status.CANCELLED,
         }),
 
         Status.CHEMISTRY_TIMEOUT: frozenset({
-            Status.MATCHING_ACTIVE,
+            Status.MATCHING_ONGOING,
             Status.CANCELLED,
         }),
 
@@ -109,7 +109,7 @@ class MatchingAttempt(models.Model):
     def automation_is_allowed(self):
         return self.status in {
             self.Status.READY_FOR_MATCHING,
-            self.Status.MATCHING_ACTIVE,
+            self.Status.MATCHING_ONGOING,
         }
 
     # match outcome
@@ -143,7 +143,7 @@ class MatchingAttempt(models.Model):
                 fields=["participant"],
                 condition=Q(
                     status__in=[
-                        "draft",
+                        "in_preparation",
                         "ready_for_matching",
                         "matching_active",
                         "chemistry_pending",

@@ -647,7 +647,7 @@ class TestMatchingAttempt:
         matching_attempt.status = MatchingAttempt.Status.MATCH_CONFIRMED
 
         with pytest.raises(ValidationError):
-            matching_attempt.transition_to(MatchingAttempt.Status.MATCHING_ACTIVE)
+            matching_attempt.transition_to(MatchingAttempt.Status.MATCHING_ONGOING)
 
     def test_only_one_active_matching_attempt_per_participant(self, participant):
         MatchingAttempt.objects.create(
@@ -673,7 +673,7 @@ class TestMatchingAttempt:
         )
 
     def test_is_active_property(self, matching_attempt):
-        matching_attempt.status = MatchingAttempt.Status.MATCHING_ACTIVE
+        matching_attempt.status = MatchingAttempt.Status.MATCHING_ONGOING
         matching_attempt.save()
 
         assert matching_attempt.is_active is True
@@ -717,7 +717,7 @@ class TestStartMatching:
         assert event.actor == staff_user
 
     def test_start_matching_raises_from_non_draft_status(self, matching_attempt, staff_user):
-        matching_attempt.status = MatchingAttempt.Status.MATCHING_ACTIVE
+        matching_attempt.status = MatchingAttempt.Status.MATCHING_ONGOING
         matching_attempt.save()
 
         with pytest.raises(ValidationError):
@@ -857,7 +857,7 @@ class TestMatchingAttemptTransitionClean:
 class TestAutomationControl:
 
     def test_enable_automation_sets_timestamp(self, matching_attempt):
-        matching_attempt.status = MatchingAttempt.Status.MATCHING_ACTIVE
+        matching_attempt.status = MatchingAttempt.Status.MATCHING_ONGOING
         matching_attempt.save()
 
         matching_attempt.enable_automation()
@@ -866,7 +866,7 @@ class TestAutomationControl:
         assert matching_attempt.automation_enabled_at is not None
 
     def test_disable_automation(self, matching_attempt):
-        matching_attempt.status = MatchingAttempt.Status.MATCHING_ACTIVE
+        matching_attempt.status = MatchingAttempt.Status.MATCHING_ONGOING
         matching_attempt.save()
         matching_attempt.enable_automation()
 
@@ -882,7 +882,7 @@ class TestAutomationControl:
             matching_attempt.enable_automation()
 
     def test_enable_automation_is_noop_if_already_enabled(self, matching_attempt):
-        matching_attempt.status = MatchingAttempt.Status.MATCHING_ACTIVE
+        matching_attempt.status = MatchingAttempt.Status.MATCHING_ONGOING
         matching_attempt.automation_enabled = True
         matching_attempt.save()
 
@@ -901,7 +901,7 @@ class TestAutomationControl:
             matching_attempt.enable_automation()
 
     def test_automation_is_allowed_true_when_status_allows(self, matching_attempt):
-        for status in (MatchingAttempt.Status.READY_FOR_MATCHING, MatchingAttempt.Status.MATCHING_ACTIVE):
+        for status in (MatchingAttempt.Status.READY_FOR_MATCHING, MatchingAttempt.Status.MATCHING_ONGOING):
             matching_attempt.status = status
             assert matching_attempt.automation_is_allowed is True
 
@@ -923,7 +923,7 @@ class TestAutomationControl:
 class TestMatchingAttemptEvent:
 
     def test_disable_automation_creates_event(self, matching_attempt):
-        matching_attempt.status = MatchingAttempt.Status.MATCHING_ACTIVE
+        matching_attempt.status = MatchingAttempt.Status.MATCHING_ONGOING
         matching_attempt.save()
         matching_attempt.enable_automation()
 

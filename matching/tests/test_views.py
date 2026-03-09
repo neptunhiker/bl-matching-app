@@ -181,7 +181,7 @@ class TestCoachRespondView:
     def matching_attempt(self, participant):
         return MatchingAttempt.objects.create(
             participant=participant,
-            status=MatchingAttempt.Status.MATCHING_ACTIVE,
+            status=MatchingAttempt.Status.MATCHING_ONGOING,
         )
 
     def _make_token(self, request_to_coach, action, used_at=None):
