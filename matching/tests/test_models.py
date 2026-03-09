@@ -560,3 +560,43 @@ class TestAutomationControl:
         ):
             matching_attempt.status = status
             assert matching_attempt.automation_is_allowed is False
+
+
+# ── TestMatchingAttemptEvent ──────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestMatchingAttemptEvent:
+
+    def test_disable_automation_creates_event(self, matching_attempt):
+        matching_attempt.status = MatchingAttempt.Status.MATCHING_ACTIVE
+        matching_attempt.save()
+        matching_attempt.enable_automation()
+
+        matching_attempt.disable_automation()
+
+        assert MatchingAttemptEvent.objects.filter(
+            matching_attempt=matching_attempt,
+            event_type=MatchingAttemptEvent.EventType.AUTOMATION_DISABLED,
+        ).exists()
+
+    def test_events_cascade_delete_with_matching_attempt(self, matching_attempt):
+        MatchingAttemptEvent.objects.create(
+            matching_attempt=matching_attempt,
+            event_type=MatchingAttemptEvent.EventType.AUTOMATION_RUN,
+        )
+
+        matching_attempt.delete()
+
+        assert MatchingAttemptEvent.objects.count() == 0
+
+    def test_actor_set_null_on_user_delete(self, matching_attempt, coach_user):
+        event = MatchingAttemptEvent.objects.create(
+            matching_attempt=matching_attempt,
+            event_type=MatchingAttemptEvent.EventType.MANUAL_OVERRIDE,
+            actor=coach_user,
+        )
+
+        coach_user.delete()
+
+        event.refresh_from_db()
+        assert event.actor is None
