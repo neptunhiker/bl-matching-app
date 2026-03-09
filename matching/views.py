@@ -307,6 +307,7 @@ class CoachRespondView(View):
                     request=rtc,
                     event_type=RequestToCoachEvent.EventType.ACCEPTED,
                     triggered_by='coach',
+                    triggered_by_user=coach.user,
                 )
         else:
             on_time = False

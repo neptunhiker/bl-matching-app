@@ -42,6 +42,7 @@ def _send_request_email(
     template_name: str,
     event_type: str,
     email_trigger: str = EmailLog.EmailTrigger.AUTOMATED,
+    triggered_by_user=None,
 ):
     accept_url, decline_url = generate_coach_action_tokens(rtc)
 
@@ -59,10 +60,16 @@ def _send_request_email(
         )   
     )
     
+    event_triggered_by = (
+        RequestToCoachEvent.TriggeredBy.STAFF
+        if email_trigger == EmailLog.EmailTrigger.MANUAL
+        else RequestToCoachEvent.TriggeredBy.SYSTEM
+    )
     RequestToCoachEvent.objects.create(
         request=rtc,
         event_type=event_type,
-        triggered_by=email_trigger,
+        triggered_by=event_triggered_by,
+        triggered_by_user=triggered_by_user if email_trigger == EmailLog.EmailTrigger.MANUAL else None,
     )
     
 @transaction.atomic
