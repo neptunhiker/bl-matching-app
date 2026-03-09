@@ -493,6 +493,53 @@ class TestRequestToCoachSendActions:
         with pytest.raises(ValidationError):
             rtc.send_reminder()
 
+    # mark_deadline_passed -------------------------------------------------
+
+    def test_mark_deadline_passed_transitions_status(self, rtc):
+        rtc.status = RequestToCoach.Status.AWAITING_REPLY
+        rtc.deadline_at = timezone.now() - timezone.timedelta(hours=1)
+        rtc.save()
+
+        rtc.mark_deadline_passed()
+
+        rtc.refresh_from_db()
+        assert rtc.status == RequestToCoach.Status.NO_RESPONSE_UNTIL_DEADLINE
+
+    def test_mark_deadline_passed_creates_timed_out_event(self, rtc):
+        rtc.status = RequestToCoach.Status.AWAITING_REPLY
+        rtc.deadline_at = timezone.now() - timezone.timedelta(hours=1)
+        rtc.save()
+
+        rtc.mark_deadline_passed()
+
+        assert RequestToCoachEvent.objects.filter(
+            request=rtc,
+            event_type=RequestToCoachEvent.EventType.TIMED_OUT,
+            triggered_by=RequestToCoachEvent.TriggeredBy.SYSTEM,
+        ).exists()
+
+    def test_mark_deadline_passed_does_nothing_if_deadline_not_passed(self, rtc):
+        rtc.status = RequestToCoach.Status.AWAITING_REPLY
+        rtc.deadline_at = timezone.now() + timezone.timedelta(hours=24)
+        rtc.save()
+
+        rtc.mark_deadline_passed()
+
+        rtc.refresh_from_db()
+        assert rtc.status == RequestToCoach.Status.AWAITING_REPLY
+        assert not RequestToCoachEvent.objects.filter(request=rtc).exists()
+
+    def test_mark_deadline_passed_does_nothing_if_wrong_status(self, rtc):
+        # rtc fixture default status is IN_PREPARATION
+        rtc.deadline_at = timezone.now() - timezone.timedelta(hours=1)
+        rtc.save()
+
+        rtc.mark_deadline_passed()
+
+        rtc.refresh_from_db()
+        assert rtc.status == RequestToCoach.Status.IN_PREPARATION
+        assert not RequestToCoachEvent.objects.filter(request=rtc).exists()
+
 
 # ── CoachActionToken ──────────────────────────────────────────────────────────
 
