@@ -310,17 +310,23 @@ class MatchingAttempt(models.Model):
             f"- Status: {self.get_status_display()}"
         )
         
-        
 class MatchingAttemptTransition(models.Model):
 
     matching_attempt = models.ForeignKey(
-        MatchingAttempt,
+        "MatchingAttempt",
         on_delete=models.CASCADE,
-        related_name="transitions"
+        related_name="transitions",
     )
 
-    from_status = models.CharField(max_length=50, choices=MatchingAttempt.Status.choices)
-    to_status = models.CharField(max_length=50, choices=MatchingAttempt.Status.choices)
+    from_status = models.CharField(
+        max_length=50,
+        choices=MatchingAttempt.Status.choices,
+    )
+
+    to_status = models.CharField(
+        max_length=50,
+        choices=MatchingAttempt.Status.choices,
+    )
 
     triggered_by = models.CharField(
         max_length=20,
@@ -330,31 +336,47 @@ class MatchingAttemptTransition(models.Model):
             ("coach", "Coach"),
         ],
     )
-    
+
     triggered_by_user = models.ForeignKey(
         User,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
+        help_text="Required if triggered_by is 'staff' or 'coach'.",
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    note = models.TextField(blank=True)
+    note = models.TextField(
+        blank=True,
+        help_text="Optional explanation for manual or exceptional transitions.",
+    )
 
     class Meta:
+
         ordering = ["created_at"]
-        
-        indexes = [models.Index(fields=["matching_attempt", "created_at"])]
-        
+
+        indexes = [
+            models.Index(fields=["matching_attempt", "created_at"]),
+        ]
+
         constraints = [
+
+            # ensure actor consistency
             models.CheckConstraint(
                 condition=(
-                    Q(triggered_by="system", triggered_by_user__isnull=True) |
+                    Q(triggered_by="system", triggered_by_user__isnull=True)
+                    |
                     Q(triggered_by__in=["staff", "coach"], triggered_by_user__isnull=False)
                 ),
-                name="transition_actor_consistency",
-            )
+                name="matching_attempt_transition_actor_consistency",
+            ),
+
+            # prevent pointless transitions
+            models.CheckConstraint(
+                condition=~Q(from_status=models.F("to_status")),
+                name="matching_attempt_transition_status_change",
+            ),
         ]
 
     def __str__(self):
