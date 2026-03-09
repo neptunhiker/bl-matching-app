@@ -459,7 +459,6 @@ class MatchingAttemptEvent(models.Model):
     def __str__(self):
         return f"{self.matching_attempt_id} - {self.get_event_type_display()} - {self.created_at}"
     
-        
 class RequestToCoach(models.Model):
 
     class Status(models.TextChoices):
@@ -472,7 +471,6 @@ class RequestToCoach(models.Model):
         NO_RESPONSE_UNTIL_DEADLINE = "no_response_until_deadline", "Keine Rückmeldung"
         CANCELLED = "cancelled", "Anfrage abgebrochen"
 
-    # Immutable transition map
     ALLOWED_COACH_REQUEST_TRANSITIONS = {
 
         Status.IN_PREPARATION: frozenset({
@@ -517,9 +515,9 @@ class RequestToCoach(models.Model):
         on_delete=models.CASCADE,
         related_name="coach_requests",
     )
-    
+
     priority = models.PositiveIntegerField(
-        help_text="Kleiner Wert = höhere Priorität. Bestimmt die Reihenfolge, in der Coaches kontaktiert werden.",
+        help_text="Kleiner Wert = höhere Priorität."
     )
 
     coach = models.ForeignKey(
@@ -549,21 +547,20 @@ class RequestToCoach(models.Model):
         null=True,
         blank=True,
         verbose_name="Antwortfrist",
-        help_text="Frist für rechtzeitige Antwort. Wird beim Versand automatisch vorausgefüllt (Wochenenden werden übersprungen), kann aber manuell angepasst werden.",
+        help_text="Frist für rechtzeitige Antwort",
     )
 
-    # ------------------------------------------------------------------
+    # -------------------------------------------------------------
     # State Machine Helpers
-    # ------------------------------------------------------------------
+    # -------------------------------------------------------------
 
     @property
     def allowed_transitions(self):
-        """Return allowed next states."""
         return self.ALLOWED_COACH_REQUEST_TRANSITIONS.get(self.status, frozenset())
 
     def can_send_request(self):
         return self.requests_sent < self.max_number_of_requests
-    
+
     def can_send_reminder(self):
         return (
             self.status == self.Status.AWAITING_REPLY
@@ -573,32 +570,28 @@ class RequestToCoach(models.Model):
         )
 
     def can_transition_to(self, new_status):
-        """Check if transition is allowed."""
         return new_status in self.allowed_transitions
 
     def _validate_transition(self, new_status):
-        """Ensure transition is valid."""
         if not self.can_transition_to(new_status):
             raise ValidationError(
                 f"Transition {self.status} → {new_status} not allowed."
             )
 
-    # ------------------------------------------------------------------
+    # -------------------------------------------------------------
     # Transition Method
-    # ------------------------------------------------------------------
+    # -------------------------------------------------------------
 
     @transaction.atomic
-    def transition_to(self, new_status, triggered_by="system", triggered_by_user: User = None) -> "RequestToCoach":
-        """
-        Perform a validated state transition and log it.
-        """
+    def transition_to(self, new_status, triggered_by="system", triggered_by_user: User = None):
+
         from .locks import _get_locked_request_to_coach
-        
+
         if triggered_by not in ["system", "staff", "coach"]:
-            raise ValueError("triggered_by must be one of: 'system', 'staff', 'coach'")
-        
-        if triggered_by_user and triggered_by not in  ["staff", "coach"]:
-            raise ValueError("triggered_by_user can only be set if triggered_by is 'staff' or 'coach'")
+            raise ValueError("triggered_by must be 'system', 'staff', or 'coach'")
+
+        if triggered_by_user and triggered_by not in ["staff", "coach"]:
+            raise ValueError("triggered_by_user only allowed for staff or coach")
 
         locked = _get_locked_request_to_coach(self)
 
@@ -618,9 +611,9 @@ class RequestToCoach(models.Model):
 
         return locked
 
-    # ------------------------------------------------------------------
+    # -------------------------------------------------------------
     # Convenience Helpers
-    # ------------------------------------------------------------------
+    # -------------------------------------------------------------
 
     def is_deadline_passed(self):
         if not self.deadline_at:
@@ -628,18 +621,73 @@ class RequestToCoach(models.Model):
         return timezone.now() > self.deadline_at
 
     def mark_responded(self):
-        """Record response timestamp."""
         RequestToCoach.objects.filter(
             pk=self.pk,
             responded_at__isnull=True
         ).update(responded_at=timezone.now())
-            
-    # ------------------------------------------------------------------
+
+    # -------------------------------------------------------------
     # Domain Actions
-    # ------------------------------------------------------------------
-    
-    
-    def accept(self, triggered_by="coach") -> "RequestToCoach":
+    # -------------------------------------------------------------
+
+    def send_request(self):
+
+        if not self.can_send_request():
+            raise ValidationError("Maximum number of requests reached")
+
+        now = timezone.now()
+
+        if self.first_sent_at is None:
+            self.first_sent_at = now
+
+        self.last_sent_at = now
+        self.requests_sent += 1
+
+        if self.status == self.Status.IN_PREPARATION:
+            self.transition_to(self.Status.AWAITING_REPLY)
+
+        self.save(update_fields=[
+            "first_sent_at",
+            "last_sent_at",
+            "requests_sent",
+        ])
+
+        RequestToCoachEvent.objects.create(
+            request=self,
+            event_type=RequestToCoachEvent.EventType.REQUEST_SENT,
+        )
+
+    def send_reminder(self):
+
+        if not self.can_send_reminder():
+            raise ValidationError("Reminder cannot be sent")
+
+        self.last_sent_at = timezone.now()
+        self.requests_sent += 1
+
+        self.save(update_fields=["last_sent_at", "requests_sent"])
+
+        RequestToCoachEvent.objects.create(
+            request=self,
+            event_type=RequestToCoachEvent.EventType.REMINDER_SENT,
+        )
+
+    def mark_deadline_passed(self):
+
+        if self.status != self.Status.AWAITING_REPLY:
+            return
+
+        if not self.is_deadline_passed():
+            return
+
+        updated = self.transition_to(self.Status.NO_RESPONSE_UNTIL_DEADLINE)
+
+        RequestToCoachEvent.objects.create(
+            request=updated,
+            event_type=RequestToCoachEvent.EventType.DEADLINE_PASSED,
+        )
+
+    def accept(self, triggered_by="coach"):
 
         if self.status != self.Status.AWAITING_REPLY:
             raise ValidationError("Cannot accept request in this state")
@@ -651,19 +699,19 @@ class RequestToCoach(models.Model):
         else:
             new_status = self.Status.ACCEPTED_ON_TIME
 
-        updated_rtc = self.transition_to(new_status, triggered_by=triggered_by)
-        
-        updated_rtc.mark_responded()
-        
+        updated = self.transition_to(new_status, triggered_by=triggered_by)
+
+        updated.mark_responded()
+
         RequestToCoachEvent.objects.create(
-            request=updated_rtc,
+            request=updated,
             event_type=RequestToCoachEvent.EventType.ACCEPTED,
             triggered_by=triggered_by,
         )
-        
-        return updated_rtc
-        
-    def reject(self, triggered_by: str = "coach") -> "RequestToCoach":
+
+        return updated
+
+    def reject(self, triggered_by="coach"):
 
         if self.status != self.Status.AWAITING_REPLY:
             raise ValidationError("Cannot reject request in this state")
@@ -675,27 +723,27 @@ class RequestToCoach(models.Model):
         else:
             new_status = self.Status.REJECTED_ON_TIME
 
-        updated_rtc = self.transition_to(new_status, triggered_by=triggered_by)
-        
-        updated_rtc.mark_responded()
-        
+        updated = self.transition_to(new_status, triggered_by=triggered_by)
+
+        updated.mark_responded()
+
         RequestToCoachEvent.objects.create(
-            request=updated_rtc,
+            request=updated,
             event_type=RequestToCoachEvent.EventType.REJECTED,
             triggered_by=triggered_by,
         )
 
-        return updated_rtc
+        return updated
 
-    # ------------------------------------------------------------------
+    # -------------------------------------------------------------
     # Django Metadata
-    # ------------------------------------------------------------------
+    # -------------------------------------------------------------
 
     class Meta:
         ordering = ["priority"]
         verbose_name = "Matching-Anfrage an Coach"
         verbose_name_plural = "Matching-Anfragen an Coaches"
-        
+
         constraints = [
             models.UniqueConstraint(
                 fields=["matching_attempt", "coach"],
@@ -709,16 +757,12 @@ class RequestToCoach(models.Model):
                 fields=["matching_attempt"],
                 condition=Q(status="awaiting_reply"),
                 name="one_request_awaiting_reply_per_attempt",
-            )
+            ),
         ]
-        
+
         indexes = [
             models.Index(fields=["matching_attempt", "status"])
         ]
-
-    # ------------------------------------------------------------------
-    # Representation
-    # ------------------------------------------------------------------
 
     def __str__(self):
         return (
@@ -726,7 +770,6 @@ class RequestToCoach(models.Model):
             f"für Coaching mit {self.matching_attempt.participant} "
             f"- Status: {self.get_status_display()}"
         )
-    
 
 class RequestToCoachTransition(models.Model):
 
