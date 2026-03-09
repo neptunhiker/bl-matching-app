@@ -68,10 +68,56 @@ class CoachListView(StaffRequiredMixin, ListView):
     template_name = 'profiles/coach_list.html'
     context_object_name = 'coaches'
     paginate_by = 25
-    
+    def get_queryset(self):
+        qs = super().get_queryset().select_related('user').prefetch_related('languages')
+
+        # text search (name / email)
+        q = self.request.GET.get('q')
+        if q:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(user__first_name__icontains=q) |
+                Q(user__last_name__icontains=q) |
+                Q(user__email__icontains=q)
+            )
+
+        # status filter
+        status = self.request.GET.get('status')
+        if status:
+            qs = qs.filter(status=status)
+
+        # (language filtering removed)
+
+        # coaching formats
+        if self.request.GET.get('format_online'):
+            qs = qs.filter(coaching_format_online=True)
+        if self.request.GET.get('format_presence'):
+            qs = qs.filter(coaching_format_presence=True)
+        if self.request.GET.get('format_hybrid'):
+            qs = qs.filter(coaching_format_hybrid=True)
+
+        return qs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        # expose status choices for the filter form
+        context['statuses'] = Coach.Status.choices
         context['Status'] = Coach.Status
+
+        # selected values for form population
+        context['q'] = self.request.GET.get('q','')
+        context['selected_status'] = self.request.GET.get('status','')
+        context['selected_online'] = bool(self.request.GET.get('format_online'))
+        context['selected_presence'] = bool(self.request.GET.get('format_presence'))
+        context['selected_hybrid'] = bool(self.request.GET.get('format_hybrid'))
+
+        # preserve other GET params for pagination links
+        params = self.request.GET.copy()
+        if 'page' in params:
+            params.pop('page')
+        context['params'] = params.urlencode()
+
         return context
 
 

@@ -18,66 +18,96 @@
   </div>
 
   {% if coaches %}
-  <div class="bg-white/70 rounded-2xl shadow-sm overflow-hidden border border-white/60">
-    <table class="w-full text-sm">
-      <thead>
-        <tr class="bg-primary-50 text-tertiary-700">
-          <th class="px-5 py-3 font-semibold" style="text-align:left">Name</th>
-          <th class="px-5 py-3 font-semibold" style="text-align:left">E-Mail</th>
-          <th class="px-5 py-3 font-semibold" style="text-align:left">Stadt</th>
-          <th class="px-5 py-3 font-semibold" style="text-align:left">Status</th>
-          <th class="px-5 py-3 font-semibold" style="text-align:left">Erstellt</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-neutral-100">
-        {% for coach in coaches %}
-        <tr class="hover:bg-primary-50/50 transition-colors text-left">
-          <td class="px-5 py-3 font-medium text-tertiary-700">
-            <a href="{% url 'coach_detail' coach.pk %}" class="hover:text-primary-600 transition-colors">
-              {{ coach.full_name }}
-            </a>
-          </td>
-          <td class="px-5 py-3 text-neutral-600">{{ coach.email }}</td>
-          <td class="px-5 py-3 text-neutral-600">{{ coach.city }}</td>
-          <td class="px-5 py-3 text-neutral-600">
+  <div class="px-6 pb-4 mb-6">
+    <form method="get" class="flex flex-wrap items-center gap-3">
+      <input type="search" name="q" value="{{ q }}" placeholder="Suche Name oder E‑Mail"
+             class="px-3 py-2 rounded-lg border border-neutral-200 text-sm w-64" />
+
+      <select name="status" class="px-3 py-2 rounded-lg border border-neutral-200 text-sm">
+        <option value="">Alle Status</option>
+        {% for val,label in statuses %}
+        <option value="{{ val }}" {% if val == selected_status %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      {# language filter removed #}
+
+      <label class="text-sm inline-flex items-center gap-2">
+        <input type="checkbox" name="format_online" value="1" {% if selected_online %}checked{% endif %} />
+        Online
+      </label>
+      <label class="text-sm inline-flex items-center gap-2">
+        <input type="checkbox" name="format_presence" value="1" {% if selected_presence %}checked{% endif %} />
+        Präsenz
+      </label>
+      <label class="text-sm inline-flex items-center gap-2">
+        <input type="checkbox" name="format_hybrid" value="1" {% if selected_hybrid %}checked{% endif %} />
+        Hybrid
+      </label>
+
+      <div class="ml-auto flex items-center gap-2">
+        <button type="submit" class="px-4 py-2 rounded-lg bg-primary-500 text-white text-sm">Filter</button>
+        <a href="{% url 'coach_list' %}" class="text-sm text-neutral-500">Zurücksetzen</a>
+      </div>
+    </form>
+  </div>
+
+  {# Mobile: compact stacked list (no JS) - visible on small screens only #}
+  <div class="md:hidden bg-white/70 rounded-2xl shadow-sm border border-white/60 my-4">
+    
+    <ul class="px-4 divide-y divide-neutral-100">
+      {% for coach in coaches %}
+      <li class="py-3 flex items-center justify-between">
+        <div class="flex-1 min-w-0">
+          <a href="{% url 'coach_detail' coach.pk %}" class="block text-sm font-semibold text-tertiary-700 hover:text-primary-600 truncate">{{ coach.full_name }}</a>
+          <div class="text-xs text-neutral-600 truncate">{{ coach.email }} • {{ coach.city }}</div>
+          <div class="mt-2 flex flex-wrap gap-2">
+            {% for lang in coach.languages.all %}
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">{{ lang.name }}</span>
+            {% endfor %}
+            {% if coach.coaching_format_online %}
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Online</span>
+            {% endif %}
+            {% if coach.coaching_format_presence %}
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Präsenz</span>
+            {% endif %}
+            {% if coach.coaching_format_hybrid %}
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Hybrid</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="ml-3 text-right">
+          <div class="text-xs text-neutral-400">{{ coach.get_status_display }}</div>
+          <div class="mt-2 text-sm">
             {% if coach.status == Status.AVAILABLE %}
               <span class="inline-flex items-center gap-2 text-sm">
-                <span class="h-3 w-3 rounded-full bg-green-500 ring-2 ring-green-300 shadow-sm animate-pulse" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
-                {{ coach.get_status_display }}
+                <span class="h-3 w-3 rounded-full bg-green-500 ring-2 ring-green-300 shadow-sm animate-pulse" aria-hidden="true"></span>
               </span>
             {% elif coach.status == Status.PAUSED %}
               <span class="inline-flex items-center gap-2 text-sm">
-                <span class="h-3 w-3 rounded-full bg-neutral-400 ring-2 ring-neutral-200 shadow-sm" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
-                {{ coach.get_status_display }}
+                <span class="h-3 w-3 rounded-full bg-neutral-400 ring-2 ring-neutral-200 shadow-sm" aria-hidden="true"></span>
               </span>
             {% elif coach.status == Status.ONBOARDING %}
               <span class="inline-flex items-center gap-2 text-sm">
-                <span class="h-3 w-3 rounded-full bg-yellow-400 ring-2 ring-yellow-200 shadow-sm" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
-                {{ coach.get_status_display }}
-              </span>
-            {% elif coach.status == Status.INACTIVE %}
-              <span class="inline-flex items-center gap-2 text-sm">
-                <span class="h-3 w-3 rounded-full bg-neutral-300 ring-2 ring-neutral-200 shadow-sm" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
-                {{ coach.get_status_display }}
+                <span class="h-3 w-3 rounded-full bg-yellow-400 ring-2 ring-yellow-200 shadow-sm" aria-hidden="true"></span>
               </span>
             {% else %}
               <span class="inline-flex items-center gap-2 text-sm">
-                <span class="h-3 w-3 rounded-full bg-neutral-300 ring-2 ring-neutral-200 shadow-sm" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
-                {{ coach.get_status_display }}
+                <span class="h-3 w-3 rounded-full bg-neutral-300 ring-2 ring-neutral-200 shadow-sm" aria-hidden="true"></span>
               </span>
             {% endif %}
-          </td>
-          <td class="px-5 py-3 text-neutral-400">{{ coach.created_at|date:"d.m.Y" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
   </div>
+  
 
   {% if is_paginated %}
   <div class="flex items-center justify-center gap-2 mt-6">
     {% if page_obj.has_previous %}
-    <a href="?page={{ page_obj.previous_page_number }}"
+    <a href="{% if params %}?{{ params }}&page={{ page_obj.previous_page_number }}{% else %}?page={{ page_obj.previous_page_number }}{% endif %}"
        class="px-4 py-2 rounded-lg text-sm border border-primary-200
               text-primary-600 hover:bg-primary-50 transition-colors">
       ← Zurück
@@ -85,7 +115,7 @@
     {% endif %}
     <span class="text-sm text-neutral-500">Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}</span>
     {% if page_obj.has_next %}
-    <a href="?page={{ page_obj.next_page_number }}"
+    <a href="{% if params %}?{{ params }}&page={{ page_obj.next_page_number }}{% else %}?page={{ page_obj.next_page_number }}{% endif %}"
        class="px-4 py-2 rounded-lg text-sm border border-primary-200
               text-primary-600 hover:bg-primary-50 transition-colors">
       Weiter →
