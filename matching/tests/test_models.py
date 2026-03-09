@@ -652,7 +652,7 @@ class TestMatchingAttempt:
     def test_only_one_active_matching_attempt_per_participant(self, participant):
         MatchingAttempt.objects.create(
             participant=participant,
-            status=MatchingAttempt.Status.DRAFT
+            status=MatchingAttempt.Status.READY_FOR_MATCHING
         )
 
         with pytest.raises(IntegrityError):
@@ -669,7 +669,7 @@ class TestMatchingAttempt:
 
         MatchingAttempt.objects.create(
             participant=participant,
-            status=MatchingAttempt.Status.DRAFT
+            status=MatchingAttempt.Status.IN_PREPARATION
         )
 
     def test_is_active_property(self, matching_attempt):
@@ -737,7 +737,7 @@ class TestMatchingAttemptTransition:
 
         transition = MatchingAttemptTransition.objects.get()
 
-        assert transition.from_status == MatchingAttempt.Status.DRAFT
+        assert transition.from_status == MatchingAttempt.Status.IN_PREPARATION
         assert transition.to_status == MatchingAttempt.Status.READY_FOR_MATCHING
 
     def test_invalid_triggered_by_raises(self, matching_attempt):
@@ -761,7 +761,7 @@ class TestMatchingAttemptTransition:
         with pytest.raises(IntegrityError):
             MatchingAttemptTransition.objects.create(
                 matching_attempt=matching_attempt,
-                from_status=MatchingAttempt.Status.DRAFT,
+                from_status=MatchingAttempt.Status.IN_PREPARATION,
                 to_status=MatchingAttempt.Status.READY_FOR_MATCHING,
                 triggered_by="system",
                 triggered_by_user=coach_user,
@@ -799,7 +799,7 @@ class TestMatchingAttemptTransition:
         with pytest.raises(IntegrityError):
             MatchingAttemptTransition.objects.create(
                 matching_attempt=matching_attempt,
-                from_status=MatchingAttempt.Status.DRAFT,
+                from_status=MatchingAttempt.Status.IN_PREPARATION,
                 to_status=MatchingAttempt.Status.READY_FOR_MATCHING,
                 triggered_by="staff",
                 triggered_by_user=None,
@@ -809,7 +809,7 @@ class TestMatchingAttemptTransition:
         transition = matching_attempt.transition_to(MatchingAttempt.Status.READY_FOR_MATCHING)
         record = MatchingAttemptTransition.objects.get()
 
-        assert str(MatchingAttempt.Status.DRAFT) in str(record)
+        assert str(MatchingAttempt.Status.IN_PREPARATION) in str(record)
         assert str(MatchingAttempt.Status.READY_FOR_MATCHING) in str(record)
 
 
@@ -821,7 +821,7 @@ class TestMatchingAttemptTransitionClean:
     def test_clean_raises_if_system_with_user(self, matching_attempt, coach_user):
         transition = MatchingAttemptTransition(
             matching_attempt=matching_attempt,
-            from_status=MatchingAttempt.Status.DRAFT,
+            from_status=MatchingAttempt.Status.IN_PREPARATION,
             to_status=MatchingAttempt.Status.READY_FOR_MATCHING,
             triggered_by="system",
             triggered_by_user=coach_user,
@@ -832,7 +832,7 @@ class TestMatchingAttemptTransitionClean:
     def test_clean_raises_if_staff_without_user(self, matching_attempt):
         transition = MatchingAttemptTransition(
             matching_attempt=matching_attempt,
-            from_status=MatchingAttempt.Status.DRAFT,
+            from_status=MatchingAttempt.Status.IN_PREPARATION,
             to_status=MatchingAttempt.Status.READY_FOR_MATCHING,
             triggered_by="staff",
             triggered_by_user=None,
@@ -843,7 +843,7 @@ class TestMatchingAttemptTransitionClean:
     def test_clean_raises_if_staff_user_is_not_staff(self, matching_attempt, coach_user):
         transition = MatchingAttemptTransition(
             matching_attempt=matching_attempt,
-            from_status=MatchingAttempt.Status.DRAFT,
+            from_status=MatchingAttempt.Status.IN_PREPARATION,
             to_status=MatchingAttempt.Status.READY_FOR_MATCHING,
             triggered_by="staff",
             triggered_by_user=coach_user,
@@ -875,7 +875,7 @@ class TestAutomationControl:
         assert matching_attempt.automation_enabled is False
 
     def test_enable_automation_raises_in_disallowed_status(self, matching_attempt):
-        matching_attempt.status = MatchingAttempt.Status.DRAFT
+        matching_attempt.status = MatchingAttempt.Status.IN_PREPARATION
         matching_attempt.save()
 
         with pytest.raises(ValidationError):
@@ -907,7 +907,7 @@ class TestAutomationControl:
 
     def test_automation_is_allowed_false_when_wrong_status(self, matching_attempt):
         for status in (
-            MatchingAttempt.Status.DRAFT,
+            MatchingAttempt.Status.IN_PREPARATION,
             MatchingAttempt.Status.CHEMISTRY_PENDING,
             MatchingAttempt.Status.MATCH_CONFIRMED,
             MatchingAttempt.Status.FAILED,

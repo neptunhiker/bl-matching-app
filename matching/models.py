@@ -15,7 +15,7 @@ from profiles.models import Participant, Coach
 class MatchingAttempt(models.Model):
 
     class Status(models.TextChoices):
-        DRAFT = "draft", "In Vorbereitung"
+        IN_PREPARATION = "in_preparation", "In Vorbereitung"
         READY_FOR_MATCHING = "ready_for_matching", "Bereit für Matching"
         MATCHING_ACTIVE = "matching_active", "Matching läuft"
         CHEMISTRY_PENDING = "chemistry_pending", "Kennenlerngespräch läuft"
@@ -25,7 +25,7 @@ class MatchingAttempt(models.Model):
         CANCELLED = "cancelled", "Matching abgebrochen"
 
     ACTIVE_MATCHING_ATTEMPT_STATUSES = frozenset({
-        Status.DRAFT,
+        Status.IN_PREPARATION,
         Status.READY_FOR_MATCHING,
         Status.MATCHING_ACTIVE,
         Status.CHEMISTRY_PENDING,
@@ -33,7 +33,7 @@ class MatchingAttempt(models.Model):
 
     ALLOWED_TRANSITIONS = {
 
-        Status.DRAFT: frozenset({
+        Status.IN_PREPARATION: frozenset({
             Status.READY_FOR_MATCHING,
             Status.CANCELLED,
         }),
@@ -89,7 +89,7 @@ class MatchingAttempt(models.Model):
     status = models.CharField(
         max_length=50,
         choices=Status.choices,
-        default=Status.DRAFT,
+        default=Status.IN_PREPARATION,
         db_index=True,
     )
 
