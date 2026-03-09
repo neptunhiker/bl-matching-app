@@ -55,6 +55,25 @@ class TestRequestToCoachTransition:
                 triggered_by_user=coach_user,
             )
 
+    def test_string_representation(self, rtc):
+        transition = RequestToCoachTransition.objects.create(
+            request=rtc,
+            from_status=RequestToCoach.Status.IN_PREPARATION,
+            to_status=RequestToCoach.Status.AWAITING_REPLY,
+            triggered_by=RequestToCoachTransition.TriggeredBy.SYSTEM,
+        )
+
+        assert str(transition.from_status) in str(transition)
+        assert str(transition.to_status) in str(transition)
+
+    def test_staff_transition_raises_for_non_staff_user(self, rtc, coach_user):
+        with pytest.raises(ValidationError):
+            rtc.transition_to(
+                RequestToCoach.Status.AWAITING_REPLY,
+                triggered_by="staff",
+                triggered_by_user=coach_user,
+            )
+
 
 # ── RequestToCoach: Accept / Reject ───────────────────────────────────────────
 
@@ -315,6 +334,16 @@ class TestRequestToCoachEvent:
 
         assert RequestToCoachEvent.objects.filter(request_id=rtc.pk).count() == 0
 
+    def test_string_representation(self, rtc):
+        event = RequestToCoachEvent.objects.create(
+            request=rtc,
+            event_type=RequestToCoachEvent.EventType.REQUEST_SENT,
+            triggered_by=RequestToCoachEvent.TriggeredBy.SYSTEM,
+        )
+
+        assert event.get_event_type_display() in str(event)
+        assert event.get_triggered_by_display() in str(event)
+
 
 # ── CoachActionToken ──────────────────────────────────────────────────────────
 
@@ -381,6 +410,26 @@ class TestCoachActionToken:
         rtc.delete()
 
         assert CoachActionToken.objects.count() == 0
+
+    def test_string_representation_unused(self, rtc):
+        token = CoachActionToken.objects.create(
+            token="repr-token",
+            request_to_coach=rtc,
+            action=CoachActionToken.Action.ACCEPT,
+        )
+
+        assert token.get_action_display() in str(token)
+        assert "offen" in str(token)
+
+    def test_string_representation_used(self, rtc):
+        token = CoachActionToken.objects.create(
+            token="repr-used-token",
+            request_to_coach=rtc,
+            action=CoachActionToken.Action.DECLINE,
+            used_at=timezone.now(),
+        )
+
+        assert "verwendet" in str(token)
 
 
 # ── MatchingAttempt ───────────────────────────────────────────────────────────
@@ -516,8 +565,8 @@ class TestMatchingAttemptTransition:
         with pytest.raises(IntegrityError):
             MatchingAttemptTransition.objects.create(
                 matching_attempt=matching_attempt,
-                from_status="draft",
-                to_status="ready_for_matching",
+                from_status=MatchingAttempt.Status.DRAFT,
+                to_status=MatchingAttempt.Status.READY_FOR_MATCHING,
                 triggered_by="system",
                 triggered_by_user=coach_user,
             )
@@ -554,11 +603,57 @@ class TestMatchingAttemptTransition:
         with pytest.raises(IntegrityError):
             MatchingAttemptTransition.objects.create(
                 matching_attempt=matching_attempt,
-                from_status="draft",
-                to_status="ready_for_matching",
+                from_status=MatchingAttempt.Status.DRAFT,
+                to_status=MatchingAttempt.Status.READY_FOR_MATCHING,
                 triggered_by="staff",
                 triggered_by_user=None,
             )
+
+    def test_string_representation(self, matching_attempt):
+        transition = matching_attempt.transition_to(MatchingAttempt.Status.READY_FOR_MATCHING)
+        record = MatchingAttemptTransition.objects.get()
+
+        assert str(MatchingAttempt.Status.DRAFT) in str(record)
+        assert str(MatchingAttempt.Status.READY_FOR_MATCHING) in str(record)
+
+
+# ── TestMatchingAttemptTransitionClean ────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestMatchingAttemptTransitionClean:
+
+    def test_clean_raises_if_system_with_user(self, matching_attempt, coach_user):
+        transition = MatchingAttemptTransition(
+            matching_attempt=matching_attempt,
+            from_status=MatchingAttempt.Status.DRAFT,
+            to_status=MatchingAttempt.Status.READY_FOR_MATCHING,
+            triggered_by="system",
+            triggered_by_user=coach_user,
+        )
+        with pytest.raises(ValidationError):
+            transition.clean()
+
+    def test_clean_raises_if_staff_without_user(self, matching_attempt):
+        transition = MatchingAttemptTransition(
+            matching_attempt=matching_attempt,
+            from_status=MatchingAttempt.Status.DRAFT,
+            to_status=MatchingAttempt.Status.READY_FOR_MATCHING,
+            triggered_by="staff",
+            triggered_by_user=None,
+        )
+        with pytest.raises(ValidationError):
+            transition.clean()
+
+    def test_clean_raises_if_staff_user_is_not_staff(self, matching_attempt, coach_user):
+        transition = MatchingAttemptTransition(
+            matching_attempt=matching_attempt,
+            from_status=MatchingAttempt.Status.DRAFT,
+            to_status=MatchingAttempt.Status.READY_FOR_MATCHING,
+            triggered_by="staff",
+            triggered_by_user=coach_user,
+        )
+        with pytest.raises(ValidationError):
+            transition.clean()
 
 
 # ── TestAutomationControl ─────────────────────────────────────────────────────
@@ -664,3 +759,11 @@ class TestMatchingAttemptEvent:
 
         event.refresh_from_db()
         assert event.actor is None
+
+    def test_string_representation(self, matching_attempt):
+        event = MatchingAttemptEvent.objects.create(
+            matching_attempt=matching_attempt,
+            event_type=MatchingAttemptEvent.EventType.AUTOMATION_RUN,
+        )
+
+        assert event.get_event_type_display() in str(event)
