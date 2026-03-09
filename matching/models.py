@@ -1,25 +1,15 @@
 from typing import List
 import uuid
 
-from django.core.exceptions import ValidationError
-from django.db import models, transaction
-from django.db.models import Q
-from django.utils import timezone
-
-
-from accounts.models import User
-from .locks import _get_locked_matching_attempt
-from profiles.models import Participant, Coach
-
-import uuid
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import Q
 from django.utils import timezone
 
 from accounts.models import User
-from profiles.models import Participant, Coach
 from .locks import _get_locked_matching_attempt
+from profiles.models import Participant, Coach
 
 
 class MatchingAttempt(models.Model):
@@ -383,22 +373,50 @@ class MatchingAttemptTransition(models.Model):
         return f"{self.from_status} → {self.to_status} ({self.triggered_by})"
         
 
-      
-        
 class MatchingAttemptEvent(models.Model):
 
     class EventType(models.TextChoices):
-        CREATED = "created", "Matching erstellt"
-        STARTED = "matching_started", "Matching gestartet"
-        AUTOMATION_ENABLED = "automation_enabled", "Auto E-Mails aktiviert"
-        AUTOMATION_DISABLED = "automation_disabled", "Auto E-Mails deaktiviert"
-        CANCELLED = "matching_cancelled", "Matching abgebrochen"
-        REQUEST_SENT = "request_sent", "Matching-Anfrage gesendet"
-        REMINDER_SENT = "reminder_sent", "Reminder gesendet"
-        RTC_CANCELLED = "rtc_cancelled", "Anfrage an Coach abgebrochen"
-        RTC_TIMED_OUT = "rtc_timed_out", "Deadline überschritten"
-        RTC_ACCEPTED = "rtc_accepted", "Matching-Anfrage akzeptiert"
-        RTC_REJECTED = "rtc_rejected", "Matching-Anfrage abgelehnt"
+
+        # Automatisierung
+        AUTOMATION_ENABLED = "automation_enabled", "Automatisierung aktiviert"
+        AUTOMATION_DISABLED = "automation_disabled", "Automatisierung deaktiviert"
+        AUTOMATION_RUN = "automation_run", "Automatisierung ausgeführt"
+
+        # Coach-Anfrage
+        COACH_REQUEST_SENT = "coach_request_sent", "Coach-Anfrage versendet"
+
+        # Antworten des Coaches
+        COACH_ACCEPTED = "coach_accepted", "Coach hat akzeptiert"
+        COACH_DECLINED = "coach_declined", "Coach hat abgelehnt"
+
+        # Verspätete Antworten
+        COACH_ACCEPTED_LATE = "coach_accepted_late", "Coach hat verspätet akzeptiert"
+        COACH_DECLINED_LATE = "coach_declined_late", "Coach hat verspätet abgelehnt"
+
+        # Ignorierte Antworten
+        COACH_RESPONSE_IGNORED = "coach_response_ignored", "Coach-Antwort ignoriert"
+
+        # Fristen
+        REQUEST_DEADLINE_PASSED = "request_deadline_passed", "Antwortfrist des Coaches abgelaufen"
+
+        # Chemiegespräch
+        CHEMISTRY_CALL_REQUESTED = "chemistry_call_requested", "Chemiegespräch angefragt"
+        CHEMISTRY_CALL_CONFIRMED = "chemistry_call_confirmed", "Chemiegespräch bestätigt"
+        CHEMISTRY_CALL_DECLINED = "chemistry_call_declined", "Chemiegespräch abgelehnt"
+
+        # Chemie-Fristen
+        CHEMISTRY_CONFIRMATION_DEADLINE_PASSED = (
+            "chemistry_confirmation_deadline_passed",
+            "Frist zur Bestätigung des Chemiegesprächs abgelaufen",
+        )
+        CHEMISTRY_CALL_TIMEOUT = "chemistry_call_timeout", "Chemiegespräch-Frist überschritten"
+
+        # Erinnerungen
+        REMINDER_SENT = "reminder_sent", "Erinnerung versendet"
+
+        # Manuelle Aktionen
+        MANUAL_OVERRIDE = "manual_override", "Manuelle Entscheidung durch Mitarbeiter"
+        STAFF_CANCELLED_REQUESTS = "staff_cancelled_requests", "Coach-Anfragen durch Mitarbeiter abgebrochen"
 
     matching_attempt = models.ForeignKey(
         "MatchingAttempt",
@@ -406,33 +424,40 @@ class MatchingAttemptEvent(models.Model):
         related_name="events",
     )
 
+    coach = models.ForeignKey(
+        Coach,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        help_text="Coach, auf den sich das Ereignis bezieht (falls zutreffend)",
+    )
+
     event_type = models.CharField(
-        max_length=30,
+        max_length=64,
         choices=EventType.choices,
     )
 
-    triggered_by = models.CharField(
-        max_length=30,
-        choices=[
-            ("system", "System"),
-            ("staff", "BL Mitarbeiter:in"),
-            ("coach", "Coach"),
-        ],
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        help_text="Benutzer, der das Ereignis ausgelöst hat (Coach, Mitarbeiter oder System)",
+    )
+
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Zusätzliche strukturierte Informationen zum Ereignis",
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    note = models.TextField(blank=True)
-
     class Meta:
         ordering = ["created_at"]
-     
-        indexes = [
-           models.Index(fields=["matching_attempt", "created_at"]),
-        ]
 
     def __str__(self):
-        return f"{self.event_type} ({self.triggered_by})"
+        return f"{self.matching_attempt_id} - {self.get_event_type_display()} - {self.created_at}"
     
         
 class RequestToCoach(models.Model):

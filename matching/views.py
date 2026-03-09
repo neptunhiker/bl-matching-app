@@ -298,14 +298,15 @@ class CoachRespondView(View):
             
                 MatchingAttemptEvent.objects.create(
                     matching_attempt=ma,
-                    event_type=MatchingAttemptEvent.EventType.RTC_ACCEPTED,
-                    triggered_by=coach.user.email,
+                    event_type=MatchingAttemptEvent.EventType.COACH_ACCEPTED,
+                    actor=coach.user,
+                    coach=coach,
                 )
                 
                 RequestToCoachEvent.objects.create(
                     request=rtc,
                     event_type=RequestToCoachEvent.EventType.ACCEPTED,
-                    triggered_by=coach.user.email,
+                    triggered_by='coach',
                 )
         else:
             on_time = False
