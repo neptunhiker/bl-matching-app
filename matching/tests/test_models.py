@@ -641,10 +641,10 @@ class TestMatchingAttempt:
 
     def test_draft_to_match_confirmed_not_allowed(self, matching_attempt):
         with pytest.raises(ValidationError):
-            matching_attempt.transition_to(MatchingAttempt.Status.MATCH_CONFIRMED)
+            matching_attempt.transition_to(MatchingAttempt.Status.MATCHING_CONFIRMED)
 
     def test_no_transition_from_match_confirmed(self, matching_attempt):
-        matching_attempt.status = MatchingAttempt.Status.MATCH_CONFIRMED
+        matching_attempt.status = MatchingAttempt.Status.MATCHING_CONFIRMED
 
         with pytest.raises(ValidationError):
             matching_attempt.transition_to(MatchingAttempt.Status.MATCHING_ONGOING)
@@ -769,7 +769,7 @@ class TestMatchingAttemptTransition:
 
     def test_invalid_transition_raises_validation_error(self, matching_attempt):
         with pytest.raises(ValidationError):
-            matching_attempt.transition_to(MatchingAttempt.Status.MATCH_CONFIRMED)
+            matching_attempt.transition_to(MatchingAttempt.Status.MATCHING_CONFIRMED)
 
     def test_transition_updates_status_on_instance(self, matching_attempt):
         updated = matching_attempt.transition_to(MatchingAttempt.Status.READY_FOR_MATCHING)
@@ -894,7 +894,7 @@ class TestAutomationControl:
         ).count() == 0
 
     def test_automation_allowed_only_in_active_states(self, matching_attempt):
-        matching_attempt.status = MatchingAttempt.Status.MATCH_CONFIRMED
+        matching_attempt.status = MatchingAttempt.Status.MATCHING_CONFIRMED
         matching_attempt.save()
 
         with pytest.raises(ValidationError):
@@ -909,7 +909,7 @@ class TestAutomationControl:
         for status in (
             MatchingAttempt.Status.IN_PREPARATION,
             MatchingAttempt.Status.CHEMISTRY_PENDING,
-            MatchingAttempt.Status.MATCH_CONFIRMED,
+            MatchingAttempt.Status.MATCHING_CONFIRMED,
             MatchingAttempt.Status.FAILED,
             MatchingAttempt.Status.CANCELLED,
         ):

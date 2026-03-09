@@ -20,7 +20,7 @@ class MatchingAttempt(models.Model):
         MATCHING_ONGOING= "matching_ongoing", "Matching läuft"
         CHEMISTRY_PENDING = "chemistry_pending", "Kennenlerngespräch läuft"
         CHEMISTRY_TIMEOUT = "chemistry_timeout", "Kennenlerngespräch nicht bestätigt"
-        MATCH_CONFIRMED = "match_confirmed", "Match bestätigt"
+        MATCHING_CONFIRMED = "matching_confirmed", "Matching bestätigt"
         FAILED = "failed", "Kein Coach gefunden"
         CANCELLED = "cancelled", "Matching abgebrochen"
 
@@ -50,7 +50,7 @@ class MatchingAttempt(models.Model):
         }),
 
         Status.CHEMISTRY_PENDING: frozenset({
-            Status.MATCH_CONFIRMED,
+            Status.MATCHING_CONFIRMED,
             Status.MATCHING_ONGOING,
             Status.CHEMISTRY_TIMEOUT,
             Status.CANCELLED,
@@ -61,7 +61,7 @@ class MatchingAttempt(models.Model):
             Status.CANCELLED,
         }),
 
-        Status.MATCH_CONFIRMED: frozenset(),
+        Status.MATCHING_CONFIRMED: frozenset(),
 
         Status.FAILED: frozenset(),
 
