@@ -586,13 +586,16 @@ class RequestToCoach(models.Model):
         return self.ALLOWED_COACH_REQUEST_TRANSITIONS.get(self.status, frozenset())
 
     def can_send_request(self):
-        return self.requests_sent < self.max_number_of_requests
+        return (
+            self.status == self.Status.IN_PREPARATION and self.requests_sent < 1
+        )
 
     def can_send_reminder(self):
         return (
             self.status == self.Status.AWAITING_REPLY
             and not self.is_deadline_passed()
-            and self.can_send_request()
+            and self.requests_sent < self.max_number_of_requests
+            and self.requests_sent > 0
             and self.first_sent_at is not None
         )
 
@@ -688,6 +691,7 @@ class RequestToCoach(models.Model):
         RequestToCoachEvent.objects.create(
             request=self,
             event_type=RequestToCoachEvent.EventType.REQUEST_SENT,
+            triggered_by=RequestToCoachEvent.TriggeredBy.SYSTEM,
         )
 
     def send_reminder(self):
@@ -703,6 +707,7 @@ class RequestToCoach(models.Model):
         RequestToCoachEvent.objects.create(
             request=self,
             event_type=RequestToCoachEvent.EventType.REMINDER_SENT,
+            triggered_by=RequestToCoachEvent.TriggeredBy.SYSTEM,
         )
 
     def mark_deadline_passed(self):
@@ -717,7 +722,8 @@ class RequestToCoach(models.Model):
 
         RequestToCoachEvent.objects.create(
             request=updated,
-            event_type=RequestToCoachEvent.EventType.DEADLINE_PASSED,
+            event_type=RequestToCoachEvent.EventType.TIMED_OUT,
+            triggered_by=RequestToCoachEvent.TriggeredBy.SYSTEM,
         )
 
     def accept(self, triggered_by="coach", triggered_by_user=None):

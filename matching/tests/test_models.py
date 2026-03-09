@@ -75,6 +75,45 @@ class TestRequestToCoachTransition:
             )
 
 
+# ── TestRequestToCoachTransitionClean ─────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestRequestToCoachTransitionClean:
+
+    def test_clean_raises_if_system_with_user(self, rtc, coach_user):
+        transition = RequestToCoachTransition(
+            request=rtc,
+            from_status=RequestToCoach.Status.IN_PREPARATION,
+            to_status=RequestToCoach.Status.AWAITING_REPLY,
+            triggered_by=RequestToCoachTransition.TriggeredBy.SYSTEM,
+            triggered_by_user=coach_user,
+        )
+        with pytest.raises(ValidationError):
+            transition.clean()
+
+    def test_clean_raises_if_staff_without_user(self, rtc):
+        transition = RequestToCoachTransition(
+            request=rtc,
+            from_status=RequestToCoach.Status.IN_PREPARATION,
+            to_status=RequestToCoach.Status.AWAITING_REPLY,
+            triggered_by=RequestToCoachTransition.TriggeredBy.STAFF,
+            triggered_by_user=None,
+        )
+        with pytest.raises(ValidationError):
+            transition.clean()
+
+    def test_clean_raises_if_staff_user_is_not_staff(self, rtc, coach_user):
+        transition = RequestToCoachTransition(
+            request=rtc,
+            from_status=RequestToCoach.Status.IN_PREPARATION,
+            to_status=RequestToCoach.Status.AWAITING_REPLY,
+            triggered_by=RequestToCoachTransition.TriggeredBy.STAFF,
+            triggered_by_user=coach_user,
+        )
+        with pytest.raises(ValidationError):
+            transition.clean()
+
+
 # ── RequestToCoach: Accept / Reject ───────────────────────────────────────────
 
 class TestRequestToCoachAcceptReject:
@@ -343,6 +382,116 @@ class TestRequestToCoachEvent:
 
         assert event.get_event_type_display() in str(event)
         assert event.get_triggered_by_display() in str(event)
+
+
+# ── TestRequestToCoachEventClean ──────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestRequestToCoachEventClean:
+
+    def test_clean_raises_if_system_with_user(self, rtc, coach_user):
+        event = RequestToCoachEvent(
+            request=rtc,
+            event_type=RequestToCoachEvent.EventType.REQUEST_SENT,
+            triggered_by=RequestToCoachEvent.TriggeredBy.SYSTEM,
+            triggered_by_user=coach_user,
+        )
+        with pytest.raises(ValidationError):
+            event.clean()
+
+    def test_clean_raises_if_coach_without_user(self, rtc):
+        event = RequestToCoachEvent(
+            request=rtc,
+            event_type=RequestToCoachEvent.EventType.ACCEPTED,
+            triggered_by=RequestToCoachEvent.TriggeredBy.COACH,
+            triggered_by_user=None,
+        )
+        with pytest.raises(ValidationError):
+            event.clean()
+
+    def test_clean_raises_if_staff_user_is_not_staff(self, rtc, coach_user):
+        event = RequestToCoachEvent(
+            request=rtc,
+            event_type=RequestToCoachEvent.EventType.ACCEPTED,
+            triggered_by=RequestToCoachEvent.TriggeredBy.STAFF,
+            triggered_by_user=coach_user,
+        )
+        with pytest.raises(ValidationError):
+            event.clean()
+
+
+# ── TestRequestToCoachSendActions ─────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestRequestToCoachSendActions:
+
+    # send_request ---------------------------------------------------------
+
+    def test_send_request_sets_timestamps(self, rtc):
+        rtc.send_request()
+
+        rtc.refresh_from_db()
+        assert rtc.first_sent_at is not None
+        assert rtc.last_sent_at is not None
+
+    def test_send_request_increments_counter(self, rtc):
+        rtc.send_request()
+
+        rtc.refresh_from_db()
+        assert rtc.requests_sent == 1
+
+    def test_send_request_transitions_to_awaiting_reply(self, rtc):
+        rtc.send_request()
+
+        rtc.refresh_from_db()
+        assert rtc.status == RequestToCoach.Status.AWAITING_REPLY
+
+    def test_send_request_creates_event(self, rtc):
+        rtc.send_request()
+
+        assert RequestToCoachEvent.objects.filter(
+            request=rtc,
+            event_type=RequestToCoachEvent.EventType.REQUEST_SENT,
+        ).exists()
+
+    def test_send_request_raises_when_one_request_already_sent(self, rtc):
+        rtc.requests_sent = 1
+        rtc.save()
+
+        with pytest.raises(ValidationError):
+            rtc.send_request()
+
+    # send_reminder --------------------------------------------------------
+
+    def test_send_reminder_increments_counter_and_updates_timestamp(self, rtc):
+        rtc.status = RequestToCoach.Status.AWAITING_REPLY
+        rtc.first_sent_at = timezone.now()
+        rtc.requests_sent = 1
+        rtc.save()
+
+        rtc.send_reminder()
+
+        rtc.refresh_from_db()
+        assert rtc.requests_sent == 2
+        assert rtc.last_sent_at is not None
+
+    def test_send_reminder_creates_event(self, rtc):
+        rtc.status = RequestToCoach.Status.AWAITING_REPLY
+        rtc.first_sent_at = timezone.now()
+        rtc.requests_sent = 1
+        rtc.save()
+
+        rtc.send_reminder()
+
+        assert RequestToCoachEvent.objects.filter(
+            request=rtc,
+            event_type=RequestToCoachEvent.EventType.REMINDER_SENT,
+        ).exists()
+
+    def test_send_reminder_raises_when_guard_fails(self, rtc):
+        # IN_PREPARATION status → can_send_reminder() returns False
+        with pytest.raises(ValidationError):
+            rtc.send_reminder()
 
 
 # ── CoachActionToken ──────────────────────────────────────────────────────────
