@@ -293,7 +293,7 @@ class CoachRespondView(View):
             )
             if is_accept:
                 ma = rtc.matching_attempt
-                ma.transition_to(MatchingAttempt.Status.RTC_ACCEPTED, triggered_by='coach', triggered_by_user=coach.user)
+                ma.transition_to(MatchingAttempt.Status.CHEMISTRY_PENDING, triggered_by='coach', triggered_by_user=coach.user)
                 ma.save(update_fields=['status'])
             
                 MatchingAttemptEvent.objects.create(

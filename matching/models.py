@@ -11,6 +11,16 @@ from accounts.models import User
 from .locks import _get_locked_matching_attempt
 from profiles.models import Participant, Coach
 
+import uuid
+from django.core.exceptions import ValidationError
+from django.db import models, transaction
+from django.db.models import Q
+from django.utils import timezone
+
+from accounts.models import User
+from profiles.models import Participant, Coach
+from .locks import _get_locked_matching_attempt
+
 
 class MatchingAttempt(models.Model):
 
@@ -18,8 +28,8 @@ class MatchingAttempt(models.Model):
         DRAFT = "draft", "In Vorbereitung"
         READY_FOR_MATCHING = "ready_for_matching", "Bereit für Matching"
         MATCHING_ACTIVE = "matching_active", "Matching läuft"
-        RTC_ACCEPTED = "rtc_accepted", "Erstanfrage von Coach akzeptiert"
-        AWAITING_CHEMISTRY_CONFIRMATION = "awaiting_chemistry_confirmation", "Kennenlerngespräch läuft"
+        CHEMISTRY_PENDING = "chemistry_pending", "Kennenlerngespräch läuft"
+        CHEMISTRY_TIMEOUT = "chemistry_timeout", "Kennenlerngespräch nicht bestätigt"
         MATCH_CONFIRMED = "match_confirmed", "Match bestätigt"
         FAILED = "failed", "Kein Coach gefunden"
         CANCELLED = "cancelled", "Matching abgebrochen"
@@ -28,12 +38,8 @@ class MatchingAttempt(models.Model):
         Status.DRAFT,
         Status.READY_FOR_MATCHING,
         Status.MATCHING_ACTIVE,
-        Status.AWAITING_CHEMISTRY_CONFIRMATION,
+        Status.CHEMISTRY_PENDING,
     })
-    
-    # ------------------------------------------------------------------
-    # State Machine
-    # ------------------------------------------------------------------
 
     ALLOWED_TRANSITIONS = {
 
@@ -48,19 +54,20 @@ class MatchingAttempt(models.Model):
         }),
 
         Status.MATCHING_ACTIVE: frozenset({
-            Status.RTC_ACCEPTED,
+            Status.CHEMISTRY_PENDING,
             Status.FAILED,
             Status.CANCELLED,
         }),
-        
-        Status.RTC_ACCEPTED: frozenset({
-            Status.AWAITING_CHEMISTRY_CONFIRMATION,
+
+        Status.CHEMISTRY_PENDING: frozenset({
+            Status.MATCH_CONFIRMED,
+            Status.MATCHING_ACTIVE,
+            Status.CHEMISTRY_TIMEOUT,
             Status.CANCELLED,
         }),
 
-        Status.AWAITING_CHEMISTRY_CONFIRMATION: frozenset({
-            Status.MATCH_CONFIRMED,
-            Status.MATCHING_ACTIVE,  # coach declined after chemistry
+        Status.CHEMISTRY_TIMEOUT: frozenset({
+            Status.MATCHING_ACTIVE,
             Status.CANCELLED,
         }),
 
@@ -70,10 +77,6 @@ class MatchingAttempt(models.Model):
 
         Status.CANCELLED: frozenset(),
     }
-
-    # ------------------------------------------------------------------
-    # Core Fields
-    # ------------------------------------------------------------------
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
@@ -100,20 +103,18 @@ class MatchingAttempt(models.Model):
         db_index=True,
     )
 
-    # ------------------------------------------------------------------
-    # Automation Control
-    # ------------------------------------------------------------------
+    # automation
 
     automation_enabled = models.BooleanField(
         default=False,
-        help_text="Wenn aktiviert, werden automatisch Coach-Anfragen verschickt und Erinnerungen gesendet. Kann jederzeit ein- und ausgeschaltet werden.",
+        help_text="Automatisches Versenden von Coach-Anfragen und Erinnerungen."
     )
 
     automation_enabled_at = models.DateTimeField(
         null=True,
         blank=True,
     )
-    
+
     @property
     def automation_is_allowed(self):
         return (
@@ -124,37 +125,31 @@ class MatchingAttempt(models.Model):
             }
         )
 
-    # ------------------------------------------------------------------
-    # Match Outcome
-    # ------------------------------------------------------------------
+    # match outcome
 
     matched_coach = models.ForeignKey(
-        "profiles.Coach",
+        Coach,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
         related_name="successful_matches",
     )
 
-    chemistry_confirmation_received_at = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
+    # chemistry phase
 
-    cancelled_at = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
+    chemistry_requested_at = models.DateTimeField(null=True, blank=True)
 
-    # ------------------------------------------------------------------
-    # Django Metadata
-    # ------------------------------------------------------------------
+    chemistry_deadline_at = models.DateTimeField(null=True, blank=True)
+
+    chemistry_confirmed_at = models.DateTimeField(null=True, blank=True)
+
+    chemistry_declined_at = models.DateTimeField(null=True, blank=True)
+
+    cancelled_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        ordering = ["-created_at"]
 
-        verbose_name = "Matching"
-        verbose_name_plural = "Matchings"
+        ordering = ["-created_at"]
 
         constraints = [
             models.UniqueConstraint(
@@ -164,27 +159,27 @@ class MatchingAttempt(models.Model):
                         "draft",
                         "ready_for_matching",
                         "matching_active",
-                        "awaiting_chemistry_confirmation",
+                        "chemistry_pending",
                     ]
                 ),
                 name="unique_active_matching_attempt_per_participant",
             )
         ]
+
         indexes = [
             models.Index(fields=["participant", "created_at"]),
         ]
 
-    # ------------------------------------------------------------------
-    # State Machine Helpers
-    # ------------------------------------------------------------------
+    # -------------------------------------------------------
+    # state machine helpers
+    # -------------------------------------------------------
 
     @property
     def allowed_transitions(self):
         return self.ALLOWED_TRANSITIONS.get(self.status, frozenset())
-    
+
     @property
     def is_active(self):
-        
         return self.status in self.ACTIVE_MATCHING_ATTEMPT_STATUSES
 
     def can_transition_to(self, new_status):
@@ -197,13 +192,18 @@ class MatchingAttempt(models.Model):
             )
 
     @transaction.atomic
-    def transition_to(self, new_status, triggered_by="system", triggered_by_user: User = None) -> "MatchingAttempt":
-        
+    def transition_to(
+        self,
+        new_status,
+        triggered_by="system",
+        triggered_by_user: User = None
+    ):
+
         if triggered_by not in ["system", "staff", "coach"]:
-            raise ValueError("triggered_by must be one of: 'system', 'staff', 'coach'")
-        
-        if triggered_by_user and triggered_by not in  ["staff", "coach"]:
-            raise ValueError("triggered_by_user can only be set if triggered_by is 'staff' or 'coach'")
+            raise ValueError("Invalid triggered_by")
+
+        if triggered_by_user and triggered_by == "system":
+            raise ValueError("System transitions cannot specify triggered_by_user")
 
         locked = _get_locked_matching_attempt(self)
 
@@ -223,28 +223,9 @@ class MatchingAttempt(models.Model):
 
         return locked
 
-    def handle_expired_requests(self, triggered_by="system"):
-        now = timezone.now()
-
-        expired_requests = self.coach_requests.filter(
-            status=RequestToCoach.Status.AWAITING_REPLY,
-            deadline_at__lt=now,
-        )
-
-        for request in expired_requests:
-            request.transition_to(new_status=RequestToCoach.Status.NO_RESPONSE_UNTIL_DEADLINE, triggered_by=triggered_by)
-            
-            RequestToCoachEvent.objects.create(
-                request=request,
-                event_type=RequestToCoachEvent.EventType.TIMED_OUT,
-                triggered_by=triggered_by,
-            )
-
-
-            
-    # ------------------------------------------------------------------
-    # Automation Control Methods
-    # ------------------------------------------------------------------
+    # -------------------------------------------------------
+    # automation control
+    # -------------------------------------------------------
 
     def enable_automation(self):
 
@@ -255,7 +236,7 @@ class MatchingAttempt(models.Model):
         self.automation_enabled_at = timezone.now()
 
         self.save(update_fields=["automation_enabled", "automation_enabled_at"])
-        
+
         MatchingAttemptEvent.objects.create(
             matching_attempt=self,
             event_type=MatchingAttemptEvent.EventType.AUTOMATION_ENABLED,
@@ -268,22 +249,19 @@ class MatchingAttempt(models.Model):
 
         self.automation_enabled = False
         self.save(update_fields=["automation_enabled"])
-        
+
         MatchingAttemptEvent.objects.create(
             matching_attempt=self,
             event_type=MatchingAttemptEvent.EventType.AUTOMATION_DISABLED,
-            
         )
 
-    # ------------------------------------------------------------------
-    # Domain Actions
-    # ------------------------------------------------------------------
+    # -------------------------------------------------------
+    # domain actions
+    # -------------------------------------------------------
 
     @transaction.atomic
-    def start_matching(self, triggered_by="staff", triggered_by_user: User = None) -> "MatchingAttempt":
-        """
-        Transition from DRAFT → READY_FOR_MATCHING and record a STARTED event.
-        """
+    def start_matching(self, triggered_by="staff", triggered_by_user: User = None):
+
         updated = self.transition_to(
             self.Status.READY_FOR_MATCHING,
             triggered_by=triggered_by,
@@ -298,24 +276,19 @@ class MatchingAttempt(models.Model):
 
         return updated
 
-    # ------------------------------------------------------------------
-    # Queue Helpers (Coach Requests)
-    # ------------------------------------------------------------------
+    # -------------------------------------------------------
+    # queue helpers
+    # -------------------------------------------------------
 
     def get_active_requests(self) -> List["RequestToCoach"]:
-        """
-        Return the currently active coach requests.
-        Only one should ever exist.
-        """
-        
-        return list(self.coach_requests.filter(
-            status=RequestToCoach.Status.AWAITING_REPLY
-        ).all())
+        return list(
+            self.coach_requests.filter(
+                status=RequestToCoach.Status.AWAITING_REPLY
+            )
+        )
 
     def get_next_request(self):
-        """
-        Return the next coach request that has not yet been sent.
-        """
+
         return (
             self.coach_requests
             .filter(status=RequestToCoach.Status.IN_PREPARATION)
@@ -324,21 +297,20 @@ class MatchingAttempt(models.Model):
         )
 
     def has_remaining_requests(self):
+
         return self.coach_requests.filter(
             status=RequestToCoach.Status.IN_PREPARATION
         ).exists()
 
-    # ------------------------------------------------------------------
-    # Representation
-    # ------------------------------------------------------------------
+    # -------------------------------------------------------
 
     def __str__(self):
         return (
             f"Matching für {self.participant} "
             f"- Status: {self.get_status_display()}"
         )
-    
-    
+        
+        
 class MatchingAttemptTransition(models.Model):
 
     matching_attempt = models.ForeignKey(
