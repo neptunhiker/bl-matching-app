@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Coaches – BL-Matching{% endblock %}
+
+{% block body %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-2xl font-semibold text-tertiary-700">Coaches</h1>
+      <p class="text-sm text-neutral-500 mt-1">{{ paginator.count }} Einträge insgesamt</p>
+    </div>
+    <a href="{% url 'coach_create' %}"
+       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
+              text-white bg-primary-500 hover:bg-primary-600 transition-colors shadow-sm">
+      + Neu anlegen
+    </a>
+  </div>
+
+  {% if coaches %}
+  <div class="bg-white/70 rounded-2xl shadow-sm overflow-hidden border border-white/60">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-primary-50 text-tertiary-700">
+          <th class="px-5 py-3 font-semibold" style="text-align:left">Name</th>
+          <th class="px-5 py-3 font-semibold" style="text-align:left">E-Mail</th>
+          <th class="px-5 py-3 font-semibold" style="text-align:left">Stadt</th>
+          <th class="px-5 py-3 font-semibold" style="text-align:left">Status</th>
+          <th class="px-5 py-3 font-semibold" style="text-align:left">Erstellt</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100">
+        {% for coach in coaches %}
+        <tr class="hover:bg-primary-50/50 transition-colors text-left">
+          <td class="px-5 py-3 font-medium text-tertiary-700">
+            <a href="{% url 'coach_detail' coach.pk %}" class="hover:text-primary-600 transition-colors">
+              {{ coach.full_name }}
+            </a>
+          </td>
+          <td class="px-5 py-3 text-neutral-600">{{ coach.email }}</td>
+          <td class="px-5 py-3 text-neutral-600">{{ coach.city }}</td>
+          <td class="px-5 py-3 text-neutral-600">
+            {% if coach.status == Status.AVAILABLE %}
+              <span class="inline-flex items-center gap-2 text-sm">
+                <span class="h-3 w-3 rounded-full bg-green-500 ring-2 ring-green-300 shadow-sm animate-pulse" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
+                {{ coach.get_status_display }}
+              </span>
+            {% elif coach.status == Status.PAUSED %}
+              <span class="inline-flex items-center gap-2 text-sm">
+                <span class="h-3 w-3 rounded-full bg-neutral-400 ring-2 ring-neutral-200 shadow-sm" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
+                {{ coach.get_status_display }}
+              </span>
+            {% elif coach.status == Status.ONBOARDING %}
+              <span class="inline-flex items-center gap-2 text-sm">
+                <span class="h-3 w-3 rounded-full bg-yellow-400 ring-2 ring-yellow-200 shadow-sm" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
+                {{ coach.get_status_display }}
+              </span>
+            {% elif coach.status == Status.INACTIVE %}
+              <span class="inline-flex items-center gap-2 text-sm">
+                <span class="h-3 w-3 rounded-full bg-neutral-300 ring-2 ring-neutral-200 shadow-sm" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
+                {{ coach.get_status_display }}
+              </span>
+            {% else %}
+              <span class="inline-flex items-center gap-2 text-sm">
+                <span class="h-3 w-3 rounded-full bg-neutral-300 ring-2 ring-neutral-200 shadow-sm" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
+                {{ coach.get_status_display }}
+              </span>
+            {% endif %}
+          </td>
+          <td class="px-5 py-3 text-neutral-400">{{ coach.created_at|date:"d.m.Y" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if is_paginated %}
+  <div class="flex items-center justify-center gap-2 mt-6">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}"
+       class="px-4 py-2 rounded-lg text-sm border border-primary-200
+              text-primary-600 hover:bg-primary-50 transition-colors">
+      ← Zurück
+    </a>
+    {% endif %}
+    <span class="text-sm text-neutral-500">Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}"
+       class="px-4 py-2 rounded-lg text-sm border border-primary-200
+              text-primary-600 hover:bg-primary-50 transition-colors">
+      Weiter →
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="bg-white/70 rounded-2xl shadow-sm border border-white/60 px-8 py-16 text-center">
+    <p class="text-neutral-500 text-sm mb-4">Noch keine Coaches angelegt.</p>
+    <a href="{% url 'coach_create' %}"
+       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
+              text-white bg-primary-500 hover:bg-primary-600 transition-colors">
+      + Ersten Eintrag anlegen
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

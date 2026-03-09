@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}{{ coach.full_name }} löschen – BL-Matching{% endblock %}
+
+{% block body %}
+<div class="max-w-lg mx-auto px-4 sm:px-6 py-20">
+
+  <nav class="text-xs text-neutral-400 mb-6">
+    <a href="{% url 'coach_list' %}" class="hover:text-primary-500 transition-colors">Coaches</a>
+    <span class="mx-2">/</span>
+    <a href="{% url 'coach_detail' coach.pk %}" class="hover:text-primary-500 transition-colors">{{ coach.full_name }}</a>
+    <span class="mx-2">/</span>
+    <span class="text-tertiary-700">Löschen</span>
+  </nav>
+
+  <div class="bg-white/70 rounded-2xl shadow-sm border border-white/60 overflow-hidden">
+    <div class="bg-secondary-100 border-b border-secondary-200 px-6 py-5">
+      <h1 class="text-lg font-semibold text-tertiary-700">Eintrag wirklich löschen?</h1>
+      <p class="text-sm text-tertiary-600 mt-1">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+    </div>
+
+    <div class="px-6 py-6">
+      <p class="text-sm text-neutral-700">Soll <span class="font-semibold text-tertiary-700">{{ coach.full_name }}</span> dauerhaft aus der Datenbank entfernt werden?</p>
+    </div>
+
+    <div class="px-6 py-4 bg-neutral-50/60 flex items-center justify-between">
+      <a href="{% url 'coach_detail' coach.pk %}" class="text-sm text-neutral-500 hover:text-neutral-700 transition-colors">Abbrechen</a>
+      <form method="post">{% csrf_token %}
+        <button type="submit" class="px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors shadow-sm" style="background-color:#dc2626" onmouseover="this.style.backgroundColor='#b91c1c'" onmouseout="this.style.backgroundColor='#dc2626'">Endgültig löschen</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

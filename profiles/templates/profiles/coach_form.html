@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}{% if object %}{{ object }} bearbeiten{% else %}Neuen Coach{% endif %} – BL-Matching{% endblock %}
+
+{% block body %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 py-10">
+  <nav class="text-xs text-neutral-400 mb-6">
+    <a href="{% url 'coach_list' %}" class="hover:text-primary-500 transition-colors">Coaches</a>
+    {% if object %}<span class="mx-2">/</span><a href="{% url 'coach_detail' object.pk %}" class="hover:text-primary-500 transition-colors">{{ object }}</a>{% endif %}
+    <span class="mx-2">/</span>
+    <span class="text-tertiary-700">{% if object %}Bearbeiten{% else %}Neu anlegen{% endif %}</span>
+  </nav>
+
+  <h1 class="text-2xl font-semibold text-tertiary-700 mb-8">{% if object %}{{ object }} bearbeiten{% else %}Neuen Coach anlegen{% endif %}</h1>
+
+  <form method="post" novalidate class="bg-white/70 rounded-2xl shadow-sm border border-white/60 overflow-hidden">
+    {% csrf_token %}
+    <div class="divide-y divide-neutral-100/60">
+      <div class="px-6 py-6">
+        <h2 class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-4">Grunddaten</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {% include "profiles/_form_field.html" with field=form.user %}
+          {% include "profiles/_form_field.html" with field=form.city %}
+          {% include "profiles/_form_field.html" with field=form.status %}
+        </div>
+      </div>
+
+      <div class="px-6 py-6">
+        <h2 class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-4">Sprachen</h2>
+        <div class="flex flex-wrap gap-3">
+          {% for checkbox in form.languages %}
+          <label class="flex items-center gap-2 cursor-pointer text-sm text-tertiary-700">{{ checkbox.tag }} <span>{{ checkbox.choice_label }}</span></label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="px-6 py-6">
+        <h2 class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-4">Coaching-Formate</h2>
+        <label class="flex items-center gap-2 cursor-pointer text-sm text-tertiary-700">{{ form.coaching_format_online }} <span>{{ form.coaching_format_online.label }}</span></label>
+        <label class="flex items-center gap-2 cursor-pointer text-sm text-tertiary-700">{{ form.coaching_format_presence }} <span>{{ form.coaching_format_presence.label }}</span></label>
+        <label class="flex items-center gap-2 cursor-pointer text-sm text-tertiary-700">{{ form.coaching_format_hybrid }} <span>{{ form.coaching_format_hybrid.label }}</span></label>
+      </div>
+
+    </div>
+
+    <div class="px-6 py-4 bg-neutral-50/60 flex items-center justify-between">
+      <a href="{% url 'coach_list' %}" class="text-sm text-neutral-500 hover:text-neutral-700 transition-colors">Abbrechen</a>
+      <button type="submit" class="px-6 py-2.5 rounded-xl text-sm font-semibold text-white bg-primary-500 hover:bg-primary-600 transition-colors shadow-sm">{% if object %}Änderungen speichern{% else %}Anlegen{% endif %}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

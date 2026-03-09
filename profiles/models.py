@@ -18,11 +18,10 @@ class Language(models.Model):
 
 class Coach(models.Model):
     class Status(models.TextChoices):
-        VERFUEGBAR = 'verfuegbar', 'Verfügbar'
-        AUSGEBUCHT = 'ausgebucht', 'Ausgebucht'
-        PAUSIERT = 'pausiert', 'Pausiert'
-        IM_ONBOARDING = 'im_onboarding', 'Im Onboarding'
-        INAKTIV = 'inaktiv', 'Inaktiv'
+        AVAILABLE = 'available', 'Verfügbar'
+        PAUSED = 'paused', 'Pausiert'
+        ONBOARDING = 'onboarding', 'Im Onboarding'
+        INACTIVE = 'inactive', 'Inaktiv'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(
@@ -40,7 +39,7 @@ class Coach(models.Model):
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
-        default=Status.IM_ONBOARDING,
+        default=Status.ONBOARDING,
         verbose_name='Status',
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -71,6 +70,7 @@ class Coach(models.Model):
 
 
 class Participant(models.Model):
+    
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     first_name = models.CharField(max_length=150, verbose_name='Vorname')
     last_name = models.CharField(max_length=150, verbose_name='Nachname')
@@ -83,6 +83,8 @@ class Participant(models.Model):
     coaching_format_presence = models.BooleanField(default=False, verbose_name='Präsenz')
     coaching_format_hybrid = models.BooleanField(default=False, verbose_name='Hybrid')
     created_at = models.DateTimeField(auto_now_add=True)
+    background_information = models.TextField(blank=True, verbose_name='Hintergrundinformationen')
+    coaching_target = models.TextField(blank=True, verbose_name='Coaching-Ziel')
 
     class Meta:
         ordering = ['last_name', 'first_name']

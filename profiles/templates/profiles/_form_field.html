@@ -1,0 +1,25 @@
+<div>
+  {% if not hide_label %}
+  <label for="{{ field.id_for_label }}"
+         class="block text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-1">
+    {{ field.label }}{% if field.field.required %} <span class="text-secondary-500">*</span>{% endif %}
+  </label>
+  {% endif %}
+  <div class="[&_input]:w-full [&_textarea]:w-full
+              [&_input]:rounded-lg [&_textarea]:rounded-lg
+              [&_input]:border [&_textarea]:border
+              [&_input]:border-neutral-200 [&_textarea]:border-neutral-200
+              [&_input]:px-3 [&_input]:py-2 [&_textarea]:px-3 [&_textarea]:py-2
+              [&_input]:text-sm [&_textarea]:text-sm
+              [&_input]:text-neutral-800 [&_textarea]:text-neutral-800
+              [&_input:focus]:outline-none [&_textarea:focus]:outline-none
+              [&_input:focus]:ring-2 [&_textarea:focus]:ring-2
+              [&_input:focus]:ring-primary-300 [&_textarea:focus]:ring-primary-300
+              [&_input:focus]:border-primary-400 [&_textarea:focus]:border-primary-400
+              [&_input]:bg-white/80 [&_textarea]:bg-white/80">
+    {{ field }}
+  </div>
+  {% if field.errors %}
+  <p class="text-secondary-600 text-xs mt-1">{{ field.errors|join:", " }}</p>
+  {% endif %}
+</div>
