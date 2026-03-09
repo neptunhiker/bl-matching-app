@@ -365,6 +365,23 @@ class TestCoachActionToken:
 
         assert token.request_to_coach == rtc
 
+    def test_tokens_cascade_delete_with_request(self, rtc):
+
+        CoachActionToken.objects.create(
+            token="token-accept",
+            request_to_coach=rtc,
+            action=CoachActionToken.Action.ACCEPT,
+        )
+        CoachActionToken.objects.create(
+            token="token-decline",
+            request_to_coach=rtc,
+            action=CoachActionToken.Action.DECLINE,
+        )
+
+        rtc.delete()
+
+        assert CoachActionToken.objects.count() == 0
+
 
 # ── MatchingAttempt ───────────────────────────────────────────────────────────
 
