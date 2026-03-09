@@ -24,6 +24,17 @@ def participant_2(db):
 
 
 @pytest.fixture
+def staff_user(db):
+    return User.objects.create_user(
+        email="staff_member@example.com",
+        password="testpass123",
+        first_name="Staff",
+        last_name="Member",
+        is_staff=True,
+    )
+
+
+@pytest.fixture
 def coach_user(db):
     return User.objects.create_user(
         email="carl_coach@example.com",

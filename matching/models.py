@@ -192,6 +192,12 @@ class MatchingAttempt(models.Model):
         if triggered_by_user and triggered_by == "system":
             raise ValueError("System transitions cannot specify triggered_by_user")
 
+        if triggered_by == "staff" and triggered_by_user is not None:
+            if not (triggered_by_user.is_staff or triggered_by_user.is_superuser):
+                raise ValidationError(
+                    "triggered_by_user must be a staff member or superuser when triggered_by is 'staff'."
+                )
+
         locked = _get_locked_matching_attempt(self)
 
         locked._validate_transition(new_status)
@@ -261,7 +267,7 @@ class MatchingAttempt(models.Model):
         MatchingAttemptEvent.objects.create(
             matching_attempt=updated,
             event_type=MatchingAttemptEvent.EventType.STARTED,
-            triggered_by=triggered_by,
+            actor=triggered_by_user,
         )
 
         return updated
@@ -369,6 +375,23 @@ class MatchingAttemptTransition(models.Model):
             ),
         ]
 
+    def clean(self):
+        if self.triggered_by == "system" and self.triggered_by_user:
+            raise ValidationError(
+                "triggered_by_user must be empty when triggered_by is 'system'."
+            )
+
+        if self.triggered_by in {"staff", "coach"} and not self.triggered_by_user:
+            raise ValidationError(
+                "triggered_by_user must be set when triggered_by is 'staff' or 'coach'."
+            )
+
+        if self.triggered_by == "staff" and self.triggered_by_user:
+            if not (self.triggered_by_user.is_staff or self.triggered_by_user.is_superuser):
+                raise ValidationError(
+                    "triggered_by_user must be a staff member or superuser when triggered_by is 'staff'."
+                )
+
     def __str__(self):
         return f"{self.from_status} → {self.to_status} ({self.triggered_by})"
         
@@ -376,6 +399,10 @@ class MatchingAttemptTransition(models.Model):
 class MatchingAttemptEvent(models.Model):
 
     class EventType(models.TextChoices):
+
+        # Lebenszyklus
+        CREATED = "created", "Matching erstellt"
+        STARTED = "started", "Matching gestartet"
 
         # Automatisierung
         AUTOMATION_ENABLED = "automation_enabled", "Automatisierung aktiviert"
@@ -592,6 +619,12 @@ class RequestToCoach(models.Model):
 
         if triggered_by_user and triggered_by not in ["staff", "coach"]:
             raise ValueError("triggered_by_user only allowed for staff or coach")
+
+        if triggered_by == "staff" and triggered_by_user is not None:
+            if not (triggered_by_user.is_staff or triggered_by_user.is_superuser):
+                raise ValidationError(
+                    "triggered_by_user must be a staff member or superuser when triggered_by is 'staff'."
+                )
 
         locked = _get_locked_request_to_coach(self)
 
@@ -858,6 +891,12 @@ class RequestToCoachTransition(models.Model):
                 "triggered_by_user must be set when triggered_by is 'staff' or 'coach'."
             )
 
+        if self.triggered_by == self.TriggeredBy.STAFF and self.triggered_by_user:
+            if not (self.triggered_by_user.is_staff or self.triggered_by_user.is_superuser):
+                raise ValidationError(
+                    "triggered_by_user must be a staff member or superuser when triggered_by is 'staff'."
+                )
+
     def __str__(self):
         return (
             f"Request {self.request_id}: "
@@ -1018,6 +1057,12 @@ class RequestToCoachEvent(models.Model):
             raise ValidationError(
                 "triggered_by_user must be set when triggered_by is 'staff' or 'coach'."
             )
+
+        if self.triggered_by == self.TriggeredBy.STAFF and self.triggered_by_user:
+            if not (self.triggered_by_user.is_staff or self.triggered_by_user.is_superuser):
+                raise ValidationError(
+                    "triggered_by_user must be a staff member or superuser when triggered_by is 'staff'."
+                )
 
     def __str__(self):
         return (

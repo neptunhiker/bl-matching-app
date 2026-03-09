@@ -444,6 +444,45 @@ class TestMatchingAttempt:
         assert str(matching_attempt).startswith("Matching für")
 
 
+# ── TestStartMatching ─────────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestStartMatching:
+
+    def test_start_matching_transitions_to_ready_for_matching(self, matching_attempt, staff_user):
+        updated = matching_attempt.start_matching(triggered_by="staff", triggered_by_user=staff_user)
+
+        assert updated.status == MatchingAttempt.Status.READY_FOR_MATCHING
+
+    def test_start_matching_creates_started_event(self, matching_attempt, staff_user):
+        updated = matching_attempt.start_matching(triggered_by="staff", triggered_by_user=staff_user)
+
+        assert MatchingAttemptEvent.objects.filter(
+            matching_attempt=updated,
+            event_type=MatchingAttemptEvent.EventType.STARTED,
+        ).exists()
+
+    def test_start_matching_records_actor_on_event(self, matching_attempt, staff_user):
+        updated = matching_attempt.start_matching(triggered_by="staff", triggered_by_user=staff_user)
+
+        event = MatchingAttemptEvent.objects.get(
+            matching_attempt=updated,
+            event_type=MatchingAttemptEvent.EventType.STARTED,
+        )
+        assert event.actor == staff_user
+
+    def test_start_matching_raises_from_non_draft_status(self, matching_attempt, staff_user):
+        matching_attempt.status = MatchingAttempt.Status.MATCHING_ACTIVE
+        matching_attempt.save()
+
+        with pytest.raises(ValidationError):
+            matching_attempt.start_matching(triggered_by="staff", triggered_by_user=staff_user)
+
+    def test_start_matching_raises_for_non_staff_user(self, matching_attempt, coach_user):
+        with pytest.raises(ValidationError):
+            matching_attempt.start_matching(triggered_by="staff", triggered_by_user=coach_user)
+
+
 # ── MatchingAttemptTransition ─────────────────────────────────────────────────
 
 class TestMatchingAttemptTransition:
@@ -492,16 +531,24 @@ class TestMatchingAttemptTransition:
 
         assert updated.status == MatchingAttempt.Status.READY_FOR_MATCHING
 
-    def test_staff_transition_records_user(self, matching_attempt, coach_user):
+    def test_staff_transition_records_user(self, matching_attempt, staff_user):
         matching_attempt.transition_to(
             MatchingAttempt.Status.READY_FOR_MATCHING,
             triggered_by="staff",
-            triggered_by_user=coach_user,
+            triggered_by_user=staff_user,
         )
 
         transition = MatchingAttemptTransition.objects.get()
         assert transition.triggered_by == "staff"
-        assert transition.triggered_by_user == coach_user
+        assert transition.triggered_by_user == staff_user
+
+    def test_staff_transition_raises_for_non_staff_user(self, matching_attempt, coach_user):
+        with pytest.raises(ValidationError):
+            matching_attempt.transition_to(
+                MatchingAttempt.Status.READY_FOR_MATCHING,
+                triggered_by="staff",
+                triggered_by_user=coach_user,
+            )
 
     def test_actor_constraint_staff_without_user(self, matching_attempt):
         with pytest.raises(IntegrityError):
