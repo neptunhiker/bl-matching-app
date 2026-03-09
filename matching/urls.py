@@ -8,6 +8,7 @@ from .views import (
     MatchingAttemptListView,
     RequestToCoachCreateView,
     RequestToCoachDetailView,
+    StartMatchingView,
     ToggleAutomationView,
 )
 
@@ -16,6 +17,7 @@ urlpatterns = [
     path('matchings/', MatchingAttemptListView.as_view(), name='matching_attempts'),
     path('matchings/new/', MatchingAttemptCreateView.as_view(), name='matching_attempt_create'),
     path('matching/<uuid:pk>/', MatchingAttemptDetailView.as_view(), name='matching_attempt_detail'),
+    path('matching/<uuid:pk>/start/', StartMatchingView.as_view(), name='matching_attempt_start'),
     path('matching/<uuid:pk>/automation/', ToggleAutomationView.as_view(), name='matching_attempt_automation'),
     path('matching/<uuid:pk>/add-coach/', RequestToCoachCreateView.as_view(), name='request_to_coach_create'),
     path('matching/coaches/search/', CoachAutocompleteView.as_view(), name='coach_autocomplete'),

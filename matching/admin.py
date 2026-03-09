@@ -23,11 +23,11 @@ class CoachActionTokenAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         return False
 
-    def has_view_permission(self, request, obj=None):
-        return False
+    # def has_view_permission(self, request, obj=None):
+    #     return False
     
-    def has_module_permission(self, request):
-        return False
+    # def has_module_permission(self, request):
+    #     return False
     
 @admin.register(MatchingAttempt)
 class MatchingAttemptAdmin(admin.ModelAdmin):

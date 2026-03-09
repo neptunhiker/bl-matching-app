@@ -26,7 +26,7 @@ class EmailLog(models.Model):
         UNIQUE_PROXY_OPEN = 'proxy_unique', 'Einmalige Proxy-Öffnung'
         
     class EmailTrigger(models.TextChoices):
-        AUTOMATED = 'automtic', 'Automatisch'
+        AUTOMATED = 'automatic', 'Automatisch'
         MANUAL = 'manual', 'Manuell'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

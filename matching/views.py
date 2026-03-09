@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.views.generic import DetailView, ListView, CreateView, View
 
 from profiles.models import Coach
-from .models import CoachActionToken, MatchingAttempt, RequestToCoach
+from .models import CoachActionToken, MatchingAttempt, RequestToCoach, MatchingAttemptEvent, RequestToCoachEvent
 from .tokens import consume_token
 
 
@@ -24,7 +24,16 @@ class MatchingAttemptCreateView(StaffRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        MatchingAttemptEvent.objects.create(
+            matching_attempt=self.object,
+            event_type=MatchingAttemptEvent.EventType.CREATED,
+            triggered_by=self.request.user,
+        )
+        return response
+    
+       
+        
 
     def get_success_url(self):
         return reverse('matching_attempt_detail', kwargs={'pk': self.object.pk})
@@ -54,7 +63,25 @@ class MatchingAttemptDetailView(LoginRequiredMixin, DetailView):
         context['transitions'] = list(
             matching_attempt.transitions.select_related('triggered_by_user').order_by('created_at')
         )
+        context['events'] = list(
+            matching_attempt.events.order_by('created_at')
+        )
         return context
+
+class StartMatchingView(StaffRequiredMixin, View):
+    """Transition a MatchingAttempt from DRAFT → READY_FOR_MATCHING.
+
+    POST /matching/<pk>/start/
+    """
+
+    def post(self, request, pk):
+        matching_attempt = get_object_or_404(MatchingAttempt, pk=pk)
+        matching_attempt.start_matching(
+            triggered_by="staff",
+            triggered_by_user=request.user,
+        )
+        return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
+
 
 class ToggleAutomationView(StaffRequiredMixin, View):
     """Enable or disable automation on a MatchingAttempt.
@@ -181,6 +208,9 @@ class RequestToCoachDetailView(LoginRequiredMixin, DetailView):
         context['transitions'] = list(
             self.object.transitions.select_related('triggered_by_user').order_by('created_at')
         )
+        context['events'] = list(
+            self.object.events.order_by('created_at')
+        )
         return context
 
 
@@ -261,6 +291,22 @@ class CoachRespondView(View):
                 RequestToCoach.Status.ACCEPTED_ON_TIME if is_accept
                 else RequestToCoach.Status.REJECTED_ON_TIME
             )
+            if is_accept:
+                ma = rtc.matching_attempt
+                ma.transition_to(MatchingAttempt.Status.RTC_ACCEPTED, triggered_by='coach', triggered_by_user=coach.user)
+                ma.save(update_fields=['status'])
+            
+                MatchingAttemptEvent.objects.create(
+                    matching_attempt=ma,
+                    event_type=MatchingAttemptEvent.EventType.RTC_ACCEPTED,
+                    triggered_by=coach.user.email,
+                )
+                
+                RequestToCoachEvent.objects.create(
+                    request=rtc,
+                    event_type=RequestToCoachEvent.EventType.ACCEPTED,
+                    triggered_by=coach.user.email,
+                )
         else:
             on_time = False
             new_status = (
@@ -270,6 +316,8 @@ class CoachRespondView(View):
 
         rtc.status = new_status
         rtc.save(update_fields=['status'])
+        
+        
 
         return render(
             request,

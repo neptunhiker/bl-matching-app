@@ -9,8 +9,9 @@ from django.db import transaction
 
 
 from emails.services import send_email
+from emails.models import EmailLog
 from .locks import _get_locked_request_to_coach
-from .models import RequestToCoach, RequestToCoachEvent, MatchingAttempt
+from .models import RequestToCoach, RequestToCoachEvent, MatchingAttempt, MatchingAttemptEvent
 from .tokens import generate_coach_action_tokens
 from .utils import add_business_hours
 
@@ -40,7 +41,7 @@ def _send_request_email(
     subject: str,
     template_name: str,
     event_type: str,
-    email_trigger: str = "automated",
+    email_trigger: str = EmailLog.EmailTrigger.AUTOMATED,
 ):
     accept_url, decline_url = generate_coach_action_tokens(rtc)
 
@@ -65,7 +66,7 @@ def _send_request_email(
     )
     
 @transaction.atomic
-def send_first_coach_request_email(rtc: RequestToCoach, email_trigger: str = "automated") -> RequestToCoach:
+def send_first_coach_request_email(rtc: RequestToCoach, email_trigger: str = EmailLog.EmailTrigger.AUTOMATED) -> RequestToCoach:
     """Send the first coach request email and update status accordingly."""
     
     rtc = _get_locked_request_to_coach(rtc)
@@ -100,11 +101,13 @@ def send_first_coach_request_email(rtc: RequestToCoach, email_trigger: str = "au
     rtc = rtc.transition_to(RequestToCoach.Status.AWAITING_REPLY)
     if not rtc.matching_attempt.is_active:
         ma = rtc.matching_attempt.transition_to(MatchingAttempt.Status.MATCHING_ACTIVE)
+        
+    
     
     return rtc
     
 @transaction.atomic
-def send_reminder_coach_request_email(rtc: RequestToCoach, email_trigger: str = "automated") -> RequestToCoach:
+def send_reminder_coach_request_email(rtc: RequestToCoach, email_trigger: str = EmailLog.EmailTrigger.AUTOMATED) -> RequestToCoach:
     """Send a reminder email to the coach and update status accordingly."""
     
     rtc = _get_locked_request_to_coach(rtc)
@@ -130,7 +133,7 @@ def send_reminder_coach_request_email(rtc: RequestToCoach, email_trigger: str = 
     return rtc
 
 @transaction.atomic
-def send_connecting_email(request_to_coach: RequestToCoach, email_trigger: str = "automated"):
+def send_connecting_email(request_to_coach: RequestToCoach, email_trigger: str = EmailLog.EmailTrigger.AUTOMATED):
     """Send match-confirmed emails to both the coach and the participant."""
     pass
     

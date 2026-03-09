@@ -18,6 +18,7 @@ class MatchingAttempt(models.Model):
         DRAFT = "draft", "In Vorbereitung"
         READY_FOR_MATCHING = "ready_for_matching", "Bereit für Matching"
         MATCHING_ACTIVE = "matching_active", "Matching läuft"
+        RTC_ACCEPTED = "rtc_accepted", "Erstanfrage von Coach akzeptiert"
         AWAITING_CHEMISTRY_CONFIRMATION = "awaiting_chemistry_confirmation", "Kennenlerngespräch läuft"
         MATCH_CONFIRMED = "match_confirmed", "Match bestätigt"
         FAILED = "failed", "Kein Coach gefunden"
@@ -47,8 +48,13 @@ class MatchingAttempt(models.Model):
         }),
 
         Status.MATCHING_ACTIVE: frozenset({
-            Status.AWAITING_CHEMISTRY_CONFIRMATION,
+            Status.RTC_ACCEPTED,
             Status.FAILED,
+            Status.CANCELLED,
+        }),
+        
+        Status.RTC_ACCEPTED: frozenset({
+            Status.AWAITING_CHEMISTRY_CONFIRMATION,
             Status.CANCELLED,
         }),
 
@@ -227,6 +233,12 @@ class MatchingAttempt(models.Model):
 
         for request in expired_requests:
             request.transition_to(new_status=RequestToCoach.Status.NO_RESPONSE_UNTIL_DEADLINE, triggered_by=triggered_by)
+            
+            RequestToCoachEvent.objects.create(
+                request=request,
+                event_type=RequestToCoachEvent.EventType.TIMED_OUT,
+                triggered_by=triggered_by,
+            )
 
 
             
@@ -243,6 +255,11 @@ class MatchingAttempt(models.Model):
         self.automation_enabled_at = timezone.now()
 
         self.save(update_fields=["automation_enabled", "automation_enabled_at"])
+        
+        MatchingAttemptEvent.objects.create(
+            matching_attempt=self,
+            event_type=MatchingAttemptEvent.EventType.AUTOMATION_ENABLED,
+        )
 
     def disable_automation(self):
 
@@ -251,6 +268,35 @@ class MatchingAttempt(models.Model):
 
         self.automation_enabled = False
         self.save(update_fields=["automation_enabled"])
+        
+        MatchingAttemptEvent.objects.create(
+            matching_attempt=self,
+            event_type=MatchingAttemptEvent.EventType.AUTOMATION_DISABLED,
+            
+        )
+
+    # ------------------------------------------------------------------
+    # Domain Actions
+    # ------------------------------------------------------------------
+
+    @transaction.atomic
+    def start_matching(self, triggered_by="staff", triggered_by_user: User = None) -> "MatchingAttempt":
+        """
+        Transition from DRAFT → READY_FOR_MATCHING and record a STARTED event.
+        """
+        updated = self.transition_to(
+            self.Status.READY_FOR_MATCHING,
+            triggered_by=triggered_by,
+            triggered_by_user=triggered_by_user,
+        )
+
+        MatchingAttemptEvent.objects.create(
+            matching_attempt=updated,
+            event_type=MatchingAttemptEvent.EventType.STARTED,
+            triggered_by=triggered_by,
+        )
+
+        return updated
 
     # ------------------------------------------------------------------
     # Queue Helpers (Coach Requests)
@@ -342,6 +388,58 @@ class MatchingAttemptTransition(models.Model):
     def __str__(self):
         return f"{self.from_status} → {self.to_status} ({self.triggered_by})"
         
+
+      
+        
+class MatchingAttemptEvent(models.Model):
+
+    class EventType(models.TextChoices):
+        CREATED = "created", "Matching erstellt"
+        STARTED = "matching_started", "Matching gestartet"
+        AUTOMATION_ENABLED = "automation_enabled", "Auto E-Mails aktiviert"
+        AUTOMATION_DISABLED = "automation_disabled", "Auto E-Mails deaktiviert"
+        CANCELLED = "matching_cancelled", "Matching abgebrochen"
+        REQUEST_SENT = "request_sent", "Matching-Anfrage gesendet"
+        REMINDER_SENT = "reminder_sent", "Reminder gesendet"
+        RTC_CANCELLED = "rtc_cancelled", "Anfrage an Coach abgebrochen"
+        RTC_TIMED_OUT = "rtc_timed_out", "Deadline überschritten"
+        RTC_ACCEPTED = "rtc_accepted", "Matching-Anfrage akzeptiert"
+        RTC_REJECTED = "rtc_rejected", "Matching-Anfrage abgelehnt"
+
+    matching_attempt = models.ForeignKey(
+        "MatchingAttempt",
+        on_delete=models.CASCADE,
+        related_name="events",
+    )
+
+    event_type = models.CharField(
+        max_length=30,
+        choices=EventType.choices,
+    )
+
+    triggered_by = models.CharField(
+        max_length=30,
+        choices=[
+            ("system", "System"),
+            ("staff", "BL Mitarbeiter:in"),
+            ("coach", "Coach"),
+        ],
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["created_at"]
+     
+        indexes = [
+           models.Index(fields=["matching_attempt", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.event_type} ({self.triggered_by})"
+    
         
 class RequestToCoach(models.Model):
 
@@ -352,7 +450,7 @@ class RequestToCoach(models.Model):
         ACCEPTED_LATE = "accepted_late", "Akzeptiert (verspätet)"
         REJECTED_ON_TIME = "rejected_on_time", "Abgelehnt (rechtzeitig)"
         REJECTED_LATE = "rejected_late", "Abgelehnt (verspätet)"
-        NO_RESPONSE_UNTIL_DEADLINE = "no_response_until_deadline", "Keine Antwort bis zur Frist"
+        NO_RESPONSE_UNTIL_DEADLINE = "no_response_until_deadline", "Keine Rückmeldung"
         CANCELLED = "cancelled", "Anfrage abgebrochen"
 
     # Immutable transition map

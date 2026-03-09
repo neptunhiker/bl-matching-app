@@ -177,6 +177,13 @@ class TestRequestToCoachDetailView:
 @pytest.mark.django_db
 class TestCoachRespondView:
 
+    @pytest.fixture
+    def matching_attempt(self, participant):
+        return MatchingAttempt.objects.create(
+            participant=participant,
+            status=MatchingAttempt.Status.MATCHING_ACTIVE,
+        )
+
     def _make_token(self, request_to_coach, action, used_at=None):
         return CoachActionToken.objects.create(
             token=secrets.token_urlsafe(48),

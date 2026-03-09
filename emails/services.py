@@ -14,7 +14,7 @@ def send_email(
     template_name: str,
     context: dict,
     sent_by: str,
-    email_trigger: str = "automated",
+    email_trigger: str = EmailLog.EmailTrigger.AUTOMATED,
     request_to_coach=None,
     matching_attempt=None,
 ) -> EmailLog:
