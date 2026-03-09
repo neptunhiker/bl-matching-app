@@ -466,6 +466,36 @@ class TestMatchingAttemptTransition:
                 triggered_by_user=coach_user,
             )
 
+    def test_invalid_transition_raises_validation_error(self, matching_attempt):
+        with pytest.raises(ValidationError):
+            matching_attempt.transition_to(MatchingAttempt.Status.MATCH_CONFIRMED)
+
+    def test_transition_updates_status_on_instance(self, matching_attempt):
+        updated = matching_attempt.transition_to(MatchingAttempt.Status.READY_FOR_MATCHING)
+
+        assert updated.status == MatchingAttempt.Status.READY_FOR_MATCHING
+
+    def test_staff_transition_records_user(self, matching_attempt, coach_user):
+        matching_attempt.transition_to(
+            MatchingAttempt.Status.READY_FOR_MATCHING,
+            triggered_by="staff",
+            triggered_by_user=coach_user,
+        )
+
+        transition = MatchingAttemptTransition.objects.get()
+        assert transition.triggered_by == "staff"
+        assert transition.triggered_by_user == coach_user
+
+    def test_actor_constraint_staff_without_user(self, matching_attempt):
+        with pytest.raises(IntegrityError):
+            MatchingAttemptTransition.objects.create(
+                matching_attempt=matching_attempt,
+                from_status="draft",
+                to_status="ready_for_matching",
+                triggered_by="staff",
+                triggered_by_user=None,
+            )
+
 
 # ── TestAutomationControl ─────────────────────────────────────────────────────
 
