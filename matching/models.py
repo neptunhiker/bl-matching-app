@@ -283,6 +283,19 @@ class MatchingAttempt(models.Model):
 
     # -------------------------------------------------------
 
+    def on_save(self, *args, **kwargs):
+        from . import MatchingAttemptEvent
+        
+        super().on_save(*args, **kwargs)
+        print("Is this being called when a new MatchingAttempt is created?")
+        # if created
+        if not self.pk:
+            MatchingAttemptEvent.objects.create(
+                matching_attempt=self,
+                event_type=MatchingAttemptEvent.EventType.CREATED,
+            )
+                
+        
     def __str__(self):
         return (
             f"Matching für {self.participant} "

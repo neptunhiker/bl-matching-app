@@ -9,6 +9,7 @@ from django.views.generic import DetailView, ListView, CreateView, View
 from profiles.models import Coach
 from .models import CoachActionToken, MatchingAttempt, RequestToCoach, MatchingAttemptEvent, RequestToCoachEvent
 from .tokens import consume_token
+from matching import services
 
 
 class StaffRequiredMixin(UserPassesTestMixin):
@@ -23,14 +24,11 @@ class MatchingAttemptCreateView(StaffRequiredMixin, CreateView):
     template_name = 'matching/matching_attempt_form.html'
 
     def form_valid(self, form):
-        form.instance.created_by = self.request.user
-        response = super().form_valid(form)
-        MatchingAttemptEvent.objects.create(
-            matching_attempt=self.object,
-            event_type=MatchingAttemptEvent.EventType.CREATED,
-            triggered_by=self.request.user,
+        self.object = services.create_matching_attempt(
+            participant=form.cleaned_data["participant"],
+            created_by=self.request.user,
         )
-        return response
+        return redirect(self.object.get_absolute_url())
     
        
         
