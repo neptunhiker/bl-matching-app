@@ -15,6 +15,10 @@ rtp.py
 implementation_plans/
 docs/
 
+# Test coverage
+.coverage
+htmlcov/
+
 # Generated Tailwind CSS (built by CLI — not committed)
 static/css/tailwind.css
 
