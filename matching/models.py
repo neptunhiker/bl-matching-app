@@ -687,10 +687,13 @@ class RequestToCoach(models.Model):
             event_type=RequestToCoachEvent.EventType.DEADLINE_PASSED,
         )
 
-    def accept(self, triggered_by="coach"):
+    def accept(self, triggered_by="coach", triggered_by_user=None):
 
         if self.status != self.Status.AWAITING_REPLY:
             raise ValidationError("Cannot accept request in this state")
+
+        if triggered_by == "coach" and triggered_by_user is None:
+            triggered_by_user = self.coach.user
 
         now = timezone.now()
 
@@ -699,7 +702,7 @@ class RequestToCoach(models.Model):
         else:
             new_status = self.Status.ACCEPTED_ON_TIME
 
-        updated = self.transition_to(new_status, triggered_by=triggered_by)
+        updated = self.transition_to(new_status, triggered_by=triggered_by, triggered_by_user=triggered_by_user)
 
         updated.mark_responded()
 
@@ -711,10 +714,13 @@ class RequestToCoach(models.Model):
 
         return updated
 
-    def reject(self, triggered_by="coach"):
+    def reject(self, triggered_by="coach", triggered_by_user=None):
 
         if self.status != self.Status.AWAITING_REPLY:
             raise ValidationError("Cannot reject request in this state")
+
+        if triggered_by == "coach" and triggered_by_user is None:
+            triggered_by_user = self.coach.user
 
         now = timezone.now()
 
@@ -723,7 +729,7 @@ class RequestToCoach(models.Model):
         else:
             new_status = self.Status.REJECTED_ON_TIME
 
-        updated = self.transition_to(new_status, triggered_by=triggered_by)
+        updated = self.transition_to(new_status, triggered_by=triggered_by, triggered_by_user=triggered_by_user)
 
         updated.mark_responded()
 
@@ -773,40 +779,89 @@ class RequestToCoach(models.Model):
 
 class RequestToCoachTransition(models.Model):
 
+    class TriggeredBy(models.TextChoices):
+        SYSTEM = "system", "System"
+        STAFF = "staff", "BL Mitarbeiter:in"
+        COACH = "coach", "Coach"
+
     request = models.ForeignKey(
         RequestToCoach,
         on_delete=models.CASCADE,
-        related_name="transitions"
+        related_name="transitions",
     )
 
-    from_status = models.CharField(max_length=50, choices=RequestToCoach.Status.choices)
-    to_status = models.CharField(max_length=50, choices=RequestToCoach.Status.choices)
+    from_status = models.CharField(
+        max_length=50,
+        choices=RequestToCoach.Status.choices,
+        db_index=True,
+    )
+
+    to_status = models.CharField(
+        max_length=50,
+        choices=RequestToCoach.Status.choices,
+        db_index=True,
+    )
 
     triggered_by = models.CharField(
         max_length=20,
-        choices=[
-            ("system", "System"),
-            ("staff", "BL Mitarbeiter:in"),
-            ("coach", "Coach"),
-        ],
+        choices=TriggeredBy.choices,
     )
-    
+
     triggered_by_user = models.ForeignKey(
         User,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
+        help_text="Benutzer, der die Transition ausgelöst hat (nur bei staff oder coach)",
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    note = models.TextField(blank=True)
+    note = models.TextField(
+        blank=True,
+        help_text="Optionaler Kommentar zur Transition (z.B. Begründung bei manuellen Eingriffen)",
+    )
 
     class Meta:
         ordering = ["created_at"]
 
+        indexes = [
+            models.Index(fields=["request", "created_at"]),
+            models.Index(fields=["from_status"]),
+            models.Index(fields=["to_status"]),
+        ]
+
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(triggered_by="system", triggered_by_user__isnull=True)
+                    |
+                    models.Q(triggered_by__in=["staff", "coach"], triggered_by_user__isnull=False)
+                ),
+                name="rtc_transition_valid_triggered_by_user",
+            )
+        ]
+
+    def clean(self):
+        """
+        Application-level validation for clearer error messages.
+        """
+        if self.triggered_by == self.TriggeredBy.SYSTEM and self.triggered_by_user:
+            raise ValidationError(
+                "triggered_by_user must be empty when triggered_by is 'system'."
+            )
+
+        if self.triggered_by in {self.TriggeredBy.STAFF, self.TriggeredBy.COACH} and not self.triggered_by_user:
+            raise ValidationError(
+                "triggered_by_user must be set when triggered_by is 'staff' or 'coach'."
+            )
+
     def __str__(self):
-        return f"{self.from_status} → {self.to_status} ({self.triggered_by})"
+        return (
+            f"Request {self.request_id}: "
+            f"{self.from_status} → {self.to_status} "
+            f"({self.get_triggered_by_display()})"
+        )
 
 
 class CoachActionToken(models.Model):
