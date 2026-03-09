@@ -107,13 +107,10 @@ class MatchingAttempt(models.Model):
 
     @property
     def automation_is_allowed(self):
-        return (
-            self.automation_enabled and
-            self.status in {
-                self.Status.READY_FOR_MATCHING,
-                self.Status.MATCHING_ACTIVE,
-            }
-        )
+        return self.status in {
+            self.Status.READY_FOR_MATCHING,
+            self.Status.MATCHING_ACTIVE,
+        }
 
     # match outcome
 
@@ -221,6 +218,9 @@ class MatchingAttempt(models.Model):
 
         if self.automation_enabled:
             return
+
+        if not self.automation_is_allowed:
+            raise ValidationError("Automation cannot be enabled in the current status.")
 
         self.automation_enabled = True
         self.automation_enabled_at = timezone.now()

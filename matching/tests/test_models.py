@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.utils import timezone
 
-from matching.models import MatchingAttempt, MatchingAttemptTransition, RequestToCoach, RequestToCoachTransition, RequestToCoachEvent, CoachActionToken
+from matching.models import MatchingAttempt, MatchingAttemptTransition, MatchingAttemptEvent, RequestToCoach, RequestToCoachTransition, RequestToCoachEvent, CoachActionToken
 
 
 # ── RequestToCoach: Transitions ───────────────────────────────────────────────
@@ -32,6 +32,28 @@ class TestRequestToCoachTransition:
 
         with pytest.raises(ValidationError):
             rtc.transition_to(RequestToCoach.Status.ACCEPTED_ON_TIME)
+
+    def test_invalid_triggered_by_raises(self, rtc):
+        with pytest.raises(ValueError):
+            rtc.transition_to(RequestToCoach.Status.AWAITING_REPLY, triggered_by="alien")
+
+    def test_triggered_by_user_requires_staff_or_coach(self, rtc, coach_user):
+        with pytest.raises(ValueError):
+            rtc.transition_to(
+                RequestToCoach.Status.AWAITING_REPLY,
+                triggered_by="system",
+                triggered_by_user=coach_user,
+            )
+
+    def test_transition_actor_constraint(self, rtc, coach_user):
+        with pytest.raises(IntegrityError):
+            RequestToCoachTransition.objects.create(
+                request=rtc,
+                from_status=RequestToCoach.Status.IN_PREPARATION,
+                to_status=RequestToCoach.Status.AWAITING_REPLY,
+                triggered_by="system",
+                triggered_by_user=coach_user,
+            )
 
 
 # ── RequestToCoach: Accept / Reject ───────────────────────────────────────────
@@ -86,6 +108,13 @@ class TestRequestToCoachAcceptReject:
         with pytest.raises(ValidationError):
             rtc.accept()
 
+    def test_reject_not_allowed_if_not_awaiting_reply(self, rtc):
+        rtc.status = RequestToCoach.Status.IN_PREPARATION
+        rtc.save()
+
+        with pytest.raises(ValidationError):
+            rtc.reject()
+
 
 # ── RequestToCoach: Helpers ───────────────────────────────────────────────────
 
@@ -113,6 +142,11 @@ class TestRequestToCoachHelpers:
 
         assert rtc.is_deadline_passed() is False
 
+    def test_deadline_passed_returns_false_if_no_deadline(self, rtc):
+        rtc.deadline_at = None
+
+        assert rtc.is_deadline_passed() is False
+
     def test_can_send_request_respects_max_limit(self, rtc):
         rtc.requests_sent = 3
         rtc.max_number_of_requests = 3
@@ -132,6 +166,15 @@ class TestRequestToCoachHelpers:
         rtc.deadline_at = timezone.now() - timezone.timedelta(hours=1)
 
         assert rtc.can_send_reminder() is False
+
+    def test_can_send_reminder_when_all_conditions_met(self, rtc):
+        rtc.status = RequestToCoach.Status.AWAITING_REPLY
+        rtc.first_sent_at = timezone.now() - timezone.timedelta(hours=1)
+        rtc.deadline_at = timezone.now() + timezone.timedelta(hours=24)
+        rtc.requests_sent = 1
+        rtc.max_number_of_requests = 3
+
+        assert rtc.can_send_reminder() is True
 
 
 # ── MatchingAttempt: Queue Helpers ────────────────────────────────────────────
@@ -156,11 +199,44 @@ class TestMatchingAttemptQueueHelpers:
 
         assert matching_attempt.get_active_requests() == [rtc_1]
 
-        def test_get_next_request_returns_lowest_priority(matching_attempt, rtc, rtc_high_priority):
+    @pytest.mark.django_db
+    def test_get_next_request_returns_lowest_priority(self, matching_attempt, coach, coach_2):
+        rtc_high = RequestToCoach.objects.create(
+            matching_attempt=matching_attempt,
+            coach=coach,
+            status=RequestToCoach.Status.IN_PREPARATION,
+            priority=1,
+        )
+        RequestToCoach.objects.create(
+            matching_attempt=matching_attempt,
+            coach=coach_2,
+            status=RequestToCoach.Status.IN_PREPARATION,
+            priority=30,
+        )
 
-            next_req = matching_attempt.get_next_request()
+        assert matching_attempt.get_next_request() == rtc_high
 
-            assert next_req == rtc_high_priority
+    @pytest.mark.django_db
+    def test_has_remaining_requests_returns_true(self, matching_attempt, coach):
+        RequestToCoach.objects.create(
+            matching_attempt=matching_attempt,
+            coach=coach,
+            status=RequestToCoach.Status.IN_PREPARATION,
+            priority=1,
+        )
+
+        assert matching_attempt.has_remaining_requests() is True
+
+    @pytest.mark.django_db
+    def test_has_remaining_requests_returns_false_when_none_left(self, matching_attempt, coach):
+        RequestToCoach.objects.create(
+            matching_attempt=matching_attempt,
+            coach=coach,
+            status=RequestToCoach.Status.AWAITING_REPLY,
+            priority=1,
+        )
+
+        assert matching_attempt.has_remaining_requests() is False
 
 
 # ── RequestToCoach: Constraints & String Representation ──────────────────────
@@ -188,6 +264,56 @@ class TestRequestToCoachConstraints:
 
         assert rtc.coach.first_name in text
         assert rtc.matching_attempt.participant.first_name in text
+
+    def test_only_one_awaiting_reply_per_matching_attempt(self, matching_attempt, coach, coach_2):
+        RequestToCoach.objects.create(
+            matching_attempt=matching_attempt,
+            coach=coach,
+            status=RequestToCoach.Status.AWAITING_REPLY,
+            priority=1,
+        )
+
+        with pytest.raises(IntegrityError):
+            RequestToCoach.objects.create(
+                matching_attempt=matching_attempt,
+                coach=coach_2,
+                status=RequestToCoach.Status.AWAITING_REPLY,
+                priority=2,
+            )
+
+
+# ── RequestToCoachEvent ───────────────────────────────────────────────────────
+
+class TestRequestToCoachEvent:
+
+    def test_system_event_created_without_user(self, rtc):
+        event = RequestToCoachEvent.objects.create(
+            request=rtc,
+            event_type=RequestToCoachEvent.EventType.REQUEST_SENT,
+            triggered_by=RequestToCoachEvent.TriggeredBy.SYSTEM,
+        )
+
+        assert event.triggered_by_user is None
+
+    def test_coach_event_without_user_violates_constraint(self, rtc):
+        with pytest.raises(IntegrityError):
+            RequestToCoachEvent.objects.create(
+                request=rtc,
+                event_type=RequestToCoachEvent.EventType.ACCEPTED,
+                triggered_by=RequestToCoachEvent.TriggeredBy.COACH,
+                triggered_by_user=None,
+            )
+
+    def test_events_deleted_when_rtc_deleted(self, rtc, coach_user):
+        RequestToCoachEvent.objects.create(
+            request=rtc,
+            event_type=RequestToCoachEvent.EventType.REQUEST_SENT,
+            triggered_by=RequestToCoachEvent.TriggeredBy.SYSTEM,
+        )
+
+        rtc.delete()
+
+        assert RequestToCoachEvent.objects.filter(request_id=rtc.pk).count() == 0
 
 
 # ── CoachActionToken ──────────────────────────────────────────────────────────
@@ -290,6 +416,12 @@ class TestMatchingAttempt:
 
         assert matching_attempt.is_active is True
 
+    def test_is_active_returns_false_for_terminal_status(self, matching_attempt):
+        matching_attempt.status = MatchingAttempt.Status.CANCELLED
+        matching_attempt.save()
+
+        assert matching_attempt.is_active is False
+
     def test_string_representation(self, matching_attempt):
 
         assert str(matching_attempt).startswith("Matching für")
@@ -340,6 +472,8 @@ class TestMatchingAttemptTransition:
 class TestAutomationControl:
 
     def test_enable_automation_sets_timestamp(self, matching_attempt):
+        matching_attempt.status = MatchingAttempt.Status.MATCHING_ACTIVE
+        matching_attempt.save()
 
         matching_attempt.enable_automation()
 
@@ -347,16 +481,52 @@ class TestAutomationControl:
         assert matching_attempt.automation_enabled_at is not None
 
     def test_disable_automation(self, matching_attempt):
+        matching_attempt.status = MatchingAttempt.Status.MATCHING_ACTIVE
+        matching_attempt.save()
         matching_attempt.enable_automation()
 
         matching_attempt.disable_automation()
 
         assert matching_attempt.automation_enabled is False
 
+    def test_enable_automation_raises_in_disallowed_status(self, matching_attempt):
+        matching_attempt.status = MatchingAttempt.Status.DRAFT
+        matching_attempt.save()
+
+        with pytest.raises(ValidationError):
+            matching_attempt.enable_automation()
+
+    def test_enable_automation_is_noop_if_already_enabled(self, matching_attempt):
+        matching_attempt.status = MatchingAttempt.Status.MATCHING_ACTIVE
+        matching_attempt.automation_enabled = True
+        matching_attempt.save()
+
+        matching_attempt.enable_automation()  # should not raise or create a second event
+
+        assert MatchingAttemptEvent.objects.filter(
+            matching_attempt=matching_attempt,
+            event_type=MatchingAttemptEvent.EventType.AUTOMATION_ENABLED,
+        ).count() == 0
+
     def test_automation_allowed_only_in_active_states(self, matching_attempt):
         matching_attempt.status = MatchingAttempt.Status.MATCH_CONFIRMED
         matching_attempt.save()
 
-        matching_attempt.enable_automation()
+        with pytest.raises(ValidationError):
+            matching_attempt.enable_automation()
 
-        assert matching_attempt.automation_is_allowed is False
+    def test_automation_is_allowed_true_when_status_allows(self, matching_attempt):
+        for status in (MatchingAttempt.Status.READY_FOR_MATCHING, MatchingAttempt.Status.MATCHING_ACTIVE):
+            matching_attempt.status = status
+            assert matching_attempt.automation_is_allowed is True
+
+    def test_automation_is_allowed_false_when_wrong_status(self, matching_attempt):
+        for status in (
+            MatchingAttempt.Status.DRAFT,
+            MatchingAttempt.Status.CHEMISTRY_PENDING,
+            MatchingAttempt.Status.MATCH_CONFIRMED,
+            MatchingAttempt.Status.FAILED,
+            MatchingAttempt.Status.CANCELLED,
+        ):
+            matching_attempt.status = status
+            assert matching_attempt.automation_is_allowed is False
