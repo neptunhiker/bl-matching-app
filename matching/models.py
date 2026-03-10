@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import Q
 from django.utils import timezone
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 
 from accounts.models import User
 from .locks import _get_locked_matching_attempt
@@ -203,7 +205,7 @@ class MatchingAttempt(models.Model):
     # automation control
     # -------------------------------------------------------
 
-    def enable_automation(self):
+    def enable_automation(self, triggered_by_user: User):
 
         if self.automation_enabled:
             return
@@ -219,9 +221,11 @@ class MatchingAttempt(models.Model):
         MatchingAttemptEvent.objects.create(
             matching_attempt=self,
             event_type=MatchingAttemptEvent.EventType.AUTOMATION_ENABLED,
+            triggered_by=MatchingAttemptEvent.TriggeredBy.STAFF,
+            triggered_by_user=triggered_by_user,
         )
 
-    def disable_automation(self):
+    def disable_automation(self, triggered_by_user: User):
 
         if not self.automation_enabled:
             return
@@ -232,6 +236,8 @@ class MatchingAttempt(models.Model):
         MatchingAttemptEvent.objects.create(
             matching_attempt=self,
             event_type=MatchingAttemptEvent.EventType.AUTOMATION_DISABLED,
+            triggered_by=MatchingAttemptEvent.TriggeredBy.STAFF,
+            triggered_by_user=triggered_by_user,
         )
 
     # -------------------------------------------------------
@@ -239,19 +245,25 @@ class MatchingAttempt(models.Model):
     # -------------------------------------------------------
 
     @transaction.atomic
-    def start_matching(self, triggered_by="staff", triggered_by_user: User = None):
+    def start_matching(self, triggered_by_user: User):
 
         updated = self.transition_to(
             self.Status.READY_FOR_MATCHING,
-            triggered_by=triggered_by,
+            triggered_by="staff",
             triggered_by_user=triggered_by_user,
         )
 
         MatchingAttemptEvent.objects.create(
             matching_attempt=updated,
             event_type=MatchingAttemptEvent.EventType.STARTED,
-            actor=triggered_by_user,
+            triggered_by=MatchingAttemptEvent.TriggeredBy.STAFF,
+            triggered_by_user=triggered_by_user,
         )
+
+        # Keep the current in-memory instance in sync with the DB-updated
+        # instance so callers that don't use the returned object observe the
+        # new status.
+        self.status = updated.status
 
         return updated
 
@@ -293,6 +305,7 @@ class MatchingAttempt(models.Model):
             MatchingAttemptEvent.objects.create(
                 matching_attempt=self,
                 event_type=MatchingAttemptEvent.EventType.CREATED,
+                triggered_by=MatchingAttemptEvent.TriggeredBy.SYSTEM,
             )
                 
         
@@ -460,12 +473,24 @@ class MatchingAttemptEvent(models.Model):
         choices=EventType.choices,
     )
 
-    actor = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+    class TriggeredBy(models.TextChoices):
+        SYSTEM = "system", "System"
+        STAFF = "staff", "BL Mitarbeiter:in"
+        COACH = "coach", "Coach"
+
+    # New canonical actor fields (align with RequestToCoachEvent)
+    triggered_by = models.CharField(
+        max_length=20,
+        choices=TriggeredBy.choices,
+        default=TriggeredBy.SYSTEM,
+    )
+
+    triggered_by_user = models.ForeignKey(
+        User,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        help_text="Benutzer, der das Ereignis ausgelöst hat (Coach, Mitarbeiter oder System)",
+        help_text="Benutzer, der das Ereignis ausgelöst hat (nur bei staff oder coach)",
     )
 
     metadata = models.JSONField(
@@ -478,9 +503,36 @@ class MatchingAttemptEvent(models.Model):
 
     class Meta:
         ordering = ["created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(triggered_by="system", triggered_by_user__isnull=True)
+                    |
+                    models.Q(triggered_by__in=["staff", "coach"], triggered_by_user__isnull=False)
+                ),
+                name="matching_attempt_event_valid_triggered_by_user",
+            )
+        ]
 
     def __str__(self):
         return f"{self.matching_attempt_id} - {self.get_event_type_display()} - {self.created_at}"
+
+    def clean(self):
+        if self.triggered_by == self.TriggeredBy.SYSTEM and self.triggered_by_user:
+            raise ValidationError(
+                "triggered_by_user must be empty when triggered_by is 'system'."
+            )
+
+        if self.triggered_by in {self.TriggeredBy.STAFF, self.TriggeredBy.COACH} and not self.triggered_by_user:
+            raise ValidationError(
+                "triggered_by_user must be set when triggered_by is 'staff' or 'coach'."
+            )
+
+        if self.triggered_by == self.TriggeredBy.STAFF and self.triggered_by_user:
+            if not (self.triggered_by_user.is_staff or self.triggered_by_user.is_superuser):
+                raise ValidationError(
+                    "triggered_by_user must be a staff member or superuser when triggered_by is 'staff'."
+                )
     
 class RequestToCoach(models.Model):
 
@@ -977,6 +1029,7 @@ class CoachActionToken(models.Model):
 class RequestToCoachEvent(models.Model):
 
     class EventType(models.TextChoices):
+        CREATED = "created", "Matching-Anfrage erstellt"
         REQUEST_SENT = "request_sent", "Matching-Anfrage gesendet"
         REMINDER_SENT = "reminder_sent", "Reminder gesendet"
         ACCEPTED = "accepted", "Matching-Anfrage akzeptiert"
@@ -1072,3 +1125,20 @@ class RequestToCoachEvent(models.Model):
             f"{self.get_event_type_display()} "
             f"({self.get_triggered_by_display()})"
         )
+
+
+# Ensure that deleting a user does not leave events in a state that violates
+# the check constraint (triggered_by in {staff,coach} requires a user).
+# Before a User is deleted, set related event rows to be SYSTEM-triggered
+# and clear the user reference so the DB constraint remains satisfied.
+@receiver(pre_delete, sender=User)
+def _nullify_user_on_related_events(sender, instance, using, **kwargs):
+    MatchingAttemptEvent.objects.filter(triggered_by_user=instance).update(
+        triggered_by=MatchingAttemptEvent.TriggeredBy.SYSTEM,
+        triggered_by_user=None,
+    )
+
+    RequestToCoachEvent.objects.filter(triggered_by_user=instance).update(
+        triggered_by=RequestToCoachEvent.TriggeredBy.SYSTEM,
+        triggered_by_user=None,
+    )

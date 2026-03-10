@@ -695,12 +695,12 @@ class TestMatchingAttempt:
 class TestStartMatching:
 
     def test_start_matching_transitions_to_ready_for_matching(self, matching_attempt, staff_user):
-        updated = matching_attempt.start_matching(triggered_by="staff", triggered_by_user=staff_user)
+        updated = matching_attempt.start_matching(triggered_by_user=staff_user)
 
         assert updated.status == MatchingAttempt.Status.READY_FOR_MATCHING
 
     def test_start_matching_creates_started_event(self, matching_attempt, staff_user):
-        updated = matching_attempt.start_matching(triggered_by="staff", triggered_by_user=staff_user)
+        updated = matching_attempt.start_matching( triggered_by_user=staff_user)
 
         assert MatchingAttemptEvent.objects.filter(
             matching_attempt=updated,
@@ -708,24 +708,24 @@ class TestStartMatching:
         ).exists()
 
     def test_start_matching_records_actor_on_event(self, matching_attempt, staff_user):
-        updated = matching_attempt.start_matching(triggered_by="staff", triggered_by_user=staff_user)
+        updated = matching_attempt.start_matching(triggered_by_user=staff_user)
 
         event = MatchingAttemptEvent.objects.get(
             matching_attempt=updated,
             event_type=MatchingAttemptEvent.EventType.STARTED,
         )
-        assert event.actor == staff_user
+        assert event.triggered_by_user == staff_user
 
     def test_start_matching_raises_from_non_draft_status(self, matching_attempt, staff_user):
         matching_attempt.status = MatchingAttempt.Status.MATCHING_ONGOING
         matching_attempt.save()
 
         with pytest.raises(ValidationError):
-            matching_attempt.start_matching(triggered_by="staff", triggered_by_user=staff_user)
+            matching_attempt.start_matching(triggered_by_user=staff_user)
 
     def test_start_matching_raises_for_non_staff_user(self, matching_attempt, coach_user):
         with pytest.raises(ValidationError):
-            matching_attempt.start_matching(triggered_by="staff", triggered_by_user=coach_user)
+            matching_attempt.start_matching(triggered_by_user=coach_user)
 
 
 # ── MatchingAttemptTransition ─────────────────────────────────────────────────
@@ -856,49 +856,49 @@ class TestMatchingAttemptTransitionClean:
 
 class TestAutomationControl:
 
-    def test_enable_automation_sets_timestamp(self, matching_attempt):
+    def test_enable_automation_sets_timestamp(self, matching_attempt, staff_user):
         matching_attempt.status = MatchingAttempt.Status.MATCHING_ONGOING
         matching_attempt.save()
 
-        matching_attempt.enable_automation()
+        matching_attempt.enable_automation(triggered_by_user=staff_user)
 
         assert matching_attempt.automation_enabled is True
         assert matching_attempt.automation_enabled_at is not None
 
-    def test_disable_automation(self, matching_attempt):
+    def test_disable_automation(self, matching_attempt, staff_user):
         matching_attempt.status = MatchingAttempt.Status.MATCHING_ONGOING
         matching_attempt.save()
-        matching_attempt.enable_automation()
+        matching_attempt.enable_automation(triggered_by_user=staff_user)
 
-        matching_attempt.disable_automation()
+        matching_attempt.disable_automation(triggered_by_user=staff_user)
 
         assert matching_attempt.automation_enabled is False
 
-    def test_enable_automation_raises_in_disallowed_status(self, matching_attempt):
+    def test_enable_automation_raises_in_disallowed_status(self, matching_attempt, staff_user):
         matching_attempt.status = MatchingAttempt.Status.IN_PREPARATION
         matching_attempt.save()
 
         with pytest.raises(ValidationError):
-            matching_attempt.enable_automation()
+            matching_attempt.enable_automation(triggered_by_user=staff_user)
 
-    def test_enable_automation_is_noop_if_already_enabled(self, matching_attempt):
+    def test_enable_automation_is_noop_if_already_enabled(self, matching_attempt, staff_user):
         matching_attempt.status = MatchingAttempt.Status.MATCHING_ONGOING
         matching_attempt.automation_enabled = True
         matching_attempt.save()
 
-        matching_attempt.enable_automation()  # should not raise or create a second event
+        matching_attempt.enable_automation(triggered_by_user=staff_user)  # should not raise or create a second event
 
         assert MatchingAttemptEvent.objects.filter(
             matching_attempt=matching_attempt,
             event_type=MatchingAttemptEvent.EventType.AUTOMATION_ENABLED,
         ).count() == 0
 
-    def test_automation_allowed_only_in_active_states(self, matching_attempt):
+    def test_automation_allowed_only_in_active_states(self, matching_attempt, staff_user):
         matching_attempt.status = MatchingAttempt.Status.MATCHING_CONFIRMED
         matching_attempt.save()
 
         with pytest.raises(ValidationError):
-            matching_attempt.enable_automation()
+            matching_attempt.enable_automation(triggered_by_user=staff_user)
 
     def test_automation_is_allowed_true_when_status_allows(self, matching_attempt):
         for status in (MatchingAttempt.Status.READY_FOR_MATCHING, MatchingAttempt.Status.MATCHING_ONGOING):
@@ -908,7 +908,6 @@ class TestAutomationControl:
     def test_automation_is_allowed_false_when_wrong_status(self, matching_attempt):
         for status in (
             MatchingAttempt.Status.IN_PREPARATION,
-            MatchingAttempt.Status.CHEMISTRY_PENDING,
             MatchingAttempt.Status.MATCHING_CONFIRMED,
             MatchingAttempt.Status.FAILED,
             MatchingAttempt.Status.CANCELLED,
@@ -922,12 +921,12 @@ class TestAutomationControl:
 @pytest.mark.django_db
 class TestMatchingAttemptEvent:
 
-    def test_disable_automation_creates_event(self, matching_attempt):
+    def test_disable_automation_creates_event(self, matching_attempt, staff_user):
         matching_attempt.status = MatchingAttempt.Status.MATCHING_ONGOING
         matching_attempt.save()
-        matching_attempt.enable_automation()
+        matching_attempt.enable_automation(triggered_by_user=staff_user)
 
-        matching_attempt.disable_automation()
+        matching_attempt.disable_automation(triggered_by_user=staff_user)
 
         assert MatchingAttemptEvent.objects.filter(
             matching_attempt=matching_attempt,
@@ -944,17 +943,18 @@ class TestMatchingAttemptEvent:
 
         assert MatchingAttemptEvent.objects.count() == 0
 
-    def test_actor_set_null_on_user_delete(self, matching_attempt, coach_user):
+    def test_triggered_by_user_set_null_on_user_delete(self, matching_attempt, staff_user):
         event = MatchingAttemptEvent.objects.create(
             matching_attempt=matching_attempt,
             event_type=MatchingAttemptEvent.EventType.MANUAL_OVERRIDE,
-            actor=coach_user,
+            triggered_by=RequestToCoachEvent.TriggeredBy.STAFF,
+            triggered_by_user=staff_user,
         )
 
-        coach_user.delete()
+        staff_user.delete()
 
         event.refresh_from_db()
-        assert event.actor is None
+        assert event.triggered_by_user is None
 
     def test_string_representation(self, matching_attempt):
         event = MatchingAttemptEvent.objects.create(

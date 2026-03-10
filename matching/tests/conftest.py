@@ -51,6 +51,15 @@ def coach_user_2(db):
         first_name="Carla",
         last_name="Coacheressa",
     )
+    
+@pytest.fixture
+def coach_user_3(db):
+    return User.objects.create_user(
+        email="paul_mazzes@example.com",
+        password="testpass123",
+        first_name="Paul",
+        last_name="Mazzes",
+    )
 
 
 @pytest.fixture
@@ -66,6 +75,13 @@ def coach_2(db, coach_user_2):
     return Coach.objects.create(
         user=coach_user_2,
         city="Milano",
+    )
+    
+@pytest.fixture
+def coach_3(db, coach_user_3):
+    return Coach.objects.create(
+        user=coach_user_3,
+        city="Hamburg",
     )
 
 @pytest.fixture
