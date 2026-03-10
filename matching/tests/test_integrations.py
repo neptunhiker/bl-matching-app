@@ -231,8 +231,49 @@ class TestIntegration:
         assert MatchingAttemptTransition.objects.filter(matching_attempt=ma).count() == 2
         assert RequestToCoachTransition.objects.filter(request=rtc1).count() == 2
         
-        # send coach request to coach number 2
+        # SEND COACH REQUEST TO SECOND COACH
+        rtc2.send_request(triggered_by="system")
+        ma.refresh_from_db()
+        rtc2.refresh_from_db()
         
-        # coch number 2 accepts
+        # status assertions
+        assert ma.status == MatchingAttempt.Status.MATCHING_ONGOING
+        assert rtc1.status == RequestToCoach.Status.NO_RESPONSE_UNTIL_DEADLINE
+        assert rtc2.status == RequestToCoach.Status.AWAITING_REPLY
+        assert rtc3.status == RequestToCoach.Status.IN_PREPARATION
+        
+        # field assertions
+        assert rtc2.first_sent_at is not None
+        assert rtc2.last_sent_at is not None
+        assert rtc2.deadline_at is not None
+        assert rtc2.deadline_at > rtc2.last_sent_at
+        
+        # event assertions
+        event9 = RequestToCoachEvent.objects.filter(request=rtc2, event_type=RequestToCoachEvent.EventType.REQUEST_SENT).first()
+        assert event9 is not None
+        assert event9.triggered_by == RequestToCoachEvent.TriggeredBy.SYSTEM
+        assert event9.triggered_by_user is None
+        
+        # transition assertions
+        assert MatchingAttemptTransition.objects.filter(matching_attempt=ma).count() == 2
+        assert RequestToCoachTransition.objects.filter(request=rtc2).count() == 1
+        
+        # COACH 2 REJECTS REQUEST
+        rtc2 = rtc2.reject(triggered_by="coach", triggered_by_user=rtc2.coach.user)
+
+        # field assertion
+        assert rtc2.responded_at is not None
+        
+        # status assertions
+        assert ma.status == MatchingAttempt.Status.MATCHING_ONGOING
+        assert rtc1.status == RequestToCoach.Status.NO_RESPONSE_UNTIL_DEADLINE
+        assert rtc2.status == RequestToCoach.Status.REJECTED_MATCHING
+        assert rtc3.status == RequestToCoach.Status.IN_PREPARATION
+        
+        # event assertions
+        event10 = RequestToCoachEvent.objects.filter(request=rtc2, event_type=RequestToCoachEvent.EventType.REJECTED).first()
+        assert event10 is not None
+        assert event10.triggered_by == RequestToCoachEvent.TriggeredBy.COACH
+        assert event10.triggered_by_user == rtc2.coach.user
         
         

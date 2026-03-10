@@ -494,10 +494,8 @@ class RequestToCoach(models.Model):
     class Status(models.TextChoices):
         IN_PREPARATION = "in_preparation", "In Vorbereitung"
         AWAITING_REPLY = "awaiting_reply", "Warten auf Antwort"
-        ACCEPTED_ON_TIME = "accepted_on_time", "Akzeptiert (rechtzeitig)"
-        ACCEPTED_LATE = "accepted_late", "Akzeptiert (verspätet)"
-        REJECTED_ON_TIME = "rejected_on_time", "Abgelehnt (rechtzeitig)"
-        REJECTED_LATE = "rejected_late", "Abgelehnt (verspätet)"
+        ACCEPTED_MATCHING = "accepted_matching", "Matching akzeptiert"
+        REJECTED_MATCHING = "rejected_matching", "Matching abgelehnt"
         NO_RESPONSE_UNTIL_DEADLINE = "no_response_until_deadline", "Keine Rückmeldung"
         CANCELLED = "cancelled", "Anfrage abgebrochen"
 
@@ -509,27 +507,17 @@ class RequestToCoach(models.Model):
         }),
 
         Status.AWAITING_REPLY: frozenset({
-            Status.ACCEPTED_ON_TIME,
-            Status.ACCEPTED_LATE,
-            Status.REJECTED_ON_TIME,
-            Status.REJECTED_LATE,
+            Status.ACCEPTED_MATCHING,
+            Status.REJECTED_MATCHING,
             Status.NO_RESPONSE_UNTIL_DEADLINE,
             Status.CANCELLED,
         }),
 
-        Status.ACCEPTED_ON_TIME: frozenset({
+        Status.ACCEPTED_MATCHING: frozenset({
             Status.CANCELLED,
         }),
 
-        Status.ACCEPTED_LATE: frozenset({
-            Status.CANCELLED,
-        }),
-
-        Status.REJECTED_ON_TIME: frozenset({
-            Status.CANCELLED,
-        }),
-
-        Status.REJECTED_LATE: frozenset({
+        Status.REJECTED_MATCHING: frozenset({
             Status.CANCELLED,
         }),
 
@@ -654,10 +642,8 @@ class RequestToCoach(models.Model):
         return timezone.now() > self.deadline_at
 
     def mark_responded(self):
-        RequestToCoach.objects.filter(
-            pk=self.pk,
-            responded_at__isnull=True
-        ).update(responded_at=timezone.now())
+        self.responded_at = timezone.now()
+        self.save(update_fields=["responded_at"])
 
     # -------------------------------------------------------------
     # Domain Actions
@@ -764,14 +750,7 @@ class RequestToCoach(models.Model):
         if triggered_by == "coach" and triggered_by_user is None:
             triggered_by_user = self.coach.user
 
-        now = timezone.now()
-
-        if self.deadline_at and now > self.deadline_at:
-            new_status = self.Status.ACCEPTED_LATE
-        else:
-            new_status = self.Status.ACCEPTED_ON_TIME
-
-        updated = self.transition_to(new_status)
+        updated = self.transition_to(self.Status.ACCEPTED_MATCHING)
 
         updated.mark_responded()
 
@@ -792,14 +771,7 @@ class RequestToCoach(models.Model):
         if triggered_by == "coach" and triggered_by_user is None:
             triggered_by_user = self.coach.user
 
-        now = timezone.now()
-
-        if self.deadline_at and now > self.deadline_at:
-            new_status = self.Status.REJECTED_LATE
-        else:
-            new_status = self.Status.REJECTED_ON_TIME
-
-        updated = self.transition_to(new_status)
+        updated = self.transition_to(self.Status.REJECTED_MATCHING)
 
         updated.mark_responded()
 

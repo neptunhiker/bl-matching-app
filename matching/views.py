@@ -237,10 +237,8 @@ class CoachRespondView(View):
 
     # States that mean the coach has already given a definitive answer.
     TERMINAL_STATUSES = {
-        RequestToCoach.Status.ACCEPTED_ON_TIME,
-        RequestToCoach.Status.ACCEPTED_LATE,
-        RequestToCoach.Status.REJECTED_ON_TIME,
-        RequestToCoach.Status.REJECTED_LATE,
+        RequestToCoach.Status.ACCEPTED_MATCHING,
+        RequestToCoach.Status.REJECTED_MATCHING,
     }
 
     def get(self, request, token):

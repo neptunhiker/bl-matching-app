@@ -9,7 +9,7 @@ from .notifications import send_connecting_email
 logger = logging.getLogger(__name__)
 
 _ACCEPTED_STATUSES = {
-    RequestToCoach.Status.ACCEPTED_ON_TIME,
+    RequestToCoach.Status.ACCEPTED_MATCHING,
 }
 _AWAITING_REPLY_STATUSES = {
     RequestToCoach.Status.AWAITING_REPLY,
