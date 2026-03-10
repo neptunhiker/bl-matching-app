@@ -158,43 +158,53 @@ class MatchingAttempt(models.Model):
                 f"Transition {self.status} → {new_status} not allowed."
             )
 
-    @transaction.atomic
-    def transition_to(
-        self,
-        new_status,
-        triggered_by="system",
-        triggered_by_user: User = None
-    ):
+    def transition_to(self, new_status, triggered_by="system", triggered_by_user=None):
+        """
+        Transition the MatchingAttempt to a new status and record the transition.
+        """
 
-        if triggered_by not in ["system", "staff", "coach"]:
-            raise ValueError("Invalid triggered_by")
+        if triggered_by not in ("system", "staff", "coach"):
+            raise ValidationError("Invalid triggered_by value")
 
-        if triggered_by_user and triggered_by == "system":
-            raise ValueError("System transitions cannot specify triggered_by_user")
+        if triggered_by == "staff" and triggered_by_user is None:
+            raise ValidationError(
+                "triggered_by_user must be provided when triggered_by='staff'"
+            )
 
-        if triggered_by == "staff" and triggered_by_user is not None:
-            if not (triggered_by_user.is_staff or triggered_by_user.is_superuser):
+        if triggered_by in ("system", "coach") and triggered_by_user is not None:
+            raise ValidationError(
+                "triggered_by_user must be None when triggered_by is 'system' or 'coach'"
+            )
+
+        with transaction.atomic():
+
+            # fetch authoritative locked instance
+            ma = _get_locked_matching_attempt(self)
+
+            old_status = ma.status
+
+            # no-op protection
+            if old_status == new_status:
+                return ma
+
+            # ensure transition is allowed
+            if not ma.can_transition_to(new_status):
                 raise ValidationError(
-                    "triggered_by_user must be a staff member or superuser when triggered_by is 'staff'."
+                    f"Invalid status transition from {old_status} to {new_status}"
                 )
 
-        locked = _get_locked_matching_attempt(self)
+            # update status
+            ma.status = new_status
+            ma.save(update_fields=["status"])
 
-        locked._validate_transition(new_status)
+            # record transition
+            MatchingAttemptTransition.objects.create(
+                matching_attempt=ma,
+                from_status=old_status,
+                to_status=new_status,
+            )
 
-        old_status = locked.status
-        locked.status = new_status
-        locked.save(update_fields=["status"])
-
-        MatchingAttemptTransition.objects.create(
-            matching_attempt=locked,
-            from_status=old_status,
-            to_status=new_status,
-            triggered_by=triggered_by,
-            triggered_by_user=triggered_by_user,
-        )
-
-        return locked
+            return ma
 
     # -------------------------------------------------------
     # automation control
@@ -241,11 +251,15 @@ class MatchingAttempt(models.Model):
     @transaction.atomic
     def start_matching(self, triggered_by_user: User):
 
+        if self.status != self.Status.IN_PREPARATION:
+            raise ValidationError("Matching attempt is not in preparation.")
+        
         updated = self.transition_to(
             self.Status.READY_FOR_MATCHING,
-            triggered_by=MatchingAttemptTransition.TriggeredBy.STAFF,
-            triggered_by_user=triggered_by_user,
         )
+        
+        self.status = updated.status  # sync cached instance
+       
 
         MatchingAttemptEvent.objects.create(
             matching_attempt=updated,
@@ -253,11 +267,6 @@ class MatchingAttempt(models.Model):
             triggered_by=MatchingAttemptEvent.TriggeredBy.STAFF,
             triggered_by_user=triggered_by_user,
         )
-
-        # Keep the current in-memory instance in sync with the DB-updated
-        # instance so callers that don't use the returned object observe the
-        # new status.
-        self.status = updated.status
 
         return updated
 
@@ -289,13 +298,12 @@ class MatchingAttempt(models.Model):
 
     # -------------------------------------------------------
 
-    def on_save(self, *args, **kwargs):
-        from . import MatchingAttemptEvent
-        
-        super().on_save(*args, **kwargs)
-        print("Is this being called when a new MatchingAttempt is created?")
-        # if created
-        if not self.pk:
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+
+        super().save(*args, **kwargs)
+
+        if is_new:
             MatchingAttemptEvent.objects.create(
                 matching_attempt=self,
                 event_type=MatchingAttemptEvent.EventType.CREATED,
@@ -310,11 +318,6 @@ class MatchingAttempt(models.Model):
         )
         
 class MatchingAttemptTransition(models.Model):
-    
-    class TriggeredBy(models.TextChoices):
-        SYSTEM = "system", "System"
-        STAFF = "staff", "BL Mitarbeiter:in"
-        COACH = "coach", "Coach"
 
     matching_attempt = models.ForeignKey(
         "MatchingAttempt",
@@ -330,20 +333,6 @@ class MatchingAttemptTransition(models.Model):
     to_status = models.CharField(
         max_length=50,
         choices=MatchingAttempt.Status.choices,
-    )
-
-    triggered_by = models.CharField(
-        max_length=20,
-        choices=TriggeredBy.choices,
-        default=TriggeredBy.SYSTEM,
-    )
-
-    triggered_by_user = models.ForeignKey(
-        User,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        help_text="Required if triggered_by is 'staff' or 'coach'.",
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -362,17 +351,6 @@ class MatchingAttemptTransition(models.Model):
         ]
 
         constraints = [
-
-            # ensure actor consistency
-            models.CheckConstraint(
-                condition=(
-                    Q(triggered_by="system", triggered_by_user__isnull=True)
-                    |
-                    Q(triggered_by__in=["staff", "coach"], triggered_by_user__isnull=False)
-                ),
-                name="matching_attempt_transition_triggered_by_consistency",
-            ),
-
             # prevent pointless transitions
             models.CheckConstraint(
                 condition=~Q(from_status=models.F("to_status")),
@@ -380,25 +358,8 @@ class MatchingAttemptTransition(models.Model):
             ),
         ]
 
-    def clean(self):
-        if self.triggered_by == "system" and self.triggered_by_user:
-            raise ValidationError(
-                "triggered_by_user must be empty when triggered_by is 'system'."
-            )
-
-        if self.triggered_by in {"staff", "coach"} and not self.triggered_by_user:
-            raise ValidationError(
-                "triggered_by_user must be set when triggered_by is 'staff' or 'coach'."
-            )
-
-        if self.triggered_by == "staff" and self.triggered_by_user:
-            if not (self.triggered_by_user.is_staff or self.triggered_by_user.is_superuser):
-                raise ValidationError(
-                    "triggered_by_user must be a staff member or superuser when triggered_by is 'staff'."
-                )
-
     def __str__(self):
-        return f"{self.from_status} → {self.to_status} ({self.triggered_by})"
+        return f"{self.from_status} → {self.to_status})"
         
 
 class MatchingAttemptEvent(models.Model):
@@ -657,21 +618,9 @@ class RequestToCoach(models.Model):
     # -------------------------------------------------------------
 
     @transaction.atomic
-    def transition_to(self, new_status, triggered_by="system", triggered_by_user: User = None):
+    def transition_to(self, new_status):
 
         from .locks import _get_locked_request_to_coach
-
-        if triggered_by not in ["system", "staff", "coach"]:
-            raise ValueError("triggered_by must be 'system', 'staff', or 'coach'")
-
-        if triggered_by_user and triggered_by not in ["staff", "coach"]:
-            raise ValueError("triggered_by_user only allowed for staff or coach")
-
-        if triggered_by == "staff" and triggered_by_user is not None:
-            if not (triggered_by_user.is_staff or triggered_by_user.is_superuser):
-                raise ValidationError(
-                    "triggered_by_user must be a staff member or superuser when triggered_by is 'staff'."
-                )
 
         locked = _get_locked_request_to_coach(self)
 
@@ -685,9 +634,15 @@ class RequestToCoach(models.Model):
             request=locked,
             from_status=old_status,
             to_status=new_status,
-            triggered_by=triggered_by,
-            triggered_by_user=triggered_by_user,
         )
+
+        # Refresh original instance so callers that continue using `self`
+        # don't accidentally overwrite the newly saved status when they
+        # call `save()` later.
+        try:
+            self.refresh_from_db()
+        except Exception:
+            pass
 
         return locked
 
@@ -710,32 +665,65 @@ class RequestToCoach(models.Model):
     # Domain Actions
     # -------------------------------------------------------------
 
-    def send_request(self):
+    def send_request(self, triggered_by="system", triggered_by_user=None):
 
         if not self.can_send_request():
             raise ValidationError("Maximum number of requests reached")
 
+        if triggered_by == "coach":
+            raise ValidationError("Coaches cannot trigger sending requests")
+
+        if triggered_by == "staff" and triggered_by_user is None:
+            raise ValidationError(
+                "triggered_by_user must be provided when triggered_by='staff'"
+            )
+
+        if triggered_by == "system" and triggered_by_user is not None:
+            raise ValidationError(
+                "triggered_by_user must be None when triggered_by='system'"
+            )
+
         now = timezone.now()
 
+        # update send timestamps
         if self.first_sent_at is None:
             self.first_sent_at = now
 
         self.last_sent_at = now
         self.requests_sent += 1
+        
+        self.save(update_fields=["first_sent_at", "last_sent_at", "requests_sent"])
 
+        # transition the request state using the state machine
         if self.status == self.Status.IN_PREPARATION:
-            self.transition_to(self.Status.AWAITING_REPLY)
+            self = self.transition_to(
+                self.Status.AWAITING_REPLY,
+            )
 
-        self.save(update_fields=[
-            "first_sent_at",
-            "last_sent_at",
-            "requests_sent",
-        ])
+        # transition the matching attempt if needed
+        ma = _get_locked_matching_attempt(self.matching_attempt)
+
+        if ma.status == MatchingAttempt.Status.READY_FOR_MATCHING:
+            ma = ma.transition_to(
+                MatchingAttempt.Status.MATCHING_ONGOING,
+                triggered_by=triggered_by,
+                triggered_by_user=triggered_by_user,
+            )
+
+        self.matching_attempt = ma
+
+        # save timestamp updates
+        self.save(
+            update_fields=[
+                "matching_attempt",
+            ]
+        )
 
         RequestToCoachEvent.objects.create(
             request=self,
             event_type=RequestToCoachEvent.EventType.REQUEST_SENT,
-            triggered_by=RequestToCoachEvent.TriggeredBy.SYSTEM,
+            triggered_by=triggered_by,
+            triggered_by_user=triggered_by_user,
         )
 
     def send_reminder(self):
@@ -864,11 +852,6 @@ class RequestToCoach(models.Model):
 
 class RequestToCoachTransition(models.Model):
 
-    class TriggeredBy(models.TextChoices):
-        SYSTEM = "system", "System"
-        STAFF = "staff", "BL Mitarbeiter:in"
-        COACH = "coach", "Coach"
-
     request = models.ForeignKey(
         RequestToCoach,
         on_delete=models.CASCADE,
@@ -887,20 +870,6 @@ class RequestToCoachTransition(models.Model):
         db_index=True,
     )
 
-    triggered_by = models.CharField(
-        max_length=20,
-        choices=TriggeredBy.choices,
-        default=TriggeredBy.SYSTEM,
-    )
-
-    triggered_by_user = models.ForeignKey(
-        User,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        help_text="Benutzer, der die Transition ausgelöst hat (nur bei staff oder coach)",
-    )
-
     created_at = models.DateTimeField(auto_now_add=True)
 
     note = models.TextField(
@@ -917,42 +886,11 @@ class RequestToCoachTransition(models.Model):
             models.Index(fields=["to_status"]),
         ]
 
-        constraints = [
-            models.CheckConstraint(
-                condition=(
-                    models.Q(triggered_by="system", triggered_by_user__isnull=True)
-                    |
-                    models.Q(triggered_by__in=["staff", "coach"], triggered_by_user__isnull=False)
-                ),
-                name="rtc_transition_valid_triggered_by_consistency",
-            )
-        ]
-
-    def clean(self):
-        """
-        Application-level validation for clearer error messages.
-        """
-        if self.triggered_by == self.TriggeredBy.SYSTEM and self.triggered_by_user:
-            raise ValidationError(
-                "triggered_by_user must be empty when triggered_by is 'system'."
-            )
-
-        if self.triggered_by in {self.TriggeredBy.STAFF, self.TriggeredBy.COACH} and not self.triggered_by_user:
-            raise ValidationError(
-                "triggered_by_user must be set when triggered_by is 'staff' or 'coach'."
-            )
-
-        if self.triggered_by == self.TriggeredBy.STAFF and self.triggered_by_user:
-            if not (self.triggered_by_user.is_staff or self.triggered_by_user.is_superuser):
-                raise ValidationError(
-                    "triggered_by_user must be a staff member or superuser when triggered_by is 'staff'."
-                )
 
     def __str__(self):
         return (
             f"Request {self.request_id}: "
             f"{self.from_status} → {self.to_status} "
-            f"({self.get_triggered_by_display()})"
         )
 
 

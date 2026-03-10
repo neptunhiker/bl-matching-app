@@ -46,15 +46,15 @@ class RequestToCoachAdmin(admin.ModelAdmin):
     
 @admin.register(MatchingAttemptTransition)
 class MatchingAttemptTransitionAdmin(admin.ModelAdmin):
-    list_display = ['id', 'matching_attempt', 'from_status', 'to_status', 'triggered_by', 'created_at']
-    list_filter = ['from_status', 'to_status', 'triggered_by']
+    list_display = ['id', 'matching_attempt', 'from_status', 'to_status', 'created_at']
+    list_filter = ['from_status', 'to_status']
     search_fields = ['matching_attempt__participant__first_name', 'matching_attempt__participant__last_name', 'matching_attempt__participant__email']
     ordering = ['-created_at']
     
 @admin.register(RequestToCoachTransition)
 class RequestToCoachTransitionAdmin(admin.ModelAdmin):
-    list_display = ['id', 'request', 'from_status', 'to_status', 'triggered_by', 'created_at']
-    list_filter = ['from_status', 'to_status', 'triggered_by']
+    list_display = ['id', 'request', 'from_status', 'to_status', 'created_at']
+    list_filter = ['from_status', 'to_status']
     search_fields = ['request__matching_attempt__participant__first_name', 'request__matching_attempt__participant__last_name', 'request__matching_attempt__participant__email', 'request__coach__user__email']
     ordering = ['-created_at']
     

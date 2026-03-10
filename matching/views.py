@@ -292,21 +292,24 @@ class CoachRespondView(View):
                 else RequestToCoach.Status.REJECTED_ON_TIME
             )
             if is_accept:
-                ma = rtc.matching_attempt
-                ma.transition_to(MatchingAttempt.Status.CHEMISTRY_PENDING, triggered_by='coach', triggered_by_user=coach.user)
-                ma.save(update_fields=['status'])
-            
+                ma = rtc.matching_attempt.transition_to(
+                    MatchingAttempt.Status.CHEMISTRY_PENDING,
+                    triggered_by="coach",
+                    triggered_by_user=coach.user,
+                )
+
                 MatchingAttemptEvent.objects.create(
                     matching_attempt=ma,
                     event_type=MatchingAttemptEvent.EventType.COACH_ACCEPTED,
-                    actor=coach.user,
+                    triggered_by=MatchingAttemptEvent.TriggeredBy.COACH,
+                    triggered_by_user=coach.user,
                     coach=coach,
                 )
-                
+
                 RequestToCoachEvent.objects.create(
                     request=rtc,
                     event_type=RequestToCoachEvent.EventType.ACCEPTED,
-                    triggered_by='coach',
+                    triggered_by=RequestToCoachEvent.TriggeredBy.COACH,
                     triggered_by_user=coach.user,
                 )
         else:

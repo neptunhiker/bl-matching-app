@@ -127,8 +127,6 @@ class TestIntegration:
         # transition assertions
         ma_tr_1 = MatchingAttemptTransition.objects.filter(matching_attempt=ma).first()
         assert ma_tr_1 is not None
-        assert ma_tr_1.triggered_by == MatchingAttemptTransition.TriggeredBy.STAFF
-        assert ma_tr_1.triggered_by_user == staff_user
         assert ma_tr_1.from_status == MatchingAttempt.Status.IN_PREPARATION
         assert ma_tr_1.to_status == MatchingAttempt.Status.READY_FOR_MATCHING
         assert MatchingAttemptTransition.objects.filter(matching_attempt=ma).count() == 1
@@ -155,8 +153,30 @@ class TestIntegration:
         assert MatchingAttemptTransition.objects.filter(matching_attempt=ma).count() == 1
         assert RequestToCoachTransition.objects.all().count() == 0
         
+        # SEND FIRST COACH REQUEST
+        rtc1.send_request(triggered_by="system")
+        ma.refresh_from_db()
+        rtc1.refresh_from_db()
         
-        # send first coach request
+        # status assertions
+        assert ma.status == MatchingAttempt.Status.MATCHING_ONGOING
+        assert rtc1.status == RequestToCoach.Status.AWAITING_REPLY
+        assert rtc2.status == RequestToCoach.Status.IN_PREPARATION
+        assert rtc3.status == RequestToCoach.Status.IN_PREPARATION
+        
+        # field assertions
+        assert rtc1.first_sent_at is not None
+        assert rtc1.last_sent_at is not None
+        
+        # event assertions
+        event6 = RequestToCoachEvent.objects.filter(request=rtc1, event_type=RequestToCoachEvent.EventType.REQUEST_SENT).first()
+        assert event6 is not None
+        assert event6.triggered_by == RequestToCoachEvent.TriggeredBy.SYSTEM
+        assert event6.triggered_by_user is None
+        
+        # transition assertions
+        assert MatchingAttemptTransition.objects.filter(matching_attempt=ma).count() == 2
+        assert RequestToCoachTransition.objects.filter(request=rtc1).count() == 1
         
         # send reminder for coach request number 1
         
