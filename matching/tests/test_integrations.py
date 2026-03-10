@@ -1,5 +1,8 @@
 import pytest
 
+from django.utils import timezone
+
+
 from matching.models import CoachActionToken, MatchingAttempt, MatchingAttemptEvent, RequestToCoach, MatchingAttemptTransition, RequestToCoachTransition, RequestToCoachEvent
 
 from matching import services
@@ -167,6 +170,8 @@ class TestIntegration:
         # field assertions
         assert rtc1.first_sent_at is not None
         assert rtc1.last_sent_at is not None
+        assert rtc1.deadline_at is not None
+        assert rtc1.deadline_at > rtc1.last_sent_at
         
         # event assertions
         event6 = RequestToCoachEvent.objects.filter(request=rtc1, event_type=RequestToCoachEvent.EventType.REQUEST_SENT).first()
@@ -178,9 +183,53 @@ class TestIntegration:
         assert MatchingAttemptTransition.objects.filter(matching_attempt=ma).count() == 2
         assert RequestToCoachTransition.objects.filter(request=rtc1).count() == 1
         
-        # send reminder for coach request number 1
+        # SEND FIRST REMINDER
+        rtc1.send_reminder(triggered_by="system")
         
-        # deadlines passes
+        # status assertions
+        assert ma.status == MatchingAttempt.Status.MATCHING_ONGOING
+        assert rtc1.status == RequestToCoach.Status.AWAITING_REPLY
+        assert rtc2.status == RequestToCoach.Status.IN_PREPARATION
+        assert rtc3.status == RequestToCoach.Status.IN_PREPARATION
+        
+        # field assertions
+        assert rtc1.first_sent_at is not None
+        assert rtc1.last_sent_at > rtc1.first_sent_at
+        assert rtc1.requests_sent == 2
+        
+        # event assertions
+        event7 = RequestToCoachEvent.objects.filter(request=rtc1, event_type=RequestToCoachEvent.EventType.REMINDER_SENT).first()
+        assert event7 is not None
+        assert event7.triggered_by == RequestToCoachEvent.TriggeredBy.SYSTEM
+        assert event7.triggered_by_user is None
+        
+        # transition assertions
+        assert MatchingAttemptTransition.objects.filter(matching_attempt=ma).count() == 2
+        assert RequestToCoachTransition.objects.filter(request=rtc1).count() == 1
+        
+        # DEADLINE PASSES FOR FIRST REQUEST
+        rtc1.deadline_at = timezone.now() - timezone.timedelta(minutes=1)
+        rtc1.save()
+        rtc1.mark_deadline_passed()
+        
+        # status assertions
+        assert ma.status == MatchingAttempt.Status.MATCHING_ONGOING
+        assert rtc1.status == RequestToCoach.Status.NO_RESPONSE_UNTIL_DEADLINE
+        
+        # field assertions
+        print(rtc1.first_sent_at, rtc1.last_sent_at, rtc1.deadline_at)
+        assert rtc1.first_sent_at is not None
+        assert rtc1.last_sent_at is not None
+        assert rtc1.deadline_at is not None
+        assert rtc1.is_deadline_passed() is True
+        
+        # event assertions
+        event8 = RequestToCoachEvent.objects.filter(request=rtc1, event_type=RequestToCoachEvent.EventType.TIMED_OUT).first()
+        assert event8 is not None
+        
+        # transition assertions
+        assert MatchingAttemptTransition.objects.filter(matching_attempt=ma).count() == 2
+        assert RequestToCoachTransition.objects.filter(request=rtc1).count() == 2
         
         # send coach request to coach number 2
         

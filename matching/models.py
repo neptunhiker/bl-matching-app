@@ -11,6 +11,7 @@ from django.dispatch import receiver
 
 from accounts.models import User
 from .locks import _get_locked_matching_attempt
+from .utils import add_business_hours
 from profiles.models import Participant, Coach
 
 
@@ -706,6 +707,12 @@ class RequestToCoach(models.Model):
 
         self.last_sent_at = now
         self.requests_sent += 1
+        
+        if self.deadline_at is None:
+            self.deadline_at = add_business_hours(
+                now,
+                settings.COACH_REQUEST_DEFAULT_DEADLINE_HOURS,
+            )
 
         # save timestamp updates
         self.save()
@@ -717,7 +724,7 @@ class RequestToCoach(models.Model):
             triggered_by_user=triggered_by_user,
         )
 
-    def send_reminder(self):
+    def send_reminder(self, triggered_by="system", triggered_by_user=None):
 
         if not self.can_send_reminder():
             raise ValidationError("Reminder cannot be sent")
