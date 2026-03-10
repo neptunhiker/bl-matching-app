@@ -271,7 +271,7 @@ class TestIntegration:
         assert rtc3.status == RequestToCoach.Status.IN_PREPARATION
         
         # event assertions
-        event10 = RequestToCoachEvent.objects.filter(request=rtc2, event_type=RequestToCoachEvent.EventType.REJECTED).first()
+        event10 = RequestToCoachEvent.objects.filter(request=rtc2, event_type=RequestToCoachEvent.EventType.MATCHING_REJECTED).first()
         assert event10 is not None
         assert event10.triggered_by == RequestToCoachEvent.TriggeredBy.COACH
         assert event10.triggered_by_user == rtc2.coach.user
@@ -307,5 +307,29 @@ class TestIntegration:
         assert MatchingAttemptTransition.objects.filter(matching_attempt=ma).count() == 2
         assert RequestToCoachTransition.objects.filter(request=rtc3).count() == 1
         
+        # THIRD COACH ACCEPTS REQUEST
+        rtc3 = rtc3.accept(triggered_by="coach", triggered_by_user=rtc3.coach.user)
+        ma.refresh_from_db()
+
+        # field assertion
+        assert rtc3.responded_at is not None
         
+        # status assertions
+        assert ma.status == MatchingAttempt.Status.MATCHING_CONFIRMED
+        assert rtc1.status == RequestToCoach.Status.NO_RESPONSE_UNTIL_DEADLINE
+        assert rtc2.status == RequestToCoach.Status.REJECTED_MATCHING
+        assert rtc3.status == RequestToCoach.Status.ACCEPTED_MATCHING
+        
+        # field assertions
+        assert ma.matched_coach == rtc3.coach
+        
+        # event assertions
+        event12 = RequestToCoachEvent.objects.filter(request=rtc3, event_type=RequestToCoachEvent.EventType.MATCHING_ACCEPTED).first()
+        assert event12 is not None
+        assert event12.triggered_by == RequestToCoachEvent.TriggeredBy.COACH
+        assert event12.triggered_by_user == rtc3.coach.user
+        
+        # transition assertions
+        assert MatchingAttemptTransition.objects.filter(matching_attempt=ma).count() == 3
+        assert RequestToCoachTransition.objects.filter(request=rtc3).count() == 2
         

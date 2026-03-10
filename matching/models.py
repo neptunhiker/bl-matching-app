@@ -44,6 +44,7 @@ class MatchingAttempt(models.Model):
         }),
 
         Status.MATCHING_ONGOING: frozenset({
+            Status.MATCHING_CONFIRMED,
             Status.FAILED,
             Status.CANCELLED,
         }),
@@ -167,12 +168,12 @@ class MatchingAttempt(models.Model):
         if triggered_by not in ("system", "staff", "coach"):
             raise ValidationError("Invalid triggered_by value")
 
-        if triggered_by == "staff" and triggered_by_user is None:
+        if triggered_by in ["staff", "coach"] and triggered_by_user is None:
             raise ValidationError(
-                "triggered_by_user must be provided when triggered_by='staff'"
+                "triggered_by_user must be provided when triggered_by='staff' or 'coach'"
             )
 
-        if triggered_by in ("system", "coach") and triggered_by_user is not None:
+        if triggered_by == "staff" and triggered_by_user is not None:
             raise ValidationError(
                 "triggered_by_user must be None when triggered_by is 'system' or 'coach'"
             )
@@ -752,11 +753,22 @@ class RequestToCoach(models.Model):
 
         updated = self.transition_to(self.Status.ACCEPTED_MATCHING)
 
+        ma = _get_locked_matching_attempt(updated.matching_attempt)
+
+        ma.transition_to(
+            MatchingAttempt.Status.MATCHING_CONFIRMED,
+            triggered_by=triggered_by,
+            triggered_by_user=triggered_by_user,
+        )
+        
+        ma.matched_coach = updated.coach
+        ma.save(update_fields=["matched_coach"])
+
         updated.mark_responded()
 
         RequestToCoachEvent.objects.create(
             request=updated,
-            event_type=RequestToCoachEvent.EventType.ACCEPTED,
+            event_type=RequestToCoachEvent.EventType.MATCHING_ACCEPTED,
             triggered_by=triggered_by,
             triggered_by_user=triggered_by_user,
         )
@@ -777,7 +789,7 @@ class RequestToCoach(models.Model):
 
         RequestToCoachEvent.objects.create(
             request=updated,
-            event_type=RequestToCoachEvent.EventType.REJECTED,
+            event_type=RequestToCoachEvent.EventType.MATCHING_REJECTED,
             triggered_by=triggered_by,
             triggered_by_user=triggered_by_user,
         )
@@ -937,8 +949,8 @@ class RequestToCoachEvent(models.Model):
         CREATED = "created", "Matching-Anfrage erstellt"
         REQUEST_SENT = "request_sent", "Matching-Anfrage gesendet"
         REMINDER_SENT = "reminder_sent", "Reminder gesendet"
-        ACCEPTED = "accepted", "Matching-Anfrage akzeptiert"
-        REJECTED = "rejected", "Matching-Anfrage abgelehnt"
+        MATCHING_ACCEPTED = "accepted", "Matching-Anfrage akzeptiert"
+        MATCHING_REJECTED = "rejected", "Matching-Anfrage abgelehnt"
         TIMED_OUT = "timed_out", "Deadline überschritten"
         CANCELLED = "cancelled", "Abgebrochen"
 
