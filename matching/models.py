@@ -86,11 +86,6 @@ class MatchingAttempt(models.Model):
         help_text="Automatisches Versenden von Coach-Anfragen und Erinnerungen."
     )
 
-    automation_enabled_at = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
-
     @property
     def automation_is_allowed(self):
         return self.status in {
@@ -214,9 +209,8 @@ class MatchingAttempt(models.Model):
             raise ValidationError("Automation cannot be enabled in the current status.")
 
         self.automation_enabled = True
-        self.automation_enabled_at = timezone.now()
 
-        self.save(update_fields=["automation_enabled", "automation_enabled_at"])
+        self.save(update_fields=["automation_enabled"])
 
         MatchingAttemptEvent.objects.create(
             matching_attempt=self,
@@ -249,7 +243,7 @@ class MatchingAttempt(models.Model):
 
         updated = self.transition_to(
             self.Status.READY_FOR_MATCHING,
-            triggered_by="staff",
+            triggered_by=MatchingAttemptTransition.TriggeredBy.STAFF,
             triggered_by_user=triggered_by_user,
         )
 
@@ -316,6 +310,11 @@ class MatchingAttempt(models.Model):
         )
         
 class MatchingAttemptTransition(models.Model):
+    
+    class TriggeredBy(models.TextChoices):
+        SYSTEM = "system", "System"
+        STAFF = "staff", "BL Mitarbeiter:in"
+        COACH = "coach", "Coach"
 
     matching_attempt = models.ForeignKey(
         "MatchingAttempt",
@@ -335,11 +334,8 @@ class MatchingAttemptTransition(models.Model):
 
     triggered_by = models.CharField(
         max_length=20,
-        choices=[
-            ("system", "System"),
-            ("staff", "BL Mitarbeiter:in"),
-            ("coach", "Coach"),
-        ],
+        choices=TriggeredBy.choices,
+        default=TriggeredBy.SYSTEM,
     )
 
     triggered_by_user = models.ForeignKey(
@@ -374,7 +370,7 @@ class MatchingAttemptTransition(models.Model):
                     |
                     Q(triggered_by__in=["staff", "coach"], triggered_by_user__isnull=False)
                 ),
-                name="matching_attempt_transition_actor_consistency",
+                name="matching_attempt_transition_triggered_by_consistency",
             ),
 
             # prevent pointless transitions
@@ -894,6 +890,7 @@ class RequestToCoachTransition(models.Model):
     triggered_by = models.CharField(
         max_length=20,
         choices=TriggeredBy.choices,
+        default=TriggeredBy.SYSTEM,
     )
 
     triggered_by_user = models.ForeignKey(
@@ -927,7 +924,7 @@ class RequestToCoachTransition(models.Model):
                     |
                     models.Q(triggered_by__in=["staff", "coach"], triggered_by_user__isnull=False)
                 ),
-                name="rtc_transition_valid_triggered_by_user",
+                name="rtc_transition_valid_triggered_by_consistency",
             )
         ]
 

@@ -48,6 +48,10 @@ class TestIntegration:
         assert event1.triggered_by == RequestToCoachEvent.TriggeredBy.STAFF
         assert event1.triggered_by_user == staff_user
         
+        # transition assertions
+        assert MatchingAttemptTransition.objects.all().count() == 0
+        assert RequestToCoachTransition.objects.all().count() == 0
+        
         # ADD COACH REQUEST NUMBER 2
         rtc2 = services.create_request_to_coach(
             matching_attempt=ma,
@@ -72,6 +76,10 @@ class TestIntegration:
         assert event2.triggered_by == RequestToCoachEvent.TriggeredBy.STAFF
         assert event2.triggered_by_user == staff_user
         
+        # transition assertions
+        assert MatchingAttemptTransition.objects.all().count() == 0
+        assert RequestToCoachTransition.objects.all().count() == 0
+
         
         # ADD COACH REQUEST NUMBER 3
         rtc3 = services.create_request_to_coach(
@@ -97,6 +105,10 @@ class TestIntegration:
         assert event3.triggered_by == RequestToCoachEvent.TriggeredBy.STAFF
         assert event3.triggered_by_user == staff_user
         
+        # transition assertions
+        assert MatchingAttemptTransition.objects.all().count() == 0
+        assert RequestToCoachTransition.objects.all().count() == 0
+        
         # START MATCHING ATTEMPT
         ma.start_matching(triggered_by_user=staff_user)
         
@@ -112,7 +124,37 @@ class TestIntegration:
         assert event4.triggered_by == MatchingAttemptEvent.TriggeredBy.STAFF
         assert event4.triggered_by_user == staff_user
         
-        # enable automation
+        # transition assertions
+        ma_tr_1 = MatchingAttemptTransition.objects.filter(matching_attempt=ma).first()
+        assert ma_tr_1 is not None
+        assert ma_tr_1.triggered_by == MatchingAttemptTransition.TriggeredBy.STAFF
+        assert ma_tr_1.triggered_by_user == staff_user
+        assert ma_tr_1.from_status == MatchingAttempt.Status.IN_PREPARATION
+        assert ma_tr_1.to_status == MatchingAttempt.Status.READY_FOR_MATCHING
+        assert MatchingAttemptTransition.objects.filter(matching_attempt=ma).count() == 1
+        
+        assert RequestToCoachTransition.objects.all().count() == 0
+        
+        # ENABLE AUTOMATION
+        ma.enable_automation(triggered_by_user=staff_user)
+        
+        # status assertions
+        assert ma.status == MatchingAttempt.Status.READY_FOR_MATCHING
+        assert rtc1.status == RequestToCoach.Status.IN_PREPARATION
+        assert rtc2.status == RequestToCoach.Status.IN_PREPARATION
+        assert rtc3.status == RequestToCoach.Status.IN_PREPARATION
+        
+        # field assertions
+        assert ma.automation_enabled == True
+        
+        # event assertions
+        event5 = MatchingAttemptEvent.objects.filter(matching_attempt=ma, event_type=MatchingAttemptEvent.EventType.AUTOMATION_ENABLED).first()
+        assert event5 is not None
+        
+        # transition assertions
+        assert MatchingAttemptTransition.objects.filter(matching_attempt=ma).count() == 1
+        assert RequestToCoachTransition.objects.all().count() == 0
+        
         
         # send first coach request
         
