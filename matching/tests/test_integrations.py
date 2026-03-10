@@ -276,4 +276,36 @@ class TestIntegration:
         assert event10.triggered_by == RequestToCoachEvent.TriggeredBy.COACH
         assert event10.triggered_by_user == rtc2.coach.user
         
+        # transition assertions
+        assert MatchingAttemptTransition.objects.filter(matching_attempt=ma).count() == 2
+        assert RequestToCoachTransition.objects.filter(request=rtc2).count() == 2
+        
+        # SEND COACH REQUEST TO THIRD COACH
+        rtc3.send_request(triggered_by="system")
+        ma.refresh_from_db()
+        rtc3.refresh_from_db()
+        
+        # status assertions
+        assert ma.status == MatchingAttempt.Status.MATCHING_ONGOING
+        assert rtc1.status == RequestToCoach.Status.NO_RESPONSE_UNTIL_DEADLINE
+        assert rtc2.status == RequestToCoach.Status.REJECTED_MATCHING
+        assert rtc3.status == RequestToCoach.Status.AWAITING_REPLY
+        
+        # field assertions
+        assert rtc3.first_sent_at is not None
+        assert rtc3.last_sent_at is not None
+        assert rtc3.deadline_at is not None
+        assert rtc3.deadline_at > rtc3.last_sent_at
+        
+        # event assertions
+        event11 = RequestToCoachEvent.objects.filter(request=rtc3, event_type=RequestToCoachEvent.EventType.REQUEST_SENT).first()
+        assert event11 is not None
+        assert event11.triggered_by == RequestToCoachEvent.TriggeredBy.SYSTEM
+        assert event11.triggered_by_user is None
+        
+        # transition assertions
+        assert MatchingAttemptTransition.objects.filter(matching_attempt=ma).count() == 2
+        assert RequestToCoachTransition.objects.filter(request=rtc3).count() == 1
+        
+        
         
