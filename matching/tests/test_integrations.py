@@ -110,7 +110,7 @@ class TestIntegration:
         assert RequestToCoachTransition.objects.all().count() == 0
         
         # START MATCHING ATTEMPT
-        ma.start_matching(triggered_by_user=staff_user)
+        ma = ma.start_matching(triggered_by_user=staff_user)
         
         # status assertions
         assert ma.status == MatchingAttempt.Status.READY_FOR_MATCHING

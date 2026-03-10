@@ -185,7 +185,7 @@ class MatchingAttempt(models.Model):
 
             # no-op protection
             if old_status == new_status:
-                return ma
+                raise ValidationError("MatchingAttempt is already in the target status.")
 
             # ensure transition is allowed
             if not ma.can_transition_to(new_status):
@@ -195,7 +195,7 @@ class MatchingAttempt(models.Model):
 
             # update status
             ma.status = new_status
-            ma.save(update_fields=["status"])
+            ma.save()
 
             # record transition
             MatchingAttemptTransition.objects.create(
@@ -258,9 +258,6 @@ class MatchingAttempt(models.Model):
             self.Status.READY_FOR_MATCHING,
         )
         
-        self.status = updated.status  # sync cached instance
-       
-
         MatchingAttemptEvent.objects.create(
             matching_attempt=updated,
             event_type=MatchingAttemptEvent.EventType.STARTED,
@@ -359,7 +356,7 @@ class MatchingAttemptTransition(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.from_status} → {self.to_status})"
+        return f"{self.from_status} → {self.to_status}"
         
 
 class MatchingAttemptEvent(models.Model):
@@ -685,15 +682,6 @@ class RequestToCoach(models.Model):
 
         now = timezone.now()
 
-        # update send timestamps
-        if self.first_sent_at is None:
-            self.first_sent_at = now
-
-        self.last_sent_at = now
-        self.requests_sent += 1
-        
-        self.save(update_fields=["first_sent_at", "last_sent_at", "requests_sent"])
-
         # transition the request state using the state machine
         if self.status == self.Status.IN_PREPARATION:
             self = self.transition_to(
@@ -711,13 +699,16 @@ class RequestToCoach(models.Model):
             )
 
         self.matching_attempt = ma
+        
+        # update send timestamps
+        if self.first_sent_at is None:
+            self.first_sent_at = now
+
+        self.last_sent_at = now
+        self.requests_sent += 1
 
         # save timestamp updates
-        self.save(
-            update_fields=[
-                "matching_attempt",
-            ]
-        )
+        self.save()
 
         RequestToCoachEvent.objects.create(
             request=self,
@@ -773,7 +764,7 @@ class RequestToCoach(models.Model):
         else:
             new_status = self.Status.ACCEPTED_ON_TIME
 
-        updated = self.transition_to(new_status, triggered_by=triggered_by, triggered_by_user=triggered_by_user)
+        updated = self.transition_to(new_status)
 
         updated.mark_responded()
 
@@ -801,7 +792,7 @@ class RequestToCoach(models.Model):
         else:
             new_status = self.Status.REJECTED_ON_TIME
 
-        updated = self.transition_to(new_status, triggered_by=triggered_by, triggered_by_user=triggered_by_user)
+        updated = self.transition_to(new_status)
 
         updated.mark_responded()
 
@@ -813,7 +804,7 @@ class RequestToCoach(models.Model):
         )
 
         return updated
-
+        
     # -------------------------------------------------------------
     # Django Metadata
     # -------------------------------------------------------------
