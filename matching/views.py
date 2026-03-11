@@ -61,7 +61,7 @@ class MatchingAttemptDetailView(LoginRequiredMixin, DetailView):
         )
         context['all_emails'] = all_emails
         context['transitions'] = list(
-            matching_attempt.transitions.select_related('triggered_by_user').order_by('created_at')
+            matching_attempt.transitions.order_by('created_at')
         )
         context['events'] = list(
             matching_attempt.events.order_by('created_at')
@@ -206,7 +206,7 @@ class RequestToCoachDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context['email_logs'] = self.object.email_logs.order_by('-sent_at').select_related('request_to_coach__coach')
         context['transitions'] = list(
-            self.object.transitions.select_related('triggered_by_user').order_by('created_at')
+            self.object.transitions.order_by('created_at')
         )
         context['events'] = list(
             self.object.events.order_by('created_at')
