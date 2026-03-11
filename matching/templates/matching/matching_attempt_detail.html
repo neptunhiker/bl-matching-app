@@ -97,7 +97,7 @@
       </dl>
 
       {# ── Start Matching ───────────────────────────────────────────── #}
-      {% if request.user.is_staff and matching_attempt.status == 'draft' %}
+      {% if request.user.is_staff and matching_attempt.status == 'in_preparation' %}
       <div class="mt-6 pt-5 border-t border-neutral-100">
         <form method="post" action="{% url 'matching_attempt_start' matching_attempt.pk %}">
           {% csrf_token %}
@@ -489,7 +489,12 @@
 
           {# Triggered by #}
           <div class="ml-auto shrink-0 text-right">
-            <p class="text-xs font-semibold text-neutral-600">{{ event.get_triggered_by_display }}</p>
+            <p class="text-xs font-semibold text-neutral-600">
+              {% if event.triggered_by == "system" %}
+                {{ event.get_triggered_by_display }}
+              {% else %}
+                {{ event.triggered_by_user }}</p>
+              {% endif %}
             {% if event.note %}
               <p class="text-xs text-neutral-400 italic mt-0.5">{{ event.note }}</p>
             {% endif %}

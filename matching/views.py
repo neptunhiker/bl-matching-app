@@ -63,9 +63,20 @@ class MatchingAttemptDetailView(LoginRequiredMixin, DetailView):
         context['transitions'] = list(
             matching_attempt.transitions.order_by('created_at')
         )
-        context['events'] = list(
-            matching_attempt.events.order_by('created_at')
+        events = [matching_attempt.events.order_by('created_at')]
+        
+        for rtc in matching_attempt.coach_requests.all():
+            rtc_events = rtc.events.order_by('created_at').select_related('request__coach')
+            events.append(rtc_events)
+        
+        ordered_events = sorted(
+            [event for sublist in events for event in sublist],  # flatten list of querysets
+            reverse=True,
+            key=lambda e: e.created_at,
         )
+        context['events'] = ordered_events
+            
+
         return context
 
 class StartMatchingView(StaffRequiredMixin, View):
@@ -77,7 +88,6 @@ class StartMatchingView(StaffRequiredMixin, View):
     def post(self, request, pk):
         matching_attempt = get_object_or_404(MatchingAttempt, pk=pk)
         matching_attempt.start_matching(
-            triggered_by="staff",
             triggered_by_user=request.user,
         )
         return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
@@ -95,9 +105,9 @@ class ToggleAutomationView(StaffRequiredMixin, View):
         action = request.POST.get("action")
 
         if action == "enable":
-            matching_attempt.enable_automation()
+            matching_attempt.enable_automation(triggered_by_user=request.user)
         elif action == "disable":
-            matching_attempt.disable_automation()
+            matching_attempt.disable_automation(triggered_by_user=request.user)
 
         return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
 
@@ -183,12 +193,15 @@ class RequestToCoachCreateView(StaffRequiredMixin, View):
             })
 
         priority = self._next_priority(matching_attempt)
-        RequestToCoach.objects.create(
+        services.create_request_to_coach(
             matching_attempt=matching_attempt,
             coach=coach,
             priority=priority,
             max_number_of_requests=max_requests,
+            triggered_by=RequestToCoachEvent.TriggeredBy.STAFF,
+            triggered_by_user=request.user,
         )
+
         return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
 
 

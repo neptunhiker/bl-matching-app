@@ -21,7 +21,7 @@ def create_matching_attempt(participant: Participant, created_by: User):
 
     return attempt
   
-def create_request_to_coach(matching_attempt: MatchingAttempt, coach: Coach, priority: int, triggered_by: str, triggered_by_user: User = None):
+def create_request_to_coach(matching_attempt: MatchingAttempt, coach: Coach, priority: int, triggered_by: str, triggered_by_user: User = None, max_number_of_requests: int = 3):
     
     if triggered_by not in [RequestToCoachEvent.TriggeredBy.SYSTEM, RequestToCoachEvent.TriggeredBy.STAFF]:
         raise ValueError("Invalid value for triggered_by. Must be either 'system' or 'staff'.")
@@ -33,6 +33,7 @@ def create_request_to_coach(matching_attempt: MatchingAttempt, coach: Coach, pri
         matching_attempt=matching_attempt,
         coach=coach,
         priority=priority,
+        max_number_of_requests=max_number_of_requests,
     )
 
     RequestToCoachEvent.objects.create(

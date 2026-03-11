@@ -91,6 +91,7 @@ class MatchingAttempt(models.Model):
     @property
     def automation_is_allowed(self):
         return self.status in {
+            self.Status.IN_PREPARATION,
             self.Status.READY_FOR_MATCHING,
             self.Status.MATCHING_ONGOING,
         }
@@ -247,6 +248,10 @@ class MatchingAttempt(models.Model):
         if not (triggered_by_user.is_staff or triggered_by_user.is_superuser):
             raise ValidationError("Only staff users can start the matching process.")
         
+        # Must have at least one RequestToCoach in preparation to start matching.
+        if not self.coach_requests.filter(status=RequestToCoach.Status.IN_PREPARATION).exists():
+            raise ValidationError("At least one coach request must be in preparation to start matching.")
+        
         updated = self.transition_to(
             self.Status.READY_FOR_MATCHING,
         )
@@ -288,17 +293,10 @@ class MatchingAttempt(models.Model):
 
     # -------------------------------------------------------
 
-    def save(self, *args, **kwargs):
-        is_new = self._state.adding
-
-        super().save(*args, **kwargs)
-
-        if is_new:
-            MatchingAttemptEvent.objects.create(
-                matching_attempt=self,
-                event_type=MatchingAttemptEvent.EventType.CREATED,
-                triggered_by=MatchingAttemptEvent.TriggeredBy.SYSTEM,
-            )
+            
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('matching_attempt_detail', kwargs={'pk': self.pk})
                 
         
     def __str__(self):

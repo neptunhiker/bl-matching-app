@@ -620,12 +620,12 @@ class TestMatchingAttempt:
 @pytest.mark.django_db
 class TestStartMatching:
 
-    def test_start_matching_transitions_to_ready_for_matching(self, matching_attempt, staff_user):
+    def test_start_matching_transitions_to_ready_for_matching(self, matching_attempt, staff_user, rtc):
         updated = matching_attempt.start_matching(triggered_by_user=staff_user)
 
         assert updated.status == MatchingAttempt.Status.READY_FOR_MATCHING
 
-    def test_start_matching_creates_started_event(self, matching_attempt, staff_user):
+    def test_start_matching_creates_started_event(self, matching_attempt, staff_user, rtc):
         updated = matching_attempt.start_matching( triggered_by_user=staff_user)
 
         assert MatchingAttemptEvent.objects.filter(
@@ -633,7 +633,7 @@ class TestStartMatching:
             event_type=MatchingAttemptEvent.EventType.STARTED,
         ).exists()
 
-    def test_start_matching_records_actor_on_event(self, matching_attempt, staff_user):
+    def test_start_matching_records_actor_on_event(self, matching_attempt, staff_user, rtc):
         updated = matching_attempt.start_matching(triggered_by_user=staff_user)
 
         event = MatchingAttemptEvent.objects.get(
@@ -708,7 +708,7 @@ class TestAutomationControl:
         assert matching_attempt.automation_enabled is False
 
     def test_enable_automation_raises_in_disallowed_status(self, matching_attempt, staff_user):
-        matching_attempt.status = MatchingAttempt.Status.IN_PREPARATION
+        matching_attempt.status = MatchingAttempt.Status.MATCHING_CONFIRMED
         matching_attempt.save()
 
         with pytest.raises(ValidationError):
@@ -740,7 +740,6 @@ class TestAutomationControl:
 
     def test_automation_is_allowed_false_when_wrong_status(self, matching_attempt):
         for status in (
-            MatchingAttempt.Status.IN_PREPARATION,
             MatchingAttempt.Status.MATCHING_CONFIRMED,
             MatchingAttempt.Status.FAILED,
             MatchingAttempt.Status.CANCELLED,
