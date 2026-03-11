@@ -24,6 +24,7 @@
           </a>
 
           <!-- Desktop links (sm and up) -->
+          {% if user.is_authenticated %}
           <ul class="hidden sm:flex items-center gap-1">
             <li>
               <a href="{% url 'matching_attempts' %}"
@@ -75,11 +76,11 @@
             {% endif %}
           </ul>
 
-          <!-- Mobile hamburger -->
-          <button id="nav-toggle"
-                  class="sm:hidden p-2 rounded-lg text-tertiary-700
-                         hover:bg-white/30 transition-colors"
-                  aria-label="Menü öffnen">
+             <!-- Mobile hamburger -->
+             <button id="nav-toggle"
+                class="sm:hidden p-2 rounded-lg text-tertiary-700
+                  hover:bg-white/30 transition-colors"
+                aria-label="Menü öffnen">
             <svg id="icon-open" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
                  viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
@@ -147,6 +148,7 @@
           {% endif %}
         </ul>
       </div>
+      {% endif %}
     </nav>
     <script>
       (function () {
@@ -154,11 +156,14 @@
         var menu  = document.getElementById('nav-menu');
         var open  = document.getElementById('icon-open');
         var close = document.getElementById('icon-close');
-        btn.addEventListener('click', function () {
-          var isHidden = menu.classList.toggle('hidden');
-          open.classList.toggle('hidden', !isHidden);
-          close.classList.toggle('hidden',  isHidden);
-        });
+        if (btn) {
+          btn.addEventListener('click', function () {
+            if (!menu) return;
+            var isHidden = menu.classList.toggle('hidden');
+            if (open) open.classList.toggle('hidden', !isHidden);
+            if (close) close.classList.toggle('hidden',  isHidden);
+          });
+        }
       })();
     </script>
 
