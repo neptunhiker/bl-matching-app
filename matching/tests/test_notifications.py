@@ -90,7 +90,7 @@ def test_reminder_not_allowed_in_wrong_state(rtc):
     with pytest.raises(ValidationError):
         send_reminder_coach_request_email(rtc)
         
-    rtc.status = RequestToCoach.Status.ACCEPTED_ON_TIME
+    rtc.status = RequestToCoach.Status.ACCEPTED_MATCHING
     rtc.save()
 
     with pytest.raises(ValidationError):

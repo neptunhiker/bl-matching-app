@@ -287,7 +287,7 @@ class CoachRespondView(View):
             on_time = True
             new_status = (
                 RequestToCoach.Status.ACCEPTED_ON_TIME if is_accept
-                else RequestToCoach.Status.REJECTED_ON_TIME
+                else RequestToCoach.Status.REJECTED_MATCHING
             )
             if is_accept:
                 ma = rtc.matching_attempt.transition_to(

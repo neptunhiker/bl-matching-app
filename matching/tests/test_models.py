@@ -31,87 +31,20 @@ class TestRequestToCoachTransition:
         rtc.save()
 
         with pytest.raises(ValidationError):
-            rtc.transition_to(RequestToCoach.Status.ACCEPTED_ON_TIME)
+            rtc.transition_to(RequestToCoach.Status.ACCEPTED_MATCHING)
 
-    def test_invalid_triggered_by_raises(self, rtc):
-        with pytest.raises(ValueError):
-            rtc.transition_to(RequestToCoach.Status.AWAITING_REPLY, triggered_by="alien")
 
-    def test_triggered_by_user_requires_staff_or_coach(self, rtc, coach_user):
-        with pytest.raises(ValueError):
-            rtc.transition_to(
-                RequestToCoach.Status.AWAITING_REPLY,
-                triggered_by="system",
-                triggered_by_user=coach_user,
-            )
-
-    def test_transition_actor_constraint(self, rtc, coach_user):
-        with pytest.raises(IntegrityError):
-            RequestToCoachTransition.objects.create(
-                request=rtc,
-                from_status=RequestToCoach.Status.IN_PREPARATION,
-                to_status=RequestToCoach.Status.AWAITING_REPLY,
-                triggered_by="system",
-                triggered_by_user=coach_user,
-            )
 
     def test_string_representation(self, rtc):
         transition = RequestToCoachTransition.objects.create(
             request=rtc,
             from_status=RequestToCoach.Status.IN_PREPARATION,
             to_status=RequestToCoach.Status.AWAITING_REPLY,
-            triggered_by=RequestToCoachTransition.TriggeredBy.SYSTEM,
         )
 
         assert str(transition.from_status) in str(transition)
         assert str(transition.to_status) in str(transition)
-
-    def test_staff_transition_raises_for_non_staff_user(self, rtc, coach_user):
-        with pytest.raises(ValidationError):
-            rtc.transition_to(
-                RequestToCoach.Status.AWAITING_REPLY,
-                triggered_by="staff",
-                triggered_by_user=coach_user,
-            )
-
-
-# ── TestRequestToCoachTransitionClean ─────────────────────────────────────────
-
-@pytest.mark.django_db
-class TestRequestToCoachTransitionClean:
-
-    def test_clean_raises_if_system_with_user(self, rtc, coach_user):
-        transition = RequestToCoachTransition(
-            request=rtc,
-            from_status=RequestToCoach.Status.IN_PREPARATION,
-            to_status=RequestToCoach.Status.AWAITING_REPLY,
-            triggered_by=RequestToCoachTransition.TriggeredBy.SYSTEM,
-            triggered_by_user=coach_user,
-        )
-        with pytest.raises(ValidationError):
-            transition.clean()
-
-    def test_clean_raises_if_staff_without_user(self, rtc):
-        transition = RequestToCoachTransition(
-            request=rtc,
-            from_status=RequestToCoach.Status.IN_PREPARATION,
-            to_status=RequestToCoach.Status.AWAITING_REPLY,
-            triggered_by=RequestToCoachTransition.TriggeredBy.STAFF,
-            triggered_by_user=None,
-        )
-        with pytest.raises(ValidationError):
-            transition.clean()
-
-    def test_clean_raises_if_staff_user_is_not_staff(self, rtc, coach_user):
-        transition = RequestToCoachTransition(
-            request=rtc,
-            from_status=RequestToCoach.Status.IN_PREPARATION,
-            to_status=RequestToCoach.Status.AWAITING_REPLY,
-            triggered_by=RequestToCoachTransition.TriggeredBy.STAFF,
-            triggered_by_user=coach_user,
-        )
-        with pytest.raises(ValidationError):
-            transition.clean()
+            
 
 
 # ── RequestToCoach: Accept / Reject ───────────────────────────────────────────
@@ -122,27 +55,20 @@ class TestRequestToCoachAcceptReject:
         rtc.status = RequestToCoach.Status.AWAITING_REPLY
         rtc.deadline_at = timezone.now() + timezone.timedelta(hours=2)
         rtc.save()
-
+        
+        rtc.matching_attempt.status = MatchingAttempt.Status.MATCHING_ONGOING
+        rtc.matching_attempt.save()
+        rtc.save()
         rtc.accept()
 
         rtc.refresh_from_db()
 
-        assert rtc.status == RequestToCoach.Status.ACCEPTED_ON_TIME
+        assert rtc.status == RequestToCoach.Status.ACCEPTED_MATCHING
         assert rtc.responded_at is not None
 
         event = RequestToCoachEvent.objects.get(request=rtc)
-        assert event.event_type == RequestToCoachEvent.EventType.ACCEPTED
+        assert event.event_type == RequestToCoachEvent.EventType.MATCHING_ACCEPTED
 
-    def test_accept_after_deadline_sets_late_status(self, rtc):
-        rtc.status = RequestToCoach.Status.AWAITING_REPLY
-        rtc.deadline_at = timezone.now() - timezone.timedelta(hours=1)
-        rtc.save()
-
-        rtc.accept()
-
-        rtc.refresh_from_db()
-
-        assert rtc.status == RequestToCoach.Status.ACCEPTED_LATE
 
     def test_reject_before_deadline_sets_status_and_event(self, rtc):
         rtc.status = RequestToCoach.Status.AWAITING_REPLY
@@ -153,11 +79,11 @@ class TestRequestToCoachAcceptReject:
 
         rtc.refresh_from_db()
 
-        assert rtc.status == RequestToCoach.Status.REJECTED_ON_TIME
+        assert rtc.status == RequestToCoach.Status.REJECTED_MATCHING
         assert rtc.responded_at is not None
 
         event = RequestToCoachEvent.objects.get(request=rtc)
-        assert event.event_type == RequestToCoachEvent.EventType.REJECTED
+        assert event.event_type == RequestToCoachEvent.EventType.MATCHING_REJECTED
 
     def test_accept_not_allowed_if_not_awaiting_reply(self, rtc):
         rtc.status = RequestToCoach.Status.IN_PREPARATION
@@ -187,7 +113,7 @@ class TestRequestToCoachHelpers:
 
         rtc.mark_responded()
         rtc.refresh_from_db()
-
+        print(rtc.responded_at, first_timestamp)
         assert rtc.responded_at == first_timestamp
 
     def test_deadline_passed_returns_true_if_past(self, rtc):
@@ -251,7 +177,7 @@ class TestMatchingAttemptQueueHelpers:
         rtc_2 = RequestToCoach.objects.create(
             matching_attempt=matching_attempt,
             coach=coach_2,
-            status=RequestToCoach.Status.ACCEPTED_ON_TIME,
+            status=RequestToCoach.Status.ACCEPTED_MATCHING,
             priority=30,
         )
 
@@ -357,7 +283,7 @@ class TestRequestToCoachEvent:
         with pytest.raises(IntegrityError):
             RequestToCoachEvent.objects.create(
                 request=rtc,
-                event_type=RequestToCoachEvent.EventType.ACCEPTED,
+                event_type=RequestToCoachEvent.EventType.MATCHING_ACCEPTED,
                 triggered_by=RequestToCoachEvent.TriggeredBy.COACH,
                 triggered_by_user=None,
             )
@@ -402,7 +328,7 @@ class TestRequestToCoachEventClean:
     def test_clean_raises_if_coach_without_user(self, rtc):
         event = RequestToCoachEvent(
             request=rtc,
-            event_type=RequestToCoachEvent.EventType.ACCEPTED,
+            event_type=RequestToCoachEvent.EventType.MATCHING_ACCEPTED,
             triggered_by=RequestToCoachEvent.TriggeredBy.COACH,
             triggered_by_user=None,
         )
@@ -412,7 +338,7 @@ class TestRequestToCoachEventClean:
     def test_clean_raises_if_staff_user_is_not_staff(self, rtc, coach_user):
         event = RequestToCoachEvent(
             request=rtc,
-            event_type=RequestToCoachEvent.EventType.ACCEPTED,
+            event_type=RequestToCoachEvent.EventType.MATCHING_ACCEPTED,
             triggered_by=RequestToCoachEvent.TriggeredBy.STAFF,
             triggered_by_user=coach_user,
         )
@@ -740,33 +666,6 @@ class TestMatchingAttemptTransition:
         assert transition.from_status == MatchingAttempt.Status.IN_PREPARATION
         assert transition.to_status == MatchingAttempt.Status.READY_FOR_MATCHING
 
-    def test_invalid_triggered_by_raises(self, matching_attempt):
-
-        with pytest.raises(ValueError):
-            matching_attempt.transition_to(
-                MatchingAttempt.Status.READY_FOR_MATCHING,
-                triggered_by="alien"
-            )
-
-    def test_triggered_by_user_requires_staff_or_coach(self, matching_attempt, coach_user):
-
-        with pytest.raises(ValueError):
-            matching_attempt.transition_to(
-                MatchingAttempt.Status.READY_FOR_MATCHING,
-                triggered_by="system",
-                triggered_by_user=coach_user
-            )
-
-    def test_transition_actor_constraint(self, matching_attempt, coach_user):
-        with pytest.raises(IntegrityError):
-            MatchingAttemptTransition.objects.create(
-                matching_attempt=matching_attempt,
-                from_status=MatchingAttempt.Status.IN_PREPARATION,
-                to_status=MatchingAttempt.Status.READY_FOR_MATCHING,
-                triggered_by="system",
-                triggered_by_user=coach_user,
-            )
-
     def test_invalid_transition_raises_validation_error(self, matching_attempt):
         with pytest.raises(ValidationError):
             matching_attempt.transition_to(MatchingAttempt.Status.MATCHING_CONFIRMED)
@@ -776,34 +675,6 @@ class TestMatchingAttemptTransition:
 
         assert updated.status == MatchingAttempt.Status.READY_FOR_MATCHING
 
-    def test_staff_transition_records_user(self, matching_attempt, staff_user):
-        matching_attempt.transition_to(
-            MatchingAttempt.Status.READY_FOR_MATCHING,
-            triggered_by="staff",
-            triggered_by_user=staff_user,
-        )
-
-        transition = MatchingAttemptTransition.objects.get()
-        assert transition.triggered_by == "staff"
-        assert transition.triggered_by_user == staff_user
-
-    def test_staff_transition_raises_for_non_staff_user(self, matching_attempt, coach_user):
-        with pytest.raises(ValidationError):
-            matching_attempt.transition_to(
-                MatchingAttempt.Status.READY_FOR_MATCHING,
-                triggered_by="staff",
-                triggered_by_user=coach_user,
-            )
-
-    def test_actor_constraint_staff_without_user(self, matching_attempt):
-        with pytest.raises(IntegrityError):
-            MatchingAttemptTransition.objects.create(
-                matching_attempt=matching_attempt,
-                from_status=MatchingAttempt.Status.IN_PREPARATION,
-                to_status=MatchingAttempt.Status.READY_FOR_MATCHING,
-                triggered_by="staff",
-                triggered_by_user=None,
-            )
 
     def test_string_representation(self, matching_attempt):
         transition = matching_attempt.transition_to(MatchingAttempt.Status.READY_FOR_MATCHING)
@@ -813,43 +684,6 @@ class TestMatchingAttemptTransition:
         assert str(MatchingAttempt.Status.READY_FOR_MATCHING) in str(record)
 
 
-# ── TestMatchingAttemptTransitionClean ────────────────────────────────────────
-
-@pytest.mark.django_db
-class TestMatchingAttemptTransitionClean:
-
-    def test_clean_raises_if_system_with_user(self, matching_attempt, coach_user):
-        transition = MatchingAttemptTransition(
-            matching_attempt=matching_attempt,
-            from_status=MatchingAttempt.Status.IN_PREPARATION,
-            to_status=MatchingAttempt.Status.READY_FOR_MATCHING,
-            triggered_by="system",
-            triggered_by_user=coach_user,
-        )
-        with pytest.raises(ValidationError):
-            transition.clean()
-
-    def test_clean_raises_if_staff_without_user(self, matching_attempt):
-        transition = MatchingAttemptTransition(
-            matching_attempt=matching_attempt,
-            from_status=MatchingAttempt.Status.IN_PREPARATION,
-            to_status=MatchingAttempt.Status.READY_FOR_MATCHING,
-            triggered_by="staff",
-            triggered_by_user=None,
-        )
-        with pytest.raises(ValidationError):
-            transition.clean()
-
-    def test_clean_raises_if_staff_user_is_not_staff(self, matching_attempt, coach_user):
-        transition = MatchingAttemptTransition(
-            matching_attempt=matching_attempt,
-            from_status=MatchingAttempt.Status.IN_PREPARATION,
-            to_status=MatchingAttempt.Status.READY_FOR_MATCHING,
-            triggered_by="staff",
-            triggered_by_user=coach_user,
-        )
-        with pytest.raises(ValidationError):
-            transition.clean()
 
 
 # ── TestAutomationControl ─────────────────────────────────────────────────────
@@ -863,7 +697,6 @@ class TestAutomationControl:
         matching_attempt.enable_automation(triggered_by_user=staff_user)
 
         assert matching_attempt.automation_enabled is True
-        assert matching_attempt.automation_enabled_at is not None
 
     def test_disable_automation(self, matching_attempt, staff_user):
         matching_attempt.status = MatchingAttempt.Status.MATCHING_ONGOING

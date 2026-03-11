@@ -160,23 +160,10 @@ class MatchingAttempt(models.Model):
                 f"Transition {self.status} → {new_status} not allowed."
             )
 
-    def transition_to(self, new_status, triggered_by="system", triggered_by_user=None):
+    def transition_to(self, new_status):
         """
         Transition the MatchingAttempt to a new status and record the transition.
         """
-
-        if triggered_by not in ("system", "staff", "coach"):
-            raise ValidationError("Invalid triggered_by value")
-
-        if triggered_by in ["staff", "coach"] and triggered_by_user is None:
-            raise ValidationError(
-                "triggered_by_user must be provided when triggered_by='staff' or 'coach'"
-            )
-
-        if triggered_by == "staff" and triggered_by_user is not None:
-            raise ValidationError(
-                "triggered_by_user must be None when triggered_by is 'system' or 'coach'"
-            )
 
         with transaction.atomic():
 
@@ -255,6 +242,10 @@ class MatchingAttempt(models.Model):
 
         if self.status != self.Status.IN_PREPARATION:
             raise ValidationError("Matching attempt is not in preparation.")
+        
+        # user must be staff to start the matching process
+        if not (triggered_by_user.is_staff or triggered_by_user.is_superuser):
+            raise ValidationError("Only staff users can start the matching process.")
         
         updated = self.transition_to(
             self.Status.READY_FOR_MATCHING,
@@ -643,8 +634,9 @@ class RequestToCoach(models.Model):
         return timezone.now() > self.deadline_at
 
     def mark_responded(self):
-        self.responded_at = timezone.now()
-        self.save(update_fields=["responded_at"])
+        if not self.responded_at:
+            self.responded_at = timezone.now()
+            self.save(update_fields=["responded_at"])
 
     # -------------------------------------------------------------
     # Domain Actions
@@ -682,8 +674,6 @@ class RequestToCoach(models.Model):
         if ma.status == MatchingAttempt.Status.READY_FOR_MATCHING:
             ma = ma.transition_to(
                 MatchingAttempt.Status.MATCHING_ONGOING,
-                triggered_by=triggered_by,
-                triggered_by_user=triggered_by_user,
             )
 
         self.matching_attempt = ma
@@ -757,8 +747,6 @@ class RequestToCoach(models.Model):
 
         ma.transition_to(
             MatchingAttempt.Status.MATCHING_CONFIRMED,
-            triggered_by=triggered_by,
-            triggered_by_user=triggered_by_user,
         )
         
         ma.matched_coach = updated.coach
