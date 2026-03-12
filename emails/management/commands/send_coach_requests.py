@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from emails.models import EmailLog
@@ -28,7 +28,10 @@ class Command(BaseCommand):
 
         for rtc in pending.iterator():
             try:
-                send_first_coach_request_email(rtc, email_trigger=EmailLog.EmailTrigger.AUTOMATED)
+                # Ensure any select_for_update inside the send routine runs
+                # within a transaction (required by Django).
+                with transaction.atomic():
+                    send_first_coach_request_email(rtc, triggered_by="system", triggered_by_user=None)
 
                 sent += 1
 

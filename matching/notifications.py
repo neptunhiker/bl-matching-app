@@ -54,7 +54,7 @@ def _send_request_email(
             context=context,
             request_to_coach=rtc,
             sent_by=context["author"],
-            email_trigger=triggered_by,
+            triggered_by=triggered_by
         )   
     )
     

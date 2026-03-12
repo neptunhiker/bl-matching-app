@@ -427,7 +427,7 @@ class CoachRespondView(View):
         if rtc.deadline_at is None or now <= rtc.deadline_at:
             on_time = True
             new_status = (
-                RequestToCoach.Status.ACCEPTED_ON_TIME if is_accept
+                RequestToCoach.Status.ACCEPTED_MATCHING if is_accept
                 else RequestToCoach.Status.REJECTED_MATCHING
             )
             if is_accept:
@@ -453,22 +453,13 @@ class CoachRespondView(View):
                 )
         else:
             on_time = False
-            new_status = (
-                RequestToCoach.Status.ACCEPTED_LATE if is_accept
-                else RequestToCoach.Status.REJECTED_LATE
-            )
-
-        rtc.status = new_status
-        rtc.save(update_fields=['status'])
-        
-        
 
         return render(
             request,
             'matching/coach_response_success.html',
             {
                 **base_context,
-                'action': token_instance.action,        # 'accept' or 'decline'
+                'action': token_instance.action, # 'accept' or 'decline'
                 'is_accept': is_accept,
                 'on_time': on_time,
                 'deadline': rtc.deadline_at,

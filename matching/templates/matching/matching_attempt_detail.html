@@ -98,7 +98,7 @@
       </dl>
 
       {# ── Start Matching ───────────────────────────────────────────── #}
-      {% if request.user.is_staff and matching_attempt.status == 'in_preparation' %}
+      {% if request.user.is_staff and matching_attempt.status == 'in_preparation' and matching_attempt.coach_requests.count > 0 %}
       <div class="mt-6 pt-5 border-t border-neutral-100">
         <form method="post" action="{% url 'matching_attempt_start' matching_attempt.pk %}">
           {% csrf_token %}
