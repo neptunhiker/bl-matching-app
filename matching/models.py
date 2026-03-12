@@ -62,6 +62,7 @@ class MatchingAttempt(models.Model):
         Participant,
         on_delete=models.CASCADE,
         related_name="matching_attempts",
+        verbose_name="Teilnehmer:in",
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
