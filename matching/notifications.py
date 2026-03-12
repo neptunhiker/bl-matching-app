@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.db import transaction
 
-
+from accounts.models import User
 from emails.services import send_email
 from emails.models import EmailLog
 from .locks import _get_locked_request_to_coach
@@ -40,9 +40,7 @@ def _send_request_email(
     rtc: RequestToCoach,
     subject: str,
     template_name: str,
-    event_type: str,
-    email_trigger: str = EmailLog.EmailTrigger.AUTOMATED,
-    triggered_by_user=None,
+    triggered_by: str,
 ):
     accept_url, decline_url = generate_coach_action_tokens(rtc)
 
@@ -56,60 +54,28 @@ def _send_request_email(
             context=context,
             request_to_coach=rtc,
             sent_by=context["author"],
-            email_trigger=email_trigger,
+            email_trigger=triggered_by,
         )   
     )
     
-    event_triggered_by = (
-        RequestToCoachEvent.TriggeredBy.STAFF
-        if email_trigger == EmailLog.EmailTrigger.MANUAL
-        else RequestToCoachEvent.TriggeredBy.SYSTEM
-    )
-    RequestToCoachEvent.objects.create(
-        request=rtc,
-        event_type=event_type,
-        triggered_by=event_triggered_by,
-        triggered_by_user=triggered_by_user if email_trigger == EmailLog.EmailTrigger.MANUAL else None,
-    )
-    
-@transaction.atomic
-def send_first_coach_request_email(rtc: RequestToCoach, email_trigger: str = EmailLog.EmailTrigger.AUTOMATED) -> RequestToCoach:
+
+def send_first_coach_request_email(rtc: RequestToCoach, triggered_by: str="system", triggered_by_user: User = None) -> RequestToCoach:
     """Send the first coach request email and update status accordingly."""
     
+    if triggered_by not in [RequestToCoachEvent.TriggeredBy.SYSTEM, RequestToCoachEvent.TriggeredBy.STAFF]:
+        raise ValueError("Invalid value for triggered_by. Must be either 'system' or 'staff'.")
+    if triggered_by == RequestToCoachEvent.TriggeredBy.STAFF and not triggered_by_user:
+        raise ValueError("triggered_by_user must be provided when triggered_by is 'staff'.")
+    
+    
     rtc = _get_locked_request_to_coach(rtc)
+    rtc.send_request(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
     
-    if rtc.first_sent_at:
-        raise ValidationError(f"First request email has already been sent on {rtc.first_sent_at}. Please send a reminder email instead.")
-    
-    if not rtc.can_send_request():
-        raise ValidationError(f"Maximum number of request emails already sent ({rtc.requests_sent} of {rtc.max_number_of_requests}).")
-    
-    now = timezone.now()  
-    
-    if rtc.deadline_at is None:
-        rtc.deadline_at = add_business_hours(
-            now,
-            getattr(settings, 'COACH_REQUEST_DEFAULT_DEADLINE_HOURS', 48),
-        )
-
     _send_request_email(rtc, 
                         subject=f"Matching-Anfrage für {rtc.matching_attempt.participant.first_name} {rtc.matching_attempt.participant.last_name}", 
                         template_name='emails/match_request_to_coach.html',
-                        email_trigger=email_trigger,
-                        event_type=RequestToCoachEvent.EventType.REQUEST_SENT,
-    )
-    
-    # update time stamps and message counters only if email sending succeeded
-    rtc.first_sent_at = now
-    rtc.last_sent_at = now
-    rtc.requests_sent += 1
-    rtc.save()
-    
-    rtc = rtc.transition_to(RequestToCoach.Status.AWAITING_REPLY)
-    if not rtc.matching_attempt.is_active:
-        ma = rtc.matching_attempt.transition_to(MatchingAttempt.Status.MATCHING_ACTIVE)
-        
-    
+                        triggered_by=triggered_by,
+    )        
     
     return rtc
     
@@ -127,8 +93,7 @@ def send_reminder_coach_request_email(rtc: RequestToCoach, email_trigger: str = 
     _send_request_email(rtc, 
                         subject=f"Reminder: Matching-Anfrage für {rtc.matching_attempt.participant.first_name} {rtc.matching_attempt.participant.last_name}", 
                         template_name='emails/reminder_match_request_to_coach.html',
-                        email_trigger=email_trigger,
-                        event_type=RequestToCoachEvent.EventType.REMINDER_SENT,
+                        triggered_by=email_trigger,
     )
     
     rtc.last_sent_at = now

@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.utils import timezone
 
+from emails.models import EmailLog
 from matching.models import RequestToCoach, MatchingAttempt
 from matching.notifications import send_first_coach_request_email
 
@@ -14,29 +15,20 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        self.stdout.write(f"Starting coach request sender at {timezone.now()}")
-
         sent = 0
         skipped = 0
         failed = 0
 
         pending = (
-            RequestToCoach.objects.filter(
-                status=RequestToCoach.Status.IN_PREPARATION,
-                first_sent_at__isnull=True,
-                matching_attempt__automation_enabled=True,
-                matching_attempt__status__in=[
-                    MatchingAttempt.Status.READY_FOR_MATCHING,
-                    MatchingAttempt.Status.MATCHING_ACTIVE,
-                ],
-            )
-            .select_related("coach__user", "matching_attempt__participant")
-            .order_by("matching_attempt_id", "priority", "id")
+            RequestToCoach.objects
+                .eligible_for_first_request()
+                .select_related("coach__user", "matching_attempt__participant")
+                .order_by("matching_attempt_id", "priority", "id")
         )[:self.MAX_PER_RUN]
 
         for rtc in pending.iterator():
             try:
-                send_first_coach_request_email(rtc)
+                send_first_coach_request_email(rtc, email_trigger=EmailLog.EmailTrigger.AUTOMATED)
 
                 sent += 1
 
@@ -44,7 +36,7 @@ class Command(BaseCommand):
                     self.style.SUCCESS(
                         f"Sent request {rtc.id} "
                         f"to coach {rtc.coach.user.email} "
-                        f"for attempt {rtc.matching_attempt_id}"
+                        f"for matching '{rtc.matching_attempt}'"
                     )
                 )
 

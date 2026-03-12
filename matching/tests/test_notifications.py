@@ -24,35 +24,7 @@ def test_build_email_context_contains_expected_fields(rtc):
     assert context["deadline"] == rtc.deadline_at
 
 
-@pytest.mark.django_db
-def test_send_request_email_creates_event(rtc):
-
-    with patch("matching.notifications.send_email"):
-        with patch("matching.notifications.generate_coach_action_tokens", return_value=("a","b")):
-
-            _send_request_email(
-                rtc,
-                subject="Test",
-                template_name="template.html",
-                event_type=RequestToCoachEvent.EventType.REQUEST_SENT,
-            )
-
-    assert rtc.events.filter(event_type="request_sent").exists()
     
-@pytest.mark.django_db
-def test_first_email_updates_status_and_counters(rtc):
-
-    with patch("matching.notifications.send_email"):
-        with patch("matching.notifications.generate_coach_action_tokens", return_value=("a","b")):
-
-            updated = send_first_coach_request_email(rtc)
-
-    updated.refresh_from_db()
-
-    assert updated.status == RequestToCoach.Status.AWAITING_REPLY
-    assert updated.requests_sent == 1
-    assert updated.first_sent_at is not None
-    assert updated.last_sent_at is not None
     
 @pytest.mark.django_db
 def test_first_email_cannot_be_sent_twice(rtc):

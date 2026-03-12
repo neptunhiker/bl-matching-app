@@ -478,6 +478,20 @@ class MatchingAttemptEvent(models.Model):
                     "triggered_by_user must be a staff member or superuser when triggered_by is 'staff'."
                 )
     
+class RequestToCoachQuerySet(models.QuerySet):
+
+    def eligible_for_first_request(self):
+        return self.filter(
+            status=RequestToCoach.Status.IN_PREPARATION,
+            first_sent_at__isnull=True,
+            requests_sent__lte=1,
+            matching_attempt__automation_enabled=True,
+            matching_attempt__status__in=[
+                MatchingAttempt.Status.READY_FOR_MATCHING,
+                MatchingAttempt.Status.MATCHING_ONGOING,
+            ],
+        )
+        
 class RequestToCoach(models.Model):
 
     class Status(models.TextChoices):
@@ -556,6 +570,8 @@ class RequestToCoach(models.Model):
         verbose_name="Antwortfrist",
         help_text="Frist für rechtzeitige Antwort",
     )
+    
+    objects = RequestToCoachQuerySet.as_manager()
 
     # -------------------------------------------------------------
     # State Machine Helpers
@@ -567,7 +583,7 @@ class RequestToCoach(models.Model):
 
     def can_send_request(self):
         return (
-            self.status == self.Status.IN_PREPARATION and self.requests_sent < 1
+            self.status == self.Status.IN_PREPARATION and self.requests_sent < 1 and self.first_sent_at is None
         )
 
     def can_send_reminder(self):
