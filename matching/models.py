@@ -121,6 +121,8 @@ class MatchingAttempt(models.Model):
     class Meta:
 
         ordering = ["-created_at"]
+        verbose_name = "Matching"
+        verbose_name_plural = "Matchings"
 
         constraints = [
             models.UniqueConstraint(
@@ -228,19 +230,20 @@ class MatchingAttempt(models.Model):
     # domain actions
     # -------------------------------------------------------
 
-    @transaction.atomic
-    def start_matching(self, triggered_by_user: User):
-
+    def _validate_start_matching(self, triggered_by_user: User):
         if self.status != self.Status.IN_PREPARATION:
             raise ValidationError("Matching attempt is not in preparation.")
         
-        # user must be staff to start the matching process
-        if not (triggered_by_user.is_staff or triggered_by_user.is_superuser):
-            raise ValidationError("Only staff users can start the matching process.")
-        
-        # Must have at least one RequestToCoach in preparation to start matching.
         if not self.coach_requests.filter(status=RequestToCoach.Status.IN_PREPARATION).exists():
             raise ValidationError("At least one coach request must be in preparation to start matching.")
+        
+        if not triggered_by_user.is_staff and not triggered_by_user.is_superuser:
+            raise ValidationError("Only staff members can start the matching process.")
+        
+    @transaction.atomic
+    def start_matching(self, triggered_by_user: User):
+
+        self._validate_start_matching(triggered_by_user)
         
         updated = self.transition_to(
             self.Status.READY_FOR_MATCHING,
@@ -323,6 +326,8 @@ class MatchingAttemptTransition(models.Model):
     class Meta:
 
         ordering = ["created_at"]
+        verbose_name = "Status Übergang Matching"
+        verbose_name_plural = "Status Übergänge Matchings"
 
         indexes = [
             models.Index(fields=["matching_attempt", "created_at"]),
@@ -438,6 +443,9 @@ class MatchingAttemptEvent(models.Model):
 
     class Meta:
         ordering = ["created_at"]
+        verbose_name = "Ereignis Matching"
+        verbose_name_plural = "Ereignisse Matching"
+        
         constraints = [
             models.CheckConstraint(
                 condition=(
@@ -837,6 +845,8 @@ class RequestToCoachTransition(models.Model):
 
     class Meta:
         ordering = ["created_at"]
+        verbose_name = "Status Übergang einer Matching-Anfrage an Coach"
+        verbose_name_plural = "Status Übergänge der Matching-Anfragen an Coaches"
 
         indexes = [
             models.Index(fields=["request", "created_at"]),
@@ -851,6 +861,128 @@ class RequestToCoachTransition(models.Model):
             f"{self.from_status} → {self.to_status} "
         )
 
+
+        
+class RequestToCoachEvent(models.Model):
+
+    class EventType(models.TextChoices):
+        CREATED = "created", "Matching-Anfrage erstellt"
+        REQUEST_SENT = "request_sent", "Matching-Anfrage gesendet"
+        REMINDER_SENT = "reminder_sent", "Reminder gesendet"
+        MATCHING_ACCEPTED = "accepted", "Matching-Anfrage akzeptiert"
+        MATCHING_REJECTED = "rejected", "Matching-Anfrage abgelehnt"
+        TIMED_OUT = "timed_out", "Deadline überschritten"
+        CANCELLED = "cancelled", "Abgebrochen"
+
+    class TriggeredBy(models.TextChoices):
+        SYSTEM = "system", "System"
+        STAFF = "staff", "BL Mitarbeiter:in"
+        COACH = "coach", "Coach"
+
+    request = models.ForeignKey(
+        "RequestToCoach",
+        on_delete=models.CASCADE,
+        related_name="events",
+    )
+
+    event_type = models.CharField(
+        max_length=30,
+        choices=EventType.choices,
+        db_index=True,
+    )
+
+    triggered_by = models.CharField(
+        max_length=20,
+        choices=TriggeredBy.choices,
+    )
+
+    triggered_by_user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        help_text="Benutzer, der das Ereignis ausgelöst hat (nur bei staff oder coach)",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    note = models.TextField(
+        blank=True,
+        help_text="Optionaler Kommentar zum Ereignis"
+    )
+
+    metadata = models.JSONField(
+        blank=True,
+        default=dict,
+        help_text="Zusätzliche strukturierte Informationen (z.B. Reminder-Typ, Deadline, etc.)",
+    )
+
+    class Meta:
+        ordering = ["created_at"]
+        verbose_name = "Ereignis Matching-Anfrage an Coach"
+        verbose_name_plural = "Ereignisse Matching-Anfrage an Coaches"
+
+        indexes = [
+            models.Index(fields=["request", "created_at"]),
+            models.Index(fields=["event_type"]),
+        ]
+
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(triggered_by="system", triggered_by_user__isnull=True)
+                    |
+                    models.Q(triggered_by__in=["staff", "coach"], triggered_by_user__isnull=False)
+                ),
+                name="rtc_event_valid_triggered_by_user",
+            )
+        ]
+
+    def clean(self):
+        """
+        Application-level validation to provide better error messages.
+        """
+        if self.triggered_by == self.TriggeredBy.SYSTEM and self.triggered_by_user:
+            raise ValidationError(
+                "triggered_by_user must be empty when triggered_by is 'system'."
+            )
+
+        if self.triggered_by in {self.TriggeredBy.STAFF, self.TriggeredBy.COACH} and not self.triggered_by_user:
+            raise ValidationError(
+                "triggered_by_user must be set when triggered_by is 'staff' or 'coach'."
+            )
+
+        if self.triggered_by == self.TriggeredBy.STAFF and self.triggered_by_user:
+            if not (self.triggered_by_user.is_staff or self.triggered_by_user.is_superuser):
+                raise ValidationError(
+                    "triggered_by_user must be a staff member or superuser when triggered_by is 'staff'."
+                )
+
+    def __str__(self):
+        return (
+            f"Request {self.request_id}: "
+            f"{self.get_event_type_display()} "
+            f"({self.get_triggered_by_display()})"
+        )
+
+
+# Ensure that deleting a user does not leave events in a state that violates
+# the check constraint (triggered_by in {staff,coach} requires a user).
+# Before a User is deleted, set related event rows to be SYSTEM-triggered
+# and clear the user reference so the DB constraint remains satisfied.
+@receiver(pre_delete, sender=User)
+def _nullify_user_on_related_events(sender, instance, using, **kwargs):
+    MatchingAttemptEvent.objects.filter(triggered_by_user=instance).update(
+        triggered_by=MatchingAttemptEvent.TriggeredBy.SYSTEM,
+        triggered_by_user=None,
+    )
+
+    RequestToCoachEvent.objects.filter(triggered_by_user=instance).update(
+        triggered_by=RequestToCoachEvent.TriggeredBy.SYSTEM,
+        triggered_by_user=None,
+    )
+    
+    
 
 class CoachActionToken(models.Model):
     """
@@ -918,120 +1050,3 @@ class CoachActionToken(models.Model):
             f"{self.get_action_display()}-Token für "
             f"{self.request_to_coach} ({used})"
         )
-        
-class RequestToCoachEvent(models.Model):
-
-    class EventType(models.TextChoices):
-        CREATED = "created", "Matching-Anfrage erstellt"
-        REQUEST_SENT = "request_sent", "Matching-Anfrage gesendet"
-        REMINDER_SENT = "reminder_sent", "Reminder gesendet"
-        MATCHING_ACCEPTED = "accepted", "Matching-Anfrage akzeptiert"
-        MATCHING_REJECTED = "rejected", "Matching-Anfrage abgelehnt"
-        TIMED_OUT = "timed_out", "Deadline überschritten"
-        CANCELLED = "cancelled", "Abgebrochen"
-
-    class TriggeredBy(models.TextChoices):
-        SYSTEM = "system", "System"
-        STAFF = "staff", "BL Mitarbeiter:in"
-        COACH = "coach", "Coach"
-
-    request = models.ForeignKey(
-        "RequestToCoach",
-        on_delete=models.CASCADE,
-        related_name="events",
-    )
-
-    event_type = models.CharField(
-        max_length=30,
-        choices=EventType.choices,
-        db_index=True,
-    )
-
-    triggered_by = models.CharField(
-        max_length=20,
-        choices=TriggeredBy.choices,
-    )
-
-    triggered_by_user = models.ForeignKey(
-        User,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        help_text="Benutzer, der das Ereignis ausgelöst hat (nur bei staff oder coach)",
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    note = models.TextField(
-        blank=True,
-        help_text="Optionaler Kommentar zum Ereignis"
-    )
-
-    metadata = models.JSONField(
-        blank=True,
-        default=dict,
-        help_text="Zusätzliche strukturierte Informationen (z.B. Reminder-Typ, Deadline, etc.)",
-    )
-
-    class Meta:
-        ordering = ["created_at"]
-
-        indexes = [
-            models.Index(fields=["request", "created_at"]),
-            models.Index(fields=["event_type"]),
-        ]
-
-        constraints = [
-            models.CheckConstraint(
-                condition=(
-                    models.Q(triggered_by="system", triggered_by_user__isnull=True)
-                    |
-                    models.Q(triggered_by__in=["staff", "coach"], triggered_by_user__isnull=False)
-                ),
-                name="rtc_event_valid_triggered_by_user",
-            )
-        ]
-
-    def clean(self):
-        """
-        Application-level validation to provide better error messages.
-        """
-        if self.triggered_by == self.TriggeredBy.SYSTEM and self.triggered_by_user:
-            raise ValidationError(
-                "triggered_by_user must be empty when triggered_by is 'system'."
-            )
-
-        if self.triggered_by in {self.TriggeredBy.STAFF, self.TriggeredBy.COACH} and not self.triggered_by_user:
-            raise ValidationError(
-                "triggered_by_user must be set when triggered_by is 'staff' or 'coach'."
-            )
-
-        if self.triggered_by == self.TriggeredBy.STAFF and self.triggered_by_user:
-            if not (self.triggered_by_user.is_staff or self.triggered_by_user.is_superuser):
-                raise ValidationError(
-                    "triggered_by_user must be a staff member or superuser when triggered_by is 'staff'."
-                )
-
-    def __str__(self):
-        return (
-            f"Request {self.request_id}: "
-            f"{self.get_event_type_display()} "
-            f"({self.get_triggered_by_display()})"
-        )
-
-
-# Ensure that deleting a user does not leave events in a state that violates
-# the check constraint (triggered_by in {staff,coach} requires a user).
-# Before a User is deleted, set related event rows to be SYSTEM-triggered
-# and clear the user reference so the DB constraint remains satisfied.
-@receiver(pre_delete, sender=User)
-def _nullify_user_on_related_events(sender, instance, using, **kwargs):
-    MatchingAttemptEvent.objects.filter(triggered_by_user=instance).update(
-        triggered_by=MatchingAttemptEvent.TriggeredBy.SYSTEM,
-        triggered_by_user=None,
-    )
-
-    RequestToCoachEvent.objects.filter(triggered_by_user=instance).update(
-        triggered_by=RequestToCoachEvent.TriggeredBy.SYSTEM,
-        triggered_by_user=None,
-    )
