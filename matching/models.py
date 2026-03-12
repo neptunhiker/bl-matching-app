@@ -492,6 +492,15 @@ class RequestToCoachQuerySet(models.QuerySet):
             ],
         )
         
+    def eligible_for_reminder(self):
+        return self.filter(
+            status=RequestToCoach.Status.AWAITING_REPLY,
+            requests_sent__gt=0,
+            requests_sent__lt=models.F("max_number_of_requests"),
+            first_sent_at__isnull=False,
+            matching_attempt__automation_enabled=True,
+        )
+        
 class RequestToCoach(models.Model):
 
     class Status(models.TextChoices):
@@ -716,19 +725,26 @@ class RequestToCoach(models.Model):
 
     def send_reminder(self, triggered_by="system", triggered_by_user=None):
 
-        if not self.can_send_reminder():
+        from .locks import _get_locked_request_to_coach
+
+        locked = _get_locked_request_to_coach(self)
+
+        if not locked.can_send_reminder():
             raise ValidationError("Reminder cannot be sent")
 
-        self.last_sent_at = timezone.now()
-        self.requests_sent += 1
+        locked.last_sent_at = timezone.now()
+        locked.requests_sent += 1
 
-        self.save(update_fields=["last_sent_at", "requests_sent"])
+        locked.save(update_fields=["last_sent_at", "requests_sent"])
 
         RequestToCoachEvent.objects.create(
-            request=self,
+            request=locked,
             event_type=RequestToCoachEvent.EventType.REMINDER_SENT,
-            triggered_by=RequestToCoachEvent.TriggeredBy.SYSTEM,
+            triggered_by=triggered_by,
+            triggered_by_user=triggered_by_user,
         )
+
+        return locked
 
     def mark_deadline_passed(self):
 

@@ -184,7 +184,7 @@ class TestIntegration:
         assert RequestToCoachTransition.objects.filter(request=rtc1).count() == 1
         
         # SEND FIRST REMINDER
-        rtc1.send_reminder(triggered_by="system")
+        rtc1 = rtc1.send_reminder(triggered_by="system")
         
         # status assertions
         assert ma.status == MatchingAttempt.Status.MATCHING_ONGOING
