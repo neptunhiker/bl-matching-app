@@ -168,6 +168,23 @@
     </script>
 
     <main class="flex-1">
+
+      {% if messages %}
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 mt-4">
+        {% for message in messages %}
+          {% if 'error' in message.tags %}
+            <div class="mb-3 p-3 rounded-lg border border-red-200 bg-red-50 text-red-800">
+              {{ message }}
+            </div>
+          {% else %}
+            <div class="mb-3 p-3 rounded-lg border border-green-200 bg-green-50 text-green-800">
+              {{ message }}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+
       {% block body %}{% endblock %}
     </main>
 

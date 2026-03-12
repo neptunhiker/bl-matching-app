@@ -1,9 +1,10 @@
 import pytest
+
+from django.contrib.messages import get_messages
 from django.urls import reverse
-from django.utils import timezone
 
-from matching.models import CoachActionToken, MatchingAttempt, RequestToCoach
-
+from matching.models import MatchingAttempt
+from profiles.models import Participant
 
 @pytest.mark.django_db
 def test_matching_attempts_access_anonymous(client):
@@ -306,3 +307,24 @@ def test_coach_respond_public_superuser(client):
     url = reverse('coach_respond', kwargs={'token': 'invalid'})
     r = client.get(url)
     assert r.status_code == 200
+
+
+@pytest.mark.django_db
+def test_create_matching_shows_error_when_active_exists(client, staff_user):
+
+    client.force_login(staff_user)
+
+    participant = Participant.objects.create(first_name='T', last_name='ester')
+    # existing active matching
+    MatchingAttempt.objects.create(participant=participant)
+
+    url = reverse('matching_attempt_create')
+    r = client.post(url, data={'participant': str(participant.pk)})
+
+    # form invalid returns 200 and shows our message
+    assert r.status_code == 200
+    messages = list(get_messages(r.wsgi_request))
+    assert any('aktives Matching' in str(m) for m in messages)
+
+    messages = list(get_messages(r.wsgi_request))
+    assert any('aktives Matching' in str(m) for m in messages)

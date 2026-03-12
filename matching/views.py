@@ -7,6 +7,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import DetailView, ListView, CreateView, View
+from django.contrib import messages
+from django.db import IntegrityError
+from django.utils.html import format_html
 
 from profiles.models import Coach
 from .models import CoachActionToken, MatchingAttempt, RequestToCoach, MatchingAttemptEvent, RequestToCoachEvent
@@ -26,10 +29,62 @@ class MatchingAttemptCreateView(StaffRequiredMixin, CreateView):
     template_name = 'matching/matching_attempt_form.html'
 
     def form_valid(self, form):
-        self.object = services.create_matching_attempt(
-            participant=form.cleaned_data["participant"],
-            created_by=self.request.user,
-        )
+        participant = form.cleaned_data["participant"]
+
+        # Prevent DB integrity error by validating existence first and provide link.
+        active_ma = MatchingAttempt.objects.filter(
+            participant=participant,
+            status__in=[
+                MatchingAttempt.Status.IN_PREPARATION,
+                MatchingAttempt.Status.READY_FOR_MATCHING,
+                MatchingAttempt.Status.MATCHING_ONGOING,
+            ],
+        ).order_by("-created_at").first()
+
+        if active_ma is not None:
+            messages.error(
+                self.request,
+                format_html(
+                    "Konnte Matching nicht erstellen: es existiert bereits ein <a href='{}' style='text-decoration:underline'>aktives Matching</a> für {}.",
+                    active_ma.get_absolute_url(),
+                    participant,
+                ),
+            )
+            return self.form_invalid(form)
+
+        # Race conditions may still cause an IntegrityError; handle gracefully.
+        try:
+            self.object = services.create_matching_attempt(
+                participant=participant,
+                created_by=self.request.user,
+            )
+        except IntegrityError:
+            # In case of a race, try to find the active matching to link to.
+            conflicting = MatchingAttempt.objects.filter(
+                participant=participant,
+                status__in=[
+                    MatchingAttempt.Status.IN_PREPARATION,
+                    MatchingAttempt.Status.READY_FOR_MATCHING,
+                    MatchingAttempt.Status.MATCHING_ONGOING,
+                ],
+            ).order_by("-created_at").first()
+
+            if conflicting is not None:
+                messages.error(
+                    self.request,
+                    format_html(
+                        "Konnte Matching nicht erstellen: es existiert bereits ein <a href='{}' style='text-decoration:underline'>aktives Matching</a> für {}.",
+                        conflicting.get_absolute_url(),
+                        participant,
+                    ),
+                )
+            else:
+                messages.error(
+                    self.request,
+                    f"Konnte Matching nicht erstellen: bereits ein aktives Matching vorhanden."
+                )
+            return self.form_invalid(form)
+
         return redirect(self.object.get_absolute_url())
     
        
