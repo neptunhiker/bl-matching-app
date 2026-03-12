@@ -426,28 +426,36 @@ class CoachRespondView(View):
 
         if rtc.deadline_at is None or now <= rtc.deadline_at:
             on_time = True
-            new_status = (
-                RequestToCoach.Status.ACCEPTED_MATCHING if is_accept
-                else RequestToCoach.Status.REJECTED_MATCHING
-            )
-            if is_accept:
-                ma = rtc.matching_attempt.transition_to(
-                    MatchingAttempt.Status.CHEMISTRY_PENDING,
-                    triggered_by="coach",
-                    triggered_by_user=coach.user,
-                )
 
-                MatchingAttemptEvent.objects.create(
-                    matching_attempt=ma,
-                    event_type=MatchingAttemptEvent.EventType.COACH_ACCEPTED,
-                    triggered_by=MatchingAttemptEvent.TriggeredBy.COACH,
-                    triggered_by_user=coach.user,
-                    coach=coach,
+            if is_accept:
+                
+                ma = rtc.matching_attempt.transition_to(
+                    MatchingAttempt.Status.MATCHING_CONFIRMED,
+                )
+                
+                ma = rtc.matching_attempt.transition_to(
+                    MatchingAttempt.Status.READY_FOR_CONNECTION,
+                )
+                
+                rtc = rtc.transition_to(
+                    RequestToCoach.Status.ACCEPTED_MATCHING,
                 )
 
                 RequestToCoachEvent.objects.create(
                     request=rtc,
-                    event_type=RequestToCoachEvent.EventType.ACCEPTED,
+                    event_type=RequestToCoachEvent.EventType.MATCHING_ACCEPTED,
+                    triggered_by=RequestToCoachEvent.TriggeredBy.COACH,
+                    triggered_by_user=coach.user,
+                )
+            else:
+                # Decline
+                rtc = rtc.transition_to(
+                    RequestToCoach.Status.REJECTED_MATCHING,
+                )
+
+                RequestToCoachEvent.objects.create(
+                    request=rtc,
+                    event_type=RequestToCoachEvent.EventType.MATCHING_REJECTED,
                     triggered_by=RequestToCoachEvent.TriggeredBy.COACH,
                     triggered_by_user=coach.user,
                 )
