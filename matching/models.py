@@ -161,40 +161,30 @@ class MatchingAttempt(models.Model):
                 f"Transition {self.status} → {new_status} not allowed."
             )
 
+    @transaction.atomic
     def transition_to(self, new_status):
         """
         Transition the MatchingAttempt to a new status and record the transition.
         """
 
-        with transaction.atomic():
+        from .locks import _get_locked_request_to_coach
 
-            # fetch authoritative locked instance
-            ma = _get_locked_matching_attempt(self)
+        locked = _get_locked_matching_attempt(self)
 
-            old_status = ma.status
+        locked._validate_transition(new_status)
 
-            # no-op protection
-            if old_status == new_status:
-                raise ValidationError("MatchingAttempt is already in the target status.")
+        old_status = locked.status
+        locked.status = new_status
+        locked.save(update_fields=["status"])
 
-            # ensure transition is allowed
-            if not ma.can_transition_to(new_status):
-                raise ValidationError(
-                    f"Invalid status transition from {old_status} to {new_status}"
-                )
+        # record transition
+        MatchingAttemptTransition.objects.create(
+            matching_attempt=locked,
+            from_status=old_status,
+            to_status=new_status,
+        )
 
-            # update status
-            ma.status = new_status
-            ma.save()
-
-            # record transition
-            MatchingAttemptTransition.objects.create(
-                matching_attempt=ma,
-                from_status=old_status,
-                to_status=new_status,
-            )
-
-            return ma
+        return locked
 
     # -------------------------------------------------------
     # automation control
