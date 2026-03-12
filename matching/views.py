@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.generic import DetailView, ListView, CreateView, View
+from django.views.generic import DetailView, ListView, CreateView, View, UpdateView, DeleteView
 from django.contrib import messages
 from django.db import IntegrityError
 from django.utils.html import format_html
@@ -218,6 +218,7 @@ class RequestToCoachCreateView(StaffRequiredMixin, View):
         matching_attempt = get_object_or_404(MatchingAttempt, pk=pk)
         coach_id = request.POST.get("coach_id", "").strip()
         max_requests = request.POST.get("max_number_of_requests", "3").strip()
+        posted_priority = request.POST.get("priority", "").strip()
 
         errors = {}
 
@@ -237,6 +238,26 @@ class RequestToCoachCreateView(StaffRequiredMixin, View):
         except (ValueError, TypeError):
             errors["max_number_of_requests"] = "Muss eine positive Zahl sein."
 
+        # Priority: optional override; must be integer >= 1 and unique per matching_attempt
+        priority = None
+        if posted_priority:
+            try:
+                priority = int(posted_priority)
+                if priority < 1:
+                    raise ValueError
+            except (ValueError, TypeError):
+                errors["priority"] = "Muss eine ganze Zahl >= 1 sein."
+        else:
+            priority = self._next_priority(matching_attempt)
+
+        if "priority" not in errors:
+            existing = list(matching_attempt.coach_requests.values_list("priority", flat=True))
+            if priority in existing:
+                existing_sorted = ", ".join(str(p) for p in sorted(existing)) if existing else "keine"
+                errors["priority"] = (
+                    f"Diese Priorität ist bereits vergeben. Bestehende Prioritäten: {existing_sorted}"
+                )
+
         if errors:
             return render(request, "matching/request_to_coach_form.html", {
                 "matching_attempt": matching_attempt,
@@ -245,9 +266,9 @@ class RequestToCoachCreateView(StaffRequiredMixin, View):
                 "posted_coach_name": request.POST.get("coach_name", ""),
                 "posted_coach_id": coach_id,
                 "posted_max_requests": request.POST.get("max_number_of_requests", "3"),
+                "posted_priority": request.POST.get("priority", ""),
             })
-
-        priority = self._next_priority(matching_attempt)
+        # priority has been validated above (either user-supplied or auto-assigned)
         services.create_request_to_coach(
             matching_attempt=matching_attempt,
             coach=coach,
@@ -258,6 +279,58 @@ class RequestToCoachCreateView(StaffRequiredMixin, View):
         )
 
         return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
+
+
+class RequestToCoachUpdateView(StaffRequiredMixin, UpdateView):
+    model = RequestToCoach
+    fields = ['priority', 'max_number_of_requests']
+    template_name = 'matching/request_to_coach_edit.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        rtc = self.object
+        matching_attempt = rtc.matching_attempt
+        existing = sorted(matching_attempt.coach_requests.exclude(pk=rtc.pk).values_list('priority', flat=True))
+        context.update({
+            'matching_attempt': matching_attempt,
+            'existing_priorities': existing,
+        })
+        return context
+
+    def form_valid(self, form):
+        priority = form.cleaned_data.get('priority')
+        if priority is None or int(priority) < 1:
+            form.add_error('priority', 'Muss eine ganze Zahl >= 1 sein.')
+            return self.form_invalid(form)
+
+        matching_attempt = self.object.matching_attempt
+        if matching_attempt.coach_requests.exclude(pk=self.object.pk).filter(priority=priority).exists():
+            existing = matching_attempt.coach_requests.exclude(pk=self.object.pk).values_list('priority', flat=True)
+            existing_sorted = ", ".join(str(p) for p in sorted(existing)) if existing else 'keine'
+            form.add_error('priority', f'Diese Priorität ist bereits vergeben. Bestehende Prioritäten: {existing_sorted}')
+            return self.form_invalid(form)
+
+        response = super().form_valid(form)
+        return response
+
+    def get_success_url(self):
+        # Prefer explicit `next` parameter (POST or GET) to return to the originating page.
+        next_url = self.request.POST.get('next') or self.request.GET.get('next')
+        if next_url:
+            return next_url
+        return reverse('matching_attempt_detail', kwargs={'pk': self.object.matching_attempt.pk})
+
+
+class RequestToCoachDeleteView(StaffRequiredMixin, DeleteView):
+    model = RequestToCoach
+    template_name = 'matching/request_to_coach_confirm_delete.html'
+
+    def get_success_url(self):
+        # Allow deletion to redirect back to an explicit `next` parameter when present.
+        next_url = self.request.POST.get('next') or self.request.GET.get('next')
+        if next_url:
+            return next_url
+        return reverse('matching_attempt_detail', kwargs={'pk': self.object.matching_attempt.pk})
 
 
 class MatchingAttemptListView(LoginRequiredMixin, ListView):

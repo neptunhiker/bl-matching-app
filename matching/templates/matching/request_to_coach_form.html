@@ -21,7 +21,7 @@
 
     <div class="p-6 sm:p-8">
       <p class="text-xs font-jakarta font-semibold uppercase tracking-widest text-primary-500 mb-1">Neuer Eintrag</p>
-      <h1 class="text-2xl font-bold text-tertiary-700 mb-6">Coach hinzufügen</h1>
+      <h1 class="text-2xl font-bold text-tertiary-700 mb-6">Matching-Anfrage erstellen</h1>
 
       <form method="post" action="{% url 'request_to_coach_create' matching_attempt.pk %}" novalidate>
         {% csrf_token %}
@@ -83,12 +83,34 @@
           {% endif %}
         </div>
 
+        {# ── Priority (optional override) ───────────────────────────── #}
+        <div class="mb-6">
+          <label class="block text-sm font-semibold text-neutral-700 mb-1" for="priority">
+            Priorität <span class="text-neutral-400">(1 = höchste Priorität)</span>
+          </label>
+          <input
+            type="number"
+            id="priority"
+            name="priority"
+            min="1"
+            value="{{ posted_priority|default:next_priority }}"
+            class="w-40 rounded-xl border border-neutral-300 px-4 py-2.5 text-sm
+                   focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent
+                   {% if errors.priority %}border-red-400{% endif %}">
+          <p class="mt-1 text-xs text-neutral-400">
+            Falls leer gelassen, wird automatisch {{ next_priority }} verwendet.
+          </p>
+          {% if errors.priority %}
+            <p class="mt-1.5 text-xs text-red-500">{{ errors.priority }}</p>
+          {% endif %}
+        </div>
+
         {# ── Actions ───────────────────────────────────────────────── #}
         <div class="flex items-center gap-3">
           <button type="submit"
                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
                          bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm">
-            Anfrage erstellen
+            Erstellen
           </button>
           <a href="{% url 'matching_attempt_detail' matching_attempt.pk %}"
              class="text-sm text-neutral-500 hover:text-neutral-700 transition-colors">

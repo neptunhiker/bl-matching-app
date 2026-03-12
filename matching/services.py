@@ -1,4 +1,5 @@
-from django.db import transaction
+from django.db import transaction, IntegrityError
+from django.core.exceptions import ValidationError
 
 from accounts.models import User
 
@@ -29,12 +30,23 @@ def create_request_to_coach(matching_attempt: MatchingAttempt, coach: Coach, pri
     if triggered_by == RequestToCoachEvent.TriggeredBy.STAFF and not triggered_by_user:
         raise ValueError("triggered_by_user must be provided when triggered_by is 'staff'.")
     
-    rtc = RequestToCoach.objects.create(
-        matching_attempt=matching_attempt,
-        coach=coach,
-        priority=priority,
-        max_number_of_requests=max_number_of_requests,
-    )
+    # Basic server-side validation to avoid races and provide clearer errors
+    if priority is None or int(priority) < 1:
+        raise ValidationError("priority must be an integer >= 1")
+
+    if matching_attempt.coach_requests.filter(priority=priority).exists():
+        raise ValidationError("priority already exists for this matching attempt")
+
+    try:
+        rtc = RequestToCoach.objects.create(
+            matching_attempt=matching_attempt,
+            coach=coach,
+            priority=priority,
+            max_number_of_requests=max_number_of_requests,
+        )
+    except IntegrityError as exc:
+        # Re-raise as ValidationError for callers that expect validation-style errors
+        raise ValidationError("Could not create RequestToCoach: integrity error") from exc
 
     RequestToCoachEvent.objects.create(
         request=rtc,

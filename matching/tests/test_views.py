@@ -326,5 +326,68 @@ def test_create_matching_shows_error_when_active_exists(client, staff_user):
     messages = list(get_messages(r.wsgi_request))
     assert any('aktives Matching' in str(m) for m in messages)
 
-    messages = list(get_messages(r.wsgi_request))
-    assert any('aktives Matching' in str(m) for m in messages)
+
+@pytest.mark.django_db
+def test_request_to_coach_edit_access_anonymous(client, rtc):
+    url = reverse('request_to_coach_edit', kwargs={'pk': rtc.pk})
+    r = client.get(url)
+    assert r.status_code == 302
+
+
+@pytest.mark.django_db
+def test_request_to_coach_edit_access_user(client, coach_user, rtc):
+    client.force_login(coach_user)
+    url = reverse('request_to_coach_edit', kwargs={'pk': rtc.pk})
+    r = client.get(url)
+    assert r.status_code == 403
+
+
+@pytest.mark.django_db
+def test_request_to_coach_edit_access_staff(client, staff_user, rtc):
+    client.force_login(staff_user)
+    url = reverse('request_to_coach_edit', kwargs={'pk': rtc.pk})
+    r = client.get(url)
+    assert r.status_code == 200
+
+
+@pytest.mark.django_db
+def test_request_to_coach_edit_access_superuser(client, rtc):
+    from accounts.models import User
+    su = User.objects.create_superuser(email='su10@example.com', password='pw')
+    client.force_login(su)
+    url = reverse('request_to_coach_edit', kwargs={'pk': rtc.pk})
+    r = client.get(url)
+    assert r.status_code == 200
+
+
+@pytest.mark.django_db
+def test_request_to_coach_delete_access_anonymous(client, rtc):
+    url = reverse('request_to_coach_delete', kwargs={'pk': rtc.pk})
+    r = client.get(url)
+    assert r.status_code == 302
+
+
+@pytest.mark.django_db
+def test_request_to_coach_delete_access_user(client, coach_user, rtc):
+    client.force_login(coach_user)
+    url = reverse('request_to_coach_delete', kwargs={'pk': rtc.pk})
+    r = client.get(url)
+    assert r.status_code == 403
+
+
+@pytest.mark.django_db
+def test_request_to_coach_delete_access_staff(client, staff_user, rtc):
+    client.force_login(staff_user)
+    url = reverse('request_to_coach_delete', kwargs={'pk': rtc.pk})
+    r = client.get(url)
+    assert r.status_code == 200
+
+
+@pytest.mark.django_db
+def test_request_to_coach_delete_access_superuser(client, rtc):
+    from accounts.models import User
+    su = User.objects.create_superuser(email='su11@example.com', password='pw')
+    client.force_login(su)
+    url = reverse('request_to_coach_delete', kwargs={'pk': rtc.pk})
+    r = client.get(url)
+    assert r.status_code == 200
