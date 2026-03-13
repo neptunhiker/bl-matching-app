@@ -116,10 +116,16 @@ class BrevoWebhookView(View):
                 logger.warning("Brevo webhook: request from disallowed IP %s rejected.", client_ip)
                 return HttpResponseForbidden("IP not allowed.")
 
+        # --- Payload size guard ---
+        if len(request.body) > 100_000:
+            logger.warning("Brevo webhook: payload too large (%s bytes)", len(request.body))
+            return HttpResponseBadRequest("Payload too large.")
+
         # --- Parse body ---
         try:
             payload = json.loads(request.body)
-            logger.info("Brevo webhook payload: %s", payload)
+            if len(request.body) > 100_000:
+                return HttpResponseBadRequest("Payload too large.")
         except (json.JSONDecodeError, ValueError):
             logger.warning("Brevo webhook: could not parse JSON body.")
             return HttpResponseBadRequest("Invalid JSON.")
@@ -174,4 +180,10 @@ class BrevoWebhookView(View):
 
         log.save(update_fields=update_fields)
         logger.info("Brevo webhook: EmailLog %s updated to '%s'.", log_id, new_status)
+        logger.debug(
+            "Brevo webhook: ip=%s event=%s tags=%s",
+            _get_client_ip(request),
+            payload.get("event"),
+            payload.get("tags"),
+        )
         return HttpResponse(status=200)
