@@ -93,6 +93,10 @@ class BrevoWebhookView(View):
     """
 
     def post(self, request, *args, **kwargs):
+        
+        if request.content_type != "application/json":
+            return HttpResponseBadRequest("Expected JSON.")
+        
         # --- Shared-secret check (fail closed if not configured) ---
         expected_secret = getattr(settings, 'BREVO_WEBHOOK_SECRET', '')
         if not expected_secret:
@@ -115,6 +119,7 @@ class BrevoWebhookView(View):
         # --- Parse body ---
         try:
             payload = json.loads(request.body)
+            logger.info("Brevo webhook payload: %s", payload)
         except (json.JSONDecodeError, ValueError):
             logger.warning("Brevo webhook: could not parse JSON body.")
             return HttpResponseBadRequest("Invalid JSON.")
@@ -154,10 +159,7 @@ class BrevoWebhookView(View):
                 log.delivered_at = timezone.now()
             update_fields.append('delivered_at')
 
-        # Only genuine human opens set opened_at — proxy opens (Apple MPP, security
-        # gateways) are excluded because they fire regardless of whether the person
-        # actually read the email and would inflate the metric.
-        # Only record it once: first event wins; don't overwrite with later re-opens.
+        # Only genuine human opens set opened_at — proxy opens (Apple MPP, security gateways) are excluded because they fire regardless of whether the person actually read the email and would inflate the metric. Only record it once: first event wins; don't overwrite with later re-opens.
         HUMAN_OPEN_STATUSES = {
             EmailLog.Status.OPENED,
             EmailLog.Status.FIRST_OPENING,
