@@ -22,6 +22,10 @@ class Coach(models.Model):
         PAUSED = 'paused', 'Pausiert'
         ONBOARDING = 'onboarding', 'Im Onboarding'
         INACTIVE = 'inactive', 'Inaktiv'
+        
+    class CommunicationChannel(models.TextChoices):
+        EMAIL = "email", "Email"
+        SLACK = "slack", "Slack"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(
@@ -36,6 +40,19 @@ class Coach(models.Model):
     coaching_format_online = models.BooleanField(default=False, verbose_name='Online')
     coaching_format_presence = models.BooleanField(default=False, verbose_name='Präsenz')
     coaching_format_hybrid = models.BooleanField(default=False, verbose_name='Hybrid')
+    preferred_communication_channel = models.CharField(
+        max_length=20,
+        choices=CommunicationChannel.choices,
+        default=CommunicationChannel.SLACK,
+        verbose_name='Bevorzugter Kommunikationskanal',
+    )
+
+    slack_user_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="ID des Slack-Benutzers, z.B. U12345678. Nur erforderlich, wenn der bevorzugte Kommunikationskanal Slack ist.",
+    )
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
