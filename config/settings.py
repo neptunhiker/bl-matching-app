@@ -205,6 +205,7 @@ SYSTEM_EMAIL_NAME = "BeginnerLuft Roboti"
 
 # SLACK
 SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN', '')
+SLACK_SIGNING_SECRET = os.environ.get('SLACK_SIGNING_SECRET', '')
 
 LOGGING = {
     'version': 1,
