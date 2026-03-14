@@ -16,6 +16,13 @@ class Language(models.Model):
         return self.name
 
 
+class CoachQuerySet(models.QuerySet):
+
+    def available(self):
+        return self.filter(status=Coach.Status.AVAILABLE)
+    
+    
+
 class Coach(models.Model):
     class Status(models.TextChoices):
         AVAILABLE = 'available', 'Verfügbar'
@@ -60,6 +67,8 @@ class Coach(models.Model):
         verbose_name='Status',
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    objects = CoachQuerySet.as_manager()
 
     @property
     def full_name(self):

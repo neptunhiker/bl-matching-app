@@ -28,33 +28,28 @@
 
         {# ── Coach search ──────────────────────────────────────────── #}
         <div class="mb-6">
-          <label class="block text-sm font-semibold text-neutral-700 mb-1" for="coach-search">
-            Coach <span class="text-red-500">*</span>
+          <label class="block text-sm font-semibold text-neutral-700 mb-1" for="coach">
+            Verfügbare Coaches <span class="text-red-500">*</span>
           </label>
 
-          {# Hidden field submitted with the form #}
-          <input type="hidden" name="coach_id" id="coach-id-input"
-                 value="{{ posted_coach_id|default:'' }}">
-          <input type="hidden" name="coach_name" id="coach-name-input"
-                 value="{{ posted_coach_name|default:'' }}">
+          <select
+            id="coach"
+            name="coach_id"
+            class="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm
+                  focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent
+                  {% if errors.coach %}border-red-400{% endif %}"
+          >
+            <option value="">Bitte Coach auswählen</option>
 
-          <div class="relative" id="coach-autocomplete-wrapper">
-            <input
-              type="text"
-              id="coach-search"
-              autocomplete="off"
-              placeholder="Name oder E-Mail eingeben …"
-              value="{{ posted_coach_name|default:'' }}"
-              class="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm
-                     focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent
-                     {% if errors.coach %}border-red-400{% endif %}">
-
-            {# Dropdown list #}
-            <ul id="coach-dropdown"
-                class="hidden absolute z-20 w-full mt-1 bg-white border border-neutral-200 rounded-xl
-                       shadow-lg max-h-64 overflow-y-auto text-sm divide-y divide-neutral-100">
-            </ul>
-          </div>
+            {% for coach in available_coaches %}
+              <option
+                value="{{ coach.id }}"
+                {% if coach.id|stringformat:"s" == posted_coach_id %}selected{% endif %}
+              >
+                {{ coach.full_name }} - {{ coach.get_status_display }} 
+              </option>
+            {% endfor %}
+          </select>
 
           {% if errors.coach %}
             <p class="mt-1.5 text-xs text-red-500">{{ errors.coach }}</p>

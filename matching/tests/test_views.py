@@ -311,15 +311,10 @@ def test_coach_respond_public_superuser(client):
 
 
 @pytest.mark.django_db
-def test_create_matching_shows_error_when_active_exists(client, staff_user):
+def test_create_matching_shows_error_when_active_exists(client, staff_user, participant):
 
     client.force_login(staff_user)
 
-    participant = Participant.objects.create(
-        first_name='T', 
-        last_name='ester',
-        email='tester@example',
-        start_date=datetime.date(2025, 7, 12))
     # existing active matching
     MatchingAttempt.objects.create(participant=participant, ue=48)
 

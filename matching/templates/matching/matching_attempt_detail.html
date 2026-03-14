@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load tz %}
+{% load static %}
 
 {% block title %}Matching für {{ matching_attempt.participant }}{% endblock %}
 
@@ -64,7 +65,7 @@
         <div class="bg-neutral-50 rounded-xl p-3">
           <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Startdatum</dt>
           <dd class="text-sm font-semibold text-neutral-800">
-            {{ matching_attempt.start_date|date:"d.m.Y" }}
+            {{ matching_attempt.participant.start_date|date:"d.m.Y" }}
           </dd>
         </div>
 
@@ -242,8 +243,20 @@
             {# Date grid #}
             <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
               <div>
-                <dt class="text-neutral-400 font-jakarta mb-0.5">Erstellt am</dt>
-                <dd class="text-neutral-700 font-semibold">{{ req.created_at|date:"d.m.Y H:i" }}</dd>
+                <dt class="text-neutral-400 font-jakarta mb-0.5">Status</dt>
+                {% if req.coach.status == "available" %}
+                  <dd class="font-semibold text-green-600">{{ req.coach.get_status_display }}</dd>
+                {% elif req.coach.status == "paused" %}
+                  <dd class="font-semibold text-neutral-600">{{ req.coach.get_status_display }}</dd>
+                {% elif req.coach.status == "onboarding" %}
+                  <dd class="font-semibold text-amber-500">{{ req.coach.get_status_display }}</dd>
+                {% elif req.coach.status == "inactive" %}
+                  <dd class="font-semibold text-red-500">{{ req.coach.get_status_display }}</dd>
+                {% else %}
+                  <dd class="font-semibold text-neutral-600">{{ req.coach.get_status_display }}</dd>
+                 {% endif %}
+
+                </dd>
               </div>
               <div>
                 <dt class="text-neutral-400 font-jakarta mb-0.5">Deadline</dt>
@@ -259,6 +272,23 @@
               <div>
                 <dt class="text-neutral-400 font-jakarta mb-0.5">UE</dt>
                 <dd class="text-neutral-700 font-semibold">{{ req.ue }}</dd>
+              </div>
+              <div>
+                <dt class="text-neutral-400 font-jakarta mb-0.5">Kommunikation</dt>
+                <dd class="text-neutral-700 font-semibold">
+                  {% if req.coach.preferred_communication_channel %}
+                  <span class="inline-flex items-center gap-1">
+                    {% if req.coach.preferred_communication_channel == "slack" %}
+                      <img src="{% static 'icons/slack.svg' %}" alt="Slack" class="h-4 w-4" />
+                    {% elif req.coach.preferred_communication_channel == "email" %}
+                      <img src="{% static 'icons/envelope.svg' %}" alt="Email" class="h-4 w-4" />
+                    {% endif %}
+                    <span class="ml-1">{{ req.coach.get_preferred_communication_channel_display }}</span>
+                  </span>
+                  {% else %}
+                    &mdash;
+                  {% endif %}
+               </dd>
               </div>
             </dl>
             <div class="flex justify-end">

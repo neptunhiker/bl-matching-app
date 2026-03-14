@@ -119,6 +119,7 @@
         {% if request_to_coach.coach.coaching_format_hybrid %}
         <span class="inline-flex items-center px-3 py-1 rounded-full bg-primary-50 text-xs text-primary-700">Hybrid</span>
         {% endif %}
+
         {% if request_to_coach.coach.preferred_communication_channel %}
         <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-neutral-100 text-xs text-neutral-600">
           {% if request_to_coach.coach.preferred_communication_channel == 'slack' %}
@@ -126,9 +127,10 @@
           {% else %}
             <img src="{% static 'icons/envelope.svg' %}" alt="Email" class="h-4 w-4" />
           {% endif %}
-          {{ request_to_coach.coach.get_preferred_communication_channel_display }}
+          <span class="ml-1">{{ request_to_coach.coach.get_preferred_communication_channel_display }}</span>
         </span>
         {% endif %}
+
         {% for lang in request_to_coach.coach.languages.all %}
         <span class="inline-flex items-center px-3 py-1 rounded-full bg-secondary-100 text-xs text-secondary-700">{{ lang }}</span>
         {% endfor %}
@@ -154,42 +156,12 @@
         </div>
 
         <div class="bg-neutral-50 rounded-xl p-3">
-          <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Zuletzt gesendet</dt>
-          <dd class="text-sm font-semibold text-neutral-800">
-            {% if request_to_coach.last_sent_at %}
-              {{ request_to_coach.last_sent_at|localtime|date:"d.m.Y" }}
-              <span class="block text-xs text-neutral-500">{{ request_to_coach.last_sent_at|localtime|time:"H:i" }} Uhr</span>
-            {% else %}
-              &mdash;
-            {% endif %}
-          </dd>
-        </div>
-
-        <div class="bg-neutral-50 rounded-xl p-3">
           <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Deadline</dt>
           <dd class="text-sm font-semibold {% if request_to_coach.deadline_at %}text-amber-600{% else %}text-neutral-400{% endif %}">
             {% if request_to_coach.deadline_at %}
               {{ request_to_coach.deadline_at|localtime|date:"d.m.Y" }}
               <span class="block text-xs">{{ request_to_coach.deadline_at|localtime|time:"H:i" }} Uhr</span>
 
-      
-            {% else %}
-              &mdash;
-            {% endif %}
-          </dd>
-        </div>
-
-        <div class="bg-neutral-50 rounded-xl p-3">
-          <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Zuletzt gesendet von</dt>
-          <dd class="text-sm font-semibold text-neutral-800">
-            {% if request_to_coach.last_sent_by %}
-              {% with u=request_to_coach.last_sent_by %}
-                {% if u.first_name %}
-                  {{ u.first_name }}{% if u.last_name %} {{ u.last_name|slice:":1" }}.{% endif %}
-                {% else %}
-                  {{ u.email }}
-                {% endif %}
-              {% endwith %}
             {% else %}
               &mdash;
             {% endif %}

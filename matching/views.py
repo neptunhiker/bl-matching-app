@@ -212,9 +212,7 @@ class CoachAutocompleteView(StaffRequiredMixin, View):
 
     def get(self, request):
         q = request.GET.get("q", "").strip()
-        qs = Coach.objects.select_related("user").order_by(
-            "user__last_name", "user__first_name"
-        )
+        qs = Coach.objects.available().select_related('user')
         if q:
             qs = qs.filter(
                 Q(user__first_name__icontains=q)
@@ -247,9 +245,11 @@ class RequestToCoachCreateView(StaffRequiredMixin, View):
 
     def get(self, request, pk):
         matching_attempt = get_object_or_404(MatchingAttempt, pk=pk)
+        available_coaches = Coach.objects.available().select_related('user').order_by('user__last_name', 'user__first_name')
         return render(request, "matching/request_to_coach_form.html", {
             "matching_attempt": matching_attempt,
             "next_priority": self._next_priority(matching_attempt),
+            "available_coaches": available_coaches,
         })
 
     def post(self, request, pk):
@@ -269,6 +269,14 @@ class RequestToCoachCreateView(StaffRequiredMixin, View):
                 coach = Coach.objects.get(pk=coach_id)
             except (Coach.DoesNotExist, ValueError):
                 errors["coach"] = "Ungültiger Coach."
+                coach = None
+        if coach.status != Coach.Status.AVAILABLE:
+            errors["coach"] = f"Coach {coach.full_name} ist derzeit nicht verfügbar (Status: {coach.get_status_display()})."
+
+        if "coach" not in errors:
+            # Double-check that the coach doesn't already have a request for this matching attempt to prevent races
+            if matching_attempt.coach_requests.filter(coach=coach).exists():
+                errors["coach"] = f"Coach {coach.full_name} hat bereits eine Anfrage für dieses Matching."
 
         try:
             max_requests = int(max_requests)
@@ -413,10 +421,10 @@ class RequestToCoachDetailView(LoginRequiredMixin, DetailView):
         context['notifications'] = notifications
 
         context['transitions'] = list(
-            self.object.transitions.order_by('created_at')
+            self.object.transitions.order_by('-created_at')
         )
         context['events'] = list(
-            self.object.events.order_by('created_at')
+            self.object.events.order_by('-created_at')
         )
         return context
 
@@ -498,6 +506,9 @@ class CoachRespondView(View):
                 ma = rtc.matching_attempt.transition_to(
                     MatchingAttempt.Status.MATCHING_CONFIRMED,
                 )
+                
+                ma.matched_coach = rtc.coach
+                ma.save(update_fields=['status', 'matched_coach'])
                 
                 ma = rtc.matching_attempt.transition_to(
                     MatchingAttempt.Status.READY_FOR_CONNECTION,
