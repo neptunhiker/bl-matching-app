@@ -15,6 +15,7 @@ class TestIntegration:
         ma = services.create_matching_attempt(
             participant=participant,
             created_by=staff_user,
+            ue=48,
         )
         
         # status assertions
@@ -34,6 +35,7 @@ class TestIntegration:
             priority=10,
             triggered_by=RequestToCoachEvent.TriggeredBy.STAFF,
             triggered_by_user=staff_user,
+            ue=40,
         )
         
         # status assertions 
@@ -62,6 +64,7 @@ class TestIntegration:
             priority=20,
             triggered_by=RequestToCoachEvent.TriggeredBy.STAFF,
             triggered_by_user=staff_user,
+            ue=40,
         )
         
         # status assertions
@@ -91,6 +94,7 @@ class TestIntegration:
             priority=30,
             triggered_by=RequestToCoachEvent.TriggeredBy.STAFF,
             triggered_by_user=staff_user,
+            ue=40,
         )
         
         # status assertions
