@@ -1,3 +1,4 @@
+import datetime
 import pytest
 
 from django.contrib.messages import get_messages
@@ -314,12 +315,16 @@ def test_create_matching_shows_error_when_active_exists(client, staff_user):
 
     client.force_login(staff_user)
 
-    participant = Participant.objects.create(first_name='T', last_name='ester')
+    participant = Participant.objects.create(
+        first_name='T', 
+        last_name='ester',
+        email='tester@example',
+        start_date=datetime.date(2025, 7, 12))
     # existing active matching
     MatchingAttempt.objects.create(participant=participant, ue=48)
 
     url = reverse('matching_attempt_create')
-    r = client.post(url, data={'participant': str(participant.pk)})
+    r = client.post(url, data={'participant': str(participant.pk), 'ue': '1'})
 
     # form invalid returns 200 and shows our message
     assert r.status_code == 200

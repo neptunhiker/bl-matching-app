@@ -19,14 +19,25 @@
         <p class="text-sm text-tertiary-600 mt-1">{{ coach.email }}</p>
       </div>
       <div class="flex items-center gap-2">
-        <a href="{% url 'coach_update' coach.pk %}" aria-label="Bearbeiten"
-           class="inline-flex items-center justify-center w-9 h-9 rounded-md bg-white/10 hover:bg-white/20 transition-colors">
-          <img src="{% static 'icons/edit.svg' %}" alt="" class="h-4 w-4" />
-        </a>
-        <a href="{% url 'coach_delete' coach.pk %}" aria-label="Löschen"
-           class="inline-flex items-center justify-center w-9 h-9 rounded-md bg-red-600 hover:bg-red-700 transition-colors">
-          <img src="{% static 'icons/delete.svg' %}" alt="" class="h-4 w-4 text-white" />
-        </a>
+        {% if request.user.is_staff %}
+          <div class="flex mb-1 w-full">
+            <a href="{% url 'coach_update' coach.pk %}?next={{ request.GET.next|default:request.path }}"
+              class="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-md text-neutral-700 hover:bg-neutral-100 transition-colors"
+              aria-label="Bearbeiten">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                  viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 00.707-.293l9.414-9.414a1 1 0 000-1.414L16.121 6.12a1 1 0 00-1.414 0L5.293 15.535A1 1 0 005 16.243V20z"/>
+              </svg>
+            </a>
+
+            <a href="{% url 'coach_delete' coach.pk %}?next={{ request.GET.next|default:request.path }}"
+              class="inline-flex items-center justify-center w-8 h-8 rounded-md text-red-600 hover:bg-red-50 transition-colors"
+              aria-label="Löschen">
+              <img src="{% static 'icons/delete.svg' %}" alt="Löschen" class="h-4 w-4" />
+            </a>
+          </div>
+        {% endif %}
       </div>
     </div>
 
@@ -40,9 +51,8 @@
           </div>
 
           <div class="bg-neutral-50 rounded-xl p-4">
-            <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Bevorzugter Kanal</p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Kommunikation über</p>
             <div class="flex items-center gap-3">
-              {% load static %}
               {% if coach.preferred_communication_channel == 'slack' %}
                 <img src="{% static 'icons/slack.svg' %}" alt="Slack" class="h-6 w-6" />
               {% else %}
@@ -110,10 +120,7 @@
             </p>
           </div>
 
-          <div class="bg-neutral-50 rounded-xl p-4">
-            <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Letzte Aktivität</p>
-            <p class="text-sm text-neutral-700">{% if coach.created_at %}Seit {{ coach.created_at|date:"d.m.Y" }}{% else %}<span class="italic text-neutral-400">–</span>{% endif %}</p>
-          </div>
+
         </div>
       </div>
     </div>

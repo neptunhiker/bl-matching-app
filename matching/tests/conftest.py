@@ -1,3 +1,4 @@
+import datetime
 import pytest
 from accounts.models import User
 from profiles.models import Coach, Participant
@@ -11,6 +12,7 @@ def participant(db):
         last_name="Participant",
         email="peter_participant@example.com",
         city="Berlin",
+        start_date=datetime.date(2026, 11, 22)
     )
     
 @pytest.fixture
@@ -20,6 +22,8 @@ def participant_2(db):
         last_name="Doe",
         email="jim_doe@example.com",
         city="Hamburg",
+        start_date=datetime.date(2026, 6, 11)
+
     )
 
 

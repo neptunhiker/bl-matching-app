@@ -1,5 +1,6 @@
 import json
 import pytest
+import datetime
 
 from emails.models import EmailLog
 
@@ -57,6 +58,7 @@ def participant(db):
         last_name="Participant",
         email="peter_participant@example.com",
         city="Berlin",
+        start_date=datetime.date(2026, 3, 14),
     )
 
 

@@ -99,9 +99,11 @@ class Participant(models.Model):
     coaching_format_online = models.BooleanField(default=False, verbose_name='Online')
     coaching_format_presence = models.BooleanField(default=False, verbose_name='Präsenz')
     coaching_format_hybrid = models.BooleanField(default=False, verbose_name='Hybrid')
+    start_date = models.DateField(verbose_name='Gewünschtes Startdatum', help_text='Wann soll das Coaching idealerweise starten?')
     created_at = models.DateTimeField(auto_now_add=True)
     background_information = models.TextField(blank=True, verbose_name='Hintergrundinformationen')
     coaching_target = models.TextField(blank=True, verbose_name='Coaching-Ziel')
+    avgs_data_docs_available = models.BooleanField(default=False, verbose_name='AVGS-Daten verfügbar', help_text='Liegen alle notwendigen AVGS-Daten vor, um mit dem Matching zu starten?')
 
     class Meta:
         ordering = ['last_name', 'first_name']

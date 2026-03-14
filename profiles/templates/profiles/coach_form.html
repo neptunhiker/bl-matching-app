@@ -17,6 +17,12 @@
     {% csrf_token %}
     <div class="divide-y divide-neutral-100/60">
       <div class="px-6 py-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {% include "profiles/_form_field.html" with field=form.user %}
+        </div>
+      </div>
+
+      <div class="px-6">
         <h2 class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-4">Grunddaten</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {% include "profiles/_form_field.html" with field=form.city %}
@@ -46,7 +52,13 @@
         </div>
       </div>
 
-    </div>
+      <div class="px-6">
+        <div class="px-6">
+        </div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {% include "profiles/_form_field.html" with field=form.slack_user_id %}
+        </div>
+      </div>
+
 
     <div class="px-6 py-4 bg-neutral-50/60 flex items-center justify-between">
       <a href="{% url 'coach_list' %}" class="text-sm text-neutral-500 hover:text-neutral-700 transition-colors">Abbrechen</a>

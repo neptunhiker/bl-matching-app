@@ -53,6 +53,51 @@
     </form>
   </div>
 
+  {# Desktop: table for medium+ screens #}
+  <div class="hidden md:block bg-white/70 rounded-2xl shadow-sm overflow-hidden border border-white/60 my-4">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-primary-50 text-tertiary-700">
+          <th class="px-5 py-3 font-semibold text-left">Name</th>
+          <th class="px-5 py-3 font-semibold text-left">Stadt</th>
+          <th class="px-5 py-3 font-semibold text-left">Status</th>
+          <th class="px-5 py-3 font-semibold text-left">Sprachen</th>
+          <th class="px-5 py-3 font-semibold text-left">Formate</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100">
+        {% for coach in coaches %}
+        <tr class="hover:bg-primary-50/50 transition-colors text-left">
+          <td class="px-5 py-3 font-medium text-tertiary-700">
+            <a href="{% url 'coach_detail' coach.pk %}" class="hover:text-primary-600 transition-colors">{{ coach.full_name }}</a>
+          </td>
+          <td class="px-5 py-3 text-neutral-600">{{ coach.city }}</td>
+          {% if coach.status == Status.AVAILABLE %}
+          <td class="px-5 py-3 text-green-600 font-medium">{{ coach.get_status_display }}</td>
+          {% elif coach.status == Status.PAUSED %}
+          <td class="px-5 py-3 text-neutral-500 font-medium">{{ coach.get_status_display }}</td>
+          {% elif coach.status == Status.ONBOARDING %}
+          <td class="px-5 py-3 text-yellow-500 font-medium">{{ coach.get_status_display }}</td>
+          {% else %}
+          <td class="px-5 py-3 text-red-500 font-medium">{{ coach.get_status_display }}</td>
+          {% endif %}
+
+          <td class="px-5 py-3 text-neutral-600">
+            {% for lang in coach.languages.all %}
+              <span class="inline-block px-2 py-0.5 mr-1 rounded-full text-xs font-medium bg-primary-100 text-primary-700">{{ lang.name }}</span>
+            {% endfor %}
+          </td>
+          <td class="px-5 py-3 text-neutral-600">
+            {% if coach.coaching_format_online %}<span class="inline-block px-2 py-0.5 mr-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Online</span>{% endif %}
+            {% if coach.coaching_format_presence %}<span class="inline-block px-2 py-0.5 mr-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Präsenz</span>{% endif %}
+            {% if coach.coaching_format_hybrid %}<span class="inline-block px-2 py-0.5 mr-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Hybrid</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
   {# Mobile: compact stacked list (no JS) - visible on small screens only #}
   <div class="md:hidden bg-white/70 rounded-2xl shadow-sm border border-white/60 my-4">
     

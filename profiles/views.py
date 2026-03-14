@@ -139,6 +139,13 @@ class CoachCreateView(StaffRequiredMixin, CreateView):
 
     def get_success_url(self):
         return reverse_lazy('coach_detail', kwargs={'pk': self.object.pk})
+    
+    def form_valid(self, form):
+        self.object = form.save(commit=False)
+        if not self.object.slack_user_id and self.object.preferred_communication_channel == Coach.CommunicationChannel.SLACK:
+            form.add_error('slack_user_id', 'Slack User ID ist erforderlich, wenn der bevorzugte Kommunikationskanal Slack ist.')
+            return self.form_invalid(form)
+        return super().form_valid(form)
 
 
 class CoachUpdateView(StaffRequiredMixin, UpdateView):

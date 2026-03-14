@@ -78,6 +78,23 @@
         </div>
       </div>
 
+      <!-- Desired start date -->
+      <div class="px-6 py-6">
+        <h2 class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-4">Gewünschtes Startdatum</h2>
+        {% include "profiles/_form_field.html" with field=form.start_date hide_label=True %}
+      </div>
+
+      <!-- Desired start date -->
+      <div class="px-6 py-6">
+        <div class="flex flex-wrap gap-6">
+          <label class="flex items-center gap-2 cursor-pointer text-sm text-tertiary-700">
+            {{ form.avgs_data_docs_available }}
+            <span>{{ form.avgs_data_docs_available.label }}</span>
+          </label>
+          
+        </div>
+      </div>
+
       <!-- Coaching target -->
       <div class="px-6 py-6">
         <h2 class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-4">Coaching-Ziel</h2>
