@@ -19,7 +19,6 @@
       <div class="px-6 py-6">
         <h2 class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-4">Grunddaten</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {% include "profiles/_form_field.html" with field=form.user %}
           {% include "profiles/_form_field.html" with field=form.city %}
           {% include "profiles/_form_field.html" with field=form.status %}
         </div>
@@ -39,6 +38,12 @@
         <label class="flex items-center gap-2 cursor-pointer text-sm text-tertiary-700">{{ form.coaching_format_online }} <span>{{ form.coaching_format_online.label }}</span></label>
         <label class="flex items-center gap-2 cursor-pointer text-sm text-tertiary-700">{{ form.coaching_format_presence }} <span>{{ form.coaching_format_presence.label }}</span></label>
         <label class="flex items-center gap-2 cursor-pointer text-sm text-tertiary-700">{{ form.coaching_format_hybrid }} <span>{{ form.coaching_format_hybrid.label }}</span></label>
+      </div>
+
+      <div class="px-6 py-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {% include "profiles/_form_field.html" with field=form.preferred_communication_channel %}
+        </div>
       </div>
 
     </div>

@@ -200,7 +200,7 @@
     </div>
 
     {% if matching_attempt.coach_requests.exists %}
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
         {% for req in matching_attempt.coach_requests.all %}
         <div class="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-200 flex flex-col overflow-hidden">
 
@@ -213,6 +213,7 @@
             {% else %}bg-secondary-300
             {% endif %}"></div>
 
+          {# Card content — includes explicit link to RequestToCoach detail #}
           <div class="p-5 flex flex-col gap-4 flex-1">
 
             {# Coach name + status #}
@@ -237,320 +238,39 @@
               </div>
               <div>
                 <dt class="text-neutral-400 font-jakarta mb-0.5">Deadline</dt>
-                <dd class="font-semibold
+                <dd class="font-semibold {% if req.deadline_at %}text-amber-600{% else %}text-neutral-400{% endif %}">
                   {% if req.deadline_at %}
-                    text-amber-600
-                  {% else %}text-neutral-400{% endif %}">
-                  {% if req.deadline_at %}{{ req.deadline_at|date:"d.m.Y H:i" }}{% else %}&mdash;{% endif %}
+                    {{ req.deadline_at|date:"d.m.Y" }}
+                    <span class="block text-xs text-neutral-500">{{ req.deadline_at|time:"H:i" }} Uhr</span>
+                  {% else %}
+                    &mdash;
+                  {% endif %}
                 </dd>
-              </div>
-              <div>
-                <dt class="text-neutral-400 font-jakarta mb-0.5">Erstmals gesendet</dt>
-                <dd class="text-neutral-700 font-semibold">
-                  {% if req.first_sent_at %}{{ req.first_sent_at|date:"d.m.Y H:i" }}{% else %}&mdash;{% endif %}
-                </dd>
-              </div>
-              <div>
-                <dt class="text-neutral-400 font-jakarta mb-0.5">Zuletzt gesendet</dt>
-                <dd class="text-neutral-700 font-semibold">
-                  {% if req.last_sent_at %}{{ req.last_sent_at|date:"d.m.Y H:i" }}{% else %}&mdash;{% endif %}
-                </dd>
-              </div>
-              <div>
-                <dt class="text-neutral-400 font-jakarta mb-0.5">Priorität</dt>
-                <dd class="text-neutral-700 font-semibold">{{ req.priority }}</dd>
               </div>
             </dl>
-
-            {# Footer: detail link #}
-            <div class="mt-auto pt-3 border-t border-neutral-100">
-              <div class="flex items-center justify-between">
-                <div>
-                  <a href="{% url 'request_to_coach_detail' req.id %}"
-                     class="inline-flex items-center gap-1 text-xs font-semibold text-primary-600
-                            hover:text-primary-800 transition-colors">
-                    Details ansehen
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none"
-                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-                    </svg>
-                  </a>
-                </div>
-
-                {% if request.user.is_staff %}
-                  <div class="flex items-center gap-2">
-                      <a href="{% url 'request_to_coach_edit' req.id %}?next={{ matching_attempt.get_absolute_url }}"
-                       class="inline-flex items-center justify-center w-8 h-8 rounded-md text-neutral-700 hover:bg-neutral-100 transition-colors"
-                       aria-label="Bearbeiten">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 00.707-.293l9.414-9.414a1 1 0 000-1.414L16.121 6.12a1 1 0 00-1.414 0L5.293 15.535A1 1 0 005 16.243V20z" />
-                      </svg>
-                    </a>
-
-                      <a href="{% url 'request_to_coach_delete' req.id %}?next={{ matching_attempt.get_absolute_url }}"
-                       class="inline-flex items-center justify-center w-8 h-8 rounded-md text-red-600 hover:bg-red-50 transition-colors"
-                       aria-label="Löschen">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/>
-                      </svg>
-                    </a>
-                  </div>
-                {% endif %}
-              </div>
+            <div class="flex justify-end">
+              <a href="{% url 'request_to_coach_detail' req.pk %}"
+                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-neutral-50 text-primary-700 hover:bg-neutral-100 transition-colors">
+                Öffnen
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
             </div>
-
-          </div>
         </div>
         {% endfor %}
       </div>
     {% else %}
-      <p class="text-sm text-neutral-500 italic">Noch keine Anfragen vorhanden.</p>
+      <div class="px-5 py-4">
+        <p class="text-sm text-neutral-500 italic">Keine Anfragen vorhanden.</p>
+      </div>
     {% endif %}
-  </section>
 
-  {# ── E-Mail Accordion ─────────────────────────────────────────── #}
-  <section>
-    <details class="group bg-white rounded-2xl shadow-sm ring-1 ring-neutral-200 overflow-hidden">
+  </div>
+  {% include 'matching/partials/notifications.html' with notifications=notifications %}
 
-      <summary class="flex items-center justify-between px-5 sm:px-6 py-4 cursor-pointer select-none
-                      hover:bg-neutral-50 transition-colors list-none">
-        <div class="flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary-500" fill="none"
-               viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-          </svg>
-          <span class="text-sm font-semibold text-tertiary-700">E-Mails</span>
-          <span class="ml-1 text-xs font-jakarta font-semibold bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">
-            {{ all_emails|length }}
-          </span>
-        </div>
+  {% include 'matching/partials/transitions.html' with transitions=transitions %}
 
-        <svg xmlns="http://www.w3.org/2000/svg"
-             class="h-5 w-5 text-neutral-400 transition-transform duration-200 group-open:rotate-180"
-             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-        </svg>
-      </summary>
+  {% include 'matching/partials/events.html' with events=events %}
 
-      {% if all_emails %}
-      <div class="divide-y divide-neutral-100 border-t border-neutral-100">
-        {% for email in all_emails %}
-        <div class="px-5 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
-
-          {# Timestamp #}
-          <div class="shrink-0 w-36">
-            <p class="text-xs font-semibold text-neutral-700">{{ email.sent_at|localtime|date:"d.m.Y" }}</p>
-            <p class="text-xs text-neutral-400">{{ email.sent_at|localtime|time:"H:i" }} Uhr</p>
-          </div>
-
-          {# Status badge #}
-          <div class="shrink-0 w-28">
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold
-              {% if email.status == 'delivered' or email.status == 'opened' or email.status == 'first_open' or email.status == 'clicked' %}
-                bg-green-100 text-green-700
-              {% elif email.status == 'sent' %}
-                bg-primary-100 text-primary-700
-              {% elif email.status == 'failed' or email.status == 'hard_bounce' or email.status == 'blocked' or email.status == 'spam' or email.status == 'error' or email.status == 'invalid' %}
-                bg-red-100 text-red-600
-              {% elif email.status == 'soft_bounce' or email.status == 'deferred' %}
-                bg-amber-100 text-amber-700
-              {% else %}
-                bg-neutral-100 text-neutral-500
-              {% endif %}">
-              {{ email.get_status_display }}
-            </span>
-          </div>
-
-          {# Subject + recipient #}
-          <div class="flex-1 min-w-0">
-            <p class="text-sm text-neutral-800 font-medium truncate" title="{{ email.subject }}">
-              {{ email.subject }}
-            </p>
-            <p class="text-xs text-neutral-400 mt-0.5">An: {{ email.to }}{% if email.request_to_coach %} &middot; <span class="text-primary-500">Coach: {{ email.request_to_coach.coach }}</span>{% endif %}</p>
-          </div>
-
-          {# Open link #}
-          <div class="shrink-0">
-            <a href="{% url 'emails:email_log_detail' email.id %}"
-               class="inline-flex items-center gap-1 text-xs font-semibold text-primary-600
-                      hover:text-primary-800 transition-colors whitespace-nowrap">
-              Öffnen
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none"
-                   viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-              </svg>
-            </a>
-          </div>
-
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-        <div class="px-5 sm:px-6 py-4">
-          <p class="text-sm text-neutral-500 italic">Noch keine E-Mails vorhanden.</p>
-        </div>
-      {% endif %}
-
-    </details>
-  </section>
-
-  {# ── Status Transitions ───────────────────────────────────────── #}
-  <section>
-    <details class="group bg-white rounded-2xl shadow-sm ring-1 ring-neutral-200 overflow-hidden">
-
-      <summary class="flex items-center justify-between px-5 sm:px-6 py-4 cursor-pointer select-none
-                      hover:bg-neutral-50 transition-colors list-none">
-        <div class="flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary-500" fill="none"
-               viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-          </svg>
-          <span class="text-sm font-semibold text-tertiary-700">Status-Verlauf</span>
-          <span class="ml-1 text-xs font-jakarta font-semibold bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">
-            {{ transitions|length }}
-          </span>
-        </div>
-
-        <svg xmlns="http://www.w3.org/2000/svg"
-             class="h-5 w-5 text-neutral-400 transition-transform duration-200 group-open:rotate-180"
-             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-        </svg>
-      </summary>
-
-      {% if transitions %}
-      <div class="divide-y divide-neutral-100 border-t border-neutral-100">
-        {% for t in transitions %}
-        <div class="px-5 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
-
-          {# Timestamp #}
-          <div class="shrink-0 w-36">
-            <p class="text-xs font-semibold text-neutral-700">{{ t.created_at|date:"d.m.Y" }}</p>
-            <p class="text-xs text-neutral-400">{{ t.created_at|time:"H:i" }} Uhr</p>
-          </div>
-
-          {# Arrow: from → to #}
-          <div class="flex items-center gap-2 flex-wrap">
-            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-neutral-100 text-neutral-600">
-              {{ t.get_from_status_display }}
-            </span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-neutral-400 shrink-0" fill="none"
-                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-            </svg>
-            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold
-              {% if t.to_status == 'match_confirmed' %}bg-green-100 text-green-700
-              {% elif t.to_status == 'cancelled' or t.to_status == 'failed' %}bg-red-100 text-red-600
-              {% elif t.to_status == 'matching_active' or t.to_status == 'awaiting_chemistry_confirmation' %}bg-primary-100 text-primary-700
-              {% else %}bg-secondary-100 text-secondary-700
-              {% endif %}">
-              {{ t.get_to_status_display }}
-            </span>
-          </div>
-
-          {# Actor #}
-          <div class="ml-auto shrink-0 text-right">
-            <p class="text-xs font-semibold text-neutral-600">{{ t.get_triggered_by_display }}</p>
-            {% if t.triggered_by_user %}
-              <p class="text-xs text-neutral-400">
-                {% with u=t.triggered_by_user %}
-                  {% if u.first_name %}{{ u.first_name }}{% if u.last_name %} {{ u.last_name|slice:":1" }}.{% endif %}
-                  {% else %}{{ u.email }}{% endif %}
-                {% endwith %}
-              </p>
-            {% endif %}
-            {% if t.note %}
-              <p class="text-xs text-neutral-400 italic mt-0.5">{{ t.note }}</p>
-            {% endif %}
-          </div>
-
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-        <div class="px-5 sm:px-6 py-4">
-          <p class="text-sm text-neutral-500 italic">Noch keine Statusübergänge vorhanden.</p>
-        </div>
-      {% endif %}
-
-    </details>
-  </section>
-
-  {# ── Events Log ──────────────────────────────────────────────────── #}
-  <section>
-    <details class="group bg-white rounded-2xl shadow-sm ring-1 ring-neutral-200 overflow-hidden">
-
-      <summary class="flex items-center justify-between px-5 sm:px-6 py-4 cursor-pointer select-none
-                      hover:bg-neutral-50 transition-colors list-none">
-        <div class="flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary-500" fill="none"
-               viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-          </svg>
-          <span class="text-sm font-semibold text-tertiary-700">Ereignisse</span>
-          <span class="ml-1 text-xs font-jakarta font-semibold bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">
-            {{ events|length }}
-          </span>
-        </div>
-
-        <svg xmlns="http://www.w3.org/2000/svg"
-             class="h-5 w-5 text-neutral-400 transition-transform duration-200 group-open:rotate-180"
-             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-        </svg>
-      </summary>
-
-      {% if events %}
-      <div class="divide-y divide-neutral-100 border-t border-neutral-100">
-        {% for event in events %}
-        <div class="px-5 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
-
-          {# Timestamp #}
-          <div class="shrink-0 w-36">
-            <p class="text-xs font-semibold text-neutral-700">{{ event.created_at|date:"d.m.Y" }}</p>
-            <p class="text-xs text-neutral-400">{{ event.created_at|time:"H:i" }} Uhr</p>
-          </div>
-
-          {# Event type badge #}
-          <div class="shrink-0">
-            <span class="inline-flex items-center px-2 py-2 rounded-full text-xs font-semibold
-              {% if event.event_type == 'rtc_accepted' %}bg-green-100 text-green-700
-              {% elif event.event_type == 'rtc_rejected' or event.event_type == 'rtc_cancelled' or event.event_type == 'matching_cancelled' %}bg-red-100 text-red-600
-              {% elif event.event_type == 'rtc_timed_out' %}bg-amber-100 text-amber-700
-              {% elif event.event_type == 'automation_disabled' %}bg-neutral-100 text-neutral-500
-              {% else %}bg-primary-100 text-primary-700
-              {% endif %}">
-              {{ event.get_event_type_display }}
-            </span>
-          </div>
-
-          {# Triggered by #}
-          <div class="ml-auto shrink-0 text-right">
-            <p class="text-xs font-semibold text-neutral-600">
-              {% if event.triggered_by == "system" %}
-                {{ event.get_triggered_by_display }}
-              {% else %}
-                {{ event.triggered_by_user }}</p>
-              {% endif %}
-            {% if event.note %}
-              <p class="text-xs text-neutral-400 italic mt-0.5">{{ event.note }}</p>
-            {% endif %}
-          </div>
-
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-        <div class="px-5 sm:px-6 py-4">
-          <p class="text-sm text-neutral-500 italic">Noch keine Ereignisse vorhanden.</p>
-        </div>
-      {% endif %}
-
-    </details>
-  </section>
-
-</div>
 {% endblock %}

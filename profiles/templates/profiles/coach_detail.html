@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ coach.full_name }} – Coach{% endblock %}
 
@@ -14,89 +15,107 @@
   <div class="bg-white/70 rounded-2xl shadow-sm border border-white/60 overflow-hidden">
     <div class="bg-bl-gradient px-6 py-5 flex items-center justify-between">
       <div>
-        <h1 class="text-xl font-semibold text-tertiary-700">{{ coach.full_name }}</h1>
-        <p class="text-sm text-tertiary-600 mt-0.5">{{ coach.email }}</p>
+        <h1 class="text-2xl font-semibold text-tertiary-700">{{ coach.full_name }}</h1>
+        <p class="text-sm text-tertiary-600 mt-1">{{ coach.email }}</p>
       </div>
       <div class="flex items-center gap-2">
-        <a href="{% url 'coach_update' coach.pk %}"
-           class="px-4 py-2 rounded-xl text-sm font-semibold text-white
-                  bg-white/30 hover:bg-white/50 transition-colors border border-white/40">
-          Bearbeiten
+        <a href="{% url 'coach_update' coach.pk %}" aria-label="Bearbeiten"
+           class="inline-flex items-center justify-center w-9 h-9 rounded-md bg-white/10 hover:bg-white/20 transition-colors">
+          <img src="{% static 'icons/edit.svg' %}" alt="" class="h-4 w-4" />
         </a>
-        <a href="{% url 'coach_delete' coach.pk %}"
-           class="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-colors border border-white/30"
-           style="background-color:#dc2626" onmouseover="this.style.backgroundColor='#b91c1c'" onmouseout="this.style.backgroundColor='#dc2626'">
-          Löschen
+        <a href="{% url 'coach_delete' coach.pk %}" aria-label="Löschen"
+           class="inline-flex items-center justify-center w-9 h-9 rounded-md bg-red-600 hover:bg-red-700 transition-colors">
+          <img src="{% static 'icons/delete.svg' %}" alt="" class="h-4 w-4 text-white" />
         </a>
       </div>
     </div>
 
-    <div class="divide-y divide-neutral-100/60">
-      <div class="px-6 py-5 grid grid-cols-2 gap-x-6 gap-y-4">
-        {% include "profiles/_detail_field.html" with label="Stadt" value=coach.city %}
-        {% include "profiles/_detail_field.html" with label="Erstellt am" value=coach.created_at|date:"d.m.Y" %}
-      </div>
+    <div class="px-6 py-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <!-- Main info (spans 2 columns on md) -->
+        <div class="md:col-span-3 space-y-4">
+          <div class="bg-neutral-50 rounded-xl p-4">
+            <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Stadt</p>
+            <p class="text-sm text-neutral-700">{% if coach.city %}{{ coach.city }}{% else %}<span class="italic text-neutral-400">–</span>{% endif %}</p>
+          </div>
 
-      <div class="px-6 py-5">
-        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Status</p>
-        <p class="text-sm text-neutral-700">
-          {% if coach.status == Status.AVAILABLE %}
-            <span class="inline-flex items-center gap-2">
-              <span class="h-3 w-3 rounded-full bg-green-500 ring-2 ring-green-300 shadow-sm animate-pulse" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
-              {{ coach.get_status_display }}
-            </span>
-          {% elif coach.status == Status.PAUSED %}
-            <span class="inline-flex items-center gap-2">
-              <span class="h-3 w-3 rounded-full bg-neutral-400 ring-2 ring-neutral-200 shadow-sm" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
-              {{ coach.get_status_display }}
-            </span>
-          {% elif coach.status == Status.ONBOARDING %}
-            <span class="inline-flex items-center gap-2">
-              <span class="h-3 w-3 rounded-full bg-yellow-400 ring-2 ring-yellow-200 shadow-sm" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
-              {{ coach.get_status_display }}
-            </span>
-          {% elif coach.status == Status.INACTIVE %}
-            <span class="inline-flex items-center gap-2">
-              <span class="h-3 w-3 rounded-full bg-neutral-300 ring-2 ring-neutral-200 shadow-sm" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
-              {{ coach.get_status_display }}
-            </span>
-          {% else %}
-            <span class="inline-flex items-center gap-2">
-              <span class="h-3 w-3 rounded-full bg-neutral-300 ring-2 ring-neutral-200 shadow-sm" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
-              {{ coach.get_status_display }}
-            </span>
-          {% endif %}
-        </p>
-      </div>
+          <div class="bg-neutral-50 rounded-xl p-4">
+            <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Bevorzugter Kanal</p>
+            <div class="flex items-center gap-3">
+              {% load static %}
+              {% if coach.preferred_communication_channel == 'slack' %}
+                <img src="{% static 'icons/slack.svg' %}" alt="Slack" class="h-6 w-6" />
+              {% else %}
+                <img src="{% static 'icons/envelope.svg' %}" alt="Email" class="h-6 w-6" />
+              {% endif %}
+              <p class="text-sm text-neutral-700">{{ coach.get_preferred_communication_channel_display }}</p>
+            </div>
+          </div>
 
-      <div class="px-6 py-5">
-        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Sprachen</p>
-        {% if coach.languages.all %}
-        <div class="flex flex-wrap gap-2">
-          {% for lang in coach.languages.all %}
-          <span class="px-3 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-700">{{ lang.name }}</span>
-          {% endfor %}
+          <div class="bg-neutral-50 rounded-xl p-4">
+            <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Sprachen</p>
+            {% if coach.languages.all %}
+            <div class="flex flex-wrap gap-2">
+              {% for lang in coach.languages.all %}
+              <span class="px-3 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-700">{{ lang.name }}</span>
+              {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-neutral-400 italic">–</p>
+            {% endif %}
+          </div>
+
+          <div class="bg-neutral-50 rounded-xl p-4">
+            <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Coaching‑Formate</p>
+            <div class="flex flex-wrap gap-2">
+              {% if coach.coaching_format_online %}
+              <span class="px-3 py-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Online</span>
+              {% endif %}
+              {% if coach.coaching_format_presence %}
+              <span class="px-3 py-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Präsenz</span>
+              {% endif %}
+              {% if coach.coaching_format_hybrid %}
+              <span class="px-3 py-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Hybrid</span>
+              {% endif %}
+            </div>
+          </div>
         </div>
-        {% else %}
-        <p class="text-sm text-neutral-400 italic">–</p>
-        {% endif %}
-      </div>
 
-      <div class="px-6 py-5">
-        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Coaching-Formate</p>
-        <div class="flex flex-wrap gap-2">
-          {% if coach.coaching_format_online %}
-          <span class="px-3 py-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Online</span>
-          {% endif %}
-          {% if coach.coaching_format_presence %}
-          <span class="px-3 py-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Präsenz</span>
-          {% endif %}
-          {% if coach.coaching_format_hybrid %}
-          <span class="px-3 py-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Hybrid</span>
-          {% endif %}
+        <!-- Side meta column -->
+        <div class="space-y-4">
+          <div class="bg-neutral-50 rounded-xl p-4">
+            <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Status</p>
+            <p class="text-sm text-neutral-700">
+              {% if coach.status == Status.AVAILABLE %}
+                <span class="inline-flex items-center gap-2">
+                  <span class="h-3 w-3 rounded-full bg-green-500 ring-2 ring-green-300 shadow-sm animate-pulse" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
+                  {{ coach.get_status_display }}
+                </span>
+              {% elif coach.status == Status.PAUSED %}
+                <span class="inline-flex items-center gap-2">
+                  <span class="h-3 w-3 rounded-full bg-neutral-400 ring-2 ring-neutral-200 shadow-sm" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
+                  {{ coach.get_status_display }}
+                </span>
+              {% elif coach.status == Status.ONBOARDING %}
+                <span class="inline-flex items-center gap-2">
+                  <span class="h-3 w-3 rounded-full bg-yellow-400 ring-2 ring-yellow-200 shadow-sm" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
+                  {{ coach.get_status_display }}
+                </span>
+              {% else %}
+                <span class="inline-flex items-center gap-2">
+                  <span class="h-3 w-3 rounded-full bg-neutral-300 ring-2 ring-neutral-200 shadow-sm" aria-hidden="true" title="{{ coach.get_status_display }}"></span>
+                  {{ coach.get_status_display }}
+                </span>
+              {% endif %}
+            </p>
+          </div>
+
+          <div class="bg-neutral-50 rounded-xl p-4">
+            <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Letzte Aktivität</p>
+            <p class="text-sm text-neutral-700">{% if coach.created_at %}Seit {{ coach.created_at|date:"d.m.Y" }}{% else %}<span class="italic text-neutral-400">–</span>{% endif %}</p>
+          </div>
         </div>
       </div>
-
     </div>
   </div>
 

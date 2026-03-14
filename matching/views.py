@@ -102,19 +102,48 @@ class MatchingAttemptDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         matching_attempt = self.object
-        # Collect all emails: directly on the matching attempt + all per-coach emails
-        direct_emails = list(matching_attempt.email_logs.all().select_related('request_to_coach__coach'))
+        # Collect emails (direct on matching + per-request) and slack logs, then merge
+        direct_emails = list(matching_attempt.email_logs.all().select_related('request_to_coach'))
         coach_emails = []
         for req in matching_attempt.coach_requests.all().select_related('coach'):
-            for email in req.email_logs.all().select_related('request_to_coach__coach'):
+            for email in req.email_logs.all().select_related('request_to_coach'):
                 coach_emails.append(email)
-        # Merge and sort chronologically (newest first)
         all_emails = sorted(
             direct_emails + coach_emails,
             key=lambda e: e.sent_at,
             reverse=True,
         )
+        # Slack logs (direct + per-request)
+        direct_slack = list(matching_attempt.slack_logs.all().select_related('to'))
+        coach_slack = []
+        for req in matching_attempt.coach_requests.all().select_related('coach'):
+            for s in req.slack_logs.all().select_related('to'):
+                coach_slack.append(s)
+        all_slack = sorted(
+            direct_slack + coach_slack,
+            key=lambda s: s.sent_at,
+            reverse=True,
+        )
+
+        # Build unified notifications list with type markers so template can render both
+        notifications = []
+        for e in all_emails:
+            notifications.append({
+                'type': 'email',
+                'obj': e,
+                'sent_at': e.sent_at,
+            })
+        for s in all_slack:
+            notifications.append({
+                'type': 'slack',
+                'obj': s,
+                'sent_at': s.sent_at,
+            })
+        notifications = sorted(notifications, key=lambda n: n['sent_at'], reverse=True)
+
         context['all_emails'] = all_emails
+        context['all_slack'] = all_slack
+        context['notifications'] = notifications
         context['transitions'] = list(
             matching_attempt.transitions.order_by('created_at')
         )
@@ -345,7 +374,21 @@ class RequestToCoachDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['email_logs'] = self.object.email_logs.order_by('-sent_at').select_related('request_to_coach__coach')
+        # collect email and slack logs for this request and provide unified notifications
+        email_logs = list(self.object.email_logs.order_by('-sent_at').select_related('request_to_coach__coach'))
+        slack_logs = list(self.object.slack_logs.order_by('-sent_at').select_related('request_to_coach__coach'))
+
+        notifications = []
+        for e in email_logs:
+            notifications.append({'type': 'email', 'obj': e, 'sent_at': e.sent_at})
+        for s in slack_logs:
+            notifications.append({'type': 'slack', 'obj': s, 'sent_at': s.sent_at})
+        notifications = sorted(notifications, key=lambda n: n['sent_at'], reverse=True)
+
+        context['email_logs'] = email_logs
+        context['slack_logs'] = slack_logs
+        context['notifications'] = notifications
+
         context['transitions'] = list(
             self.object.transitions.order_by('created_at')
         )

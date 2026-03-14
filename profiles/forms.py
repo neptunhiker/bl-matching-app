@@ -31,11 +31,7 @@ class ParticipantForm(forms.ModelForm):
 
 
 class CoachForm(forms.ModelForm):
-    user = forms.ModelChoiceField(
-        queryset=None,
-        required=True,
-        label='Benutzer',
-    )
+
     languages = forms.ModelMultipleChoiceField(
         queryset=Language.objects.all(),
         widget=forms.CheckboxSelectMultiple,
@@ -46,18 +42,13 @@ class CoachForm(forms.ModelForm):
     class Meta:
         model = Coach
         fields = [
-            'user',
             'city',
             'languages',
             'coaching_format_online',
             'coaching_format_presence',
             'coaching_format_hybrid',
             'status',
+            'preferred_communication_channel',
         ]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # set the user queryset
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
-        self.fields['user'].queryset = User.objects.order_by('last_name', 'first_name')
+

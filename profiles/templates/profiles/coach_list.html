@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Coaches – BL-Matching{% endblock %}
 
@@ -73,6 +74,16 @@
             {% endif %}
             {% if coach.coaching_format_hybrid %}
             <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Hybrid</span>
+            {% endif %}
+            {% if coach.preferred_communication_channel %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">
+              {% if coach.preferred_communication_channel == 'slack' %}
+                <img src="{% static 'icons/slack.svg' %}" alt="Slack" class="h-4 w-4" />
+              {% else %}
+                <img src="{% static 'icons/envelope.svg' %}" alt="Email" class="h-4 w-4" />
+              {% endif %}
+              <span class="ml-1">{{ coach.get_preferred_communication_channel_display }}</span>
+            </span>
             {% endif %}
           </div>
         </div>

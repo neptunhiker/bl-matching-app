@@ -110,7 +110,7 @@ def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="syste
         }
     ]
 
-    subject = f"Matching-Anfrage für {rtc.matching_attempt.participant} an {rtc.coach}"
+    subject = f"Matching-Anfrage für {rtc.matching_attempt.participant}"
 
 
     
