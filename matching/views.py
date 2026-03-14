@@ -10,6 +10,9 @@ from django.views.generic import DetailView, ListView, CreateView, View, UpdateV
 from django.contrib import messages
 from django.db import IntegrityError
 from django.utils.html import format_html
+from urllib3 import request
+from urllib.parse import urlparse
+
 
 from profiles.models import Coach
 from .models import CoachActionToken, MatchingAttempt, RequestToCoach, MatchingAttemptEvent, RequestToCoachEvent
@@ -25,12 +28,20 @@ class StaffRequiredMixin(UserPassesTestMixin):
 
 class MatchingAttemptCreateView(StaffRequiredMixin, CreateView):
     model = MatchingAttempt
-    fields = ['participant']
+    fields = ['participant', 'ue', 'start_date', 'background_information', 'coaching_target']
     template_name = 'matching/matching_attempt_form.html'
 
     def form_valid(self, form):
         participant = form.cleaned_data["participant"]
+        ue = form.cleaned_data["ue"]
+        start_date = form.cleaned_data["start_date"]
+        background_information = form.cleaned_data["background_information"]
+        coaching_target = form.cleaned_data["coaching_target"]
 
+        if ue < 1:
+            messages.error(self.request, "Die Anzahl der Unterrichtseinheiten muss mindestens 1 sein.")
+            return self.form_invalid(form)
+        
         # Prevent DB integrity error by validating existence first and provide link.
         active_ma = MatchingAttempt.objects.filter(
             participant=participant,
@@ -56,6 +67,10 @@ class MatchingAttemptCreateView(StaffRequiredMixin, CreateView):
         try:
             self.object = services.create_matching_attempt(
                 participant=participant,
+                ue=ue,
+                start_date=start_date,
+                background_information=background_information,
+                coaching_target=coaching_target,
                 created_by=self.request.user,
             )
         except IntegrityError:
@@ -248,7 +263,8 @@ class RequestToCoachCreateView(StaffRequiredMixin, View):
         coach_id = request.POST.get("coach_id", "").strip()
         max_requests = request.POST.get("max_number_of_requests", "3").strip()
         posted_priority = request.POST.get("priority", "").strip()
-
+        ue = request.POST.get("ue", "").strip()
+        
         errors = {}
 
         coach = None
@@ -295,6 +311,7 @@ class RequestToCoachCreateView(StaffRequiredMixin, View):
                 "posted_coach_name": request.POST.get("coach_name", ""),
                 "posted_coach_id": coach_id,
                 "posted_max_requests": request.POST.get("max_number_of_requests", "3"),
+                "ue": request.POST.get("ue", ""),
                 "posted_priority": request.POST.get("priority", ""),
             })
         # priority has been validated above (either user-supplied or auto-assigned)
@@ -302,6 +319,7 @@ class RequestToCoachCreateView(StaffRequiredMixin, View):
             matching_attempt=matching_attempt,
             coach=coach,
             priority=priority,
+            ue=ue,
             max_number_of_requests=max_requests,
             triggered_by=RequestToCoachEvent.TriggeredBy.STAFF,
             triggered_by_user=request.user,
@@ -358,7 +376,18 @@ class RequestToCoachDeleteView(StaffRequiredMixin, DeleteView):
         # Allow deletion to redirect back to an explicit `next` parameter when present.
         next_url = self.request.POST.get('next') or self.request.GET.get('next')
         if next_url:
-            return next_url
+            # Protect against redirecting to the deleted object's detail page.
+            # Accept both absolute and relative URLs by comparing path parts.
+            try:
+                parsed = urlparse(next_url)
+                next_path = parsed.path
+            except Exception:
+                next_path = next_url
+
+            own_detail_path = reverse('request_to_coach_detail', kwargs={'pk': self.object.pk})
+            if next_path and next_path != own_detail_path:
+                return next_url
+
         return reverse('matching_attempt_detail', kwargs={'pk': self.object.matching_attempt.pk})
 
 

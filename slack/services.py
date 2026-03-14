@@ -7,6 +7,7 @@ from slack_sdk import WebClient
 from accounts.models import User
 from matching.locks import _get_locked_request_to_coach
 from matching.models import RequestToCoach
+from matching.tokens import generate_coach_action_tokens
 from slack.models import SlackLog
 
 
@@ -29,6 +30,10 @@ def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="syste
     rtc = _get_locked_request_to_coach(rtc)
     rtc = rtc.send_request(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
     
+    coach = rtc.coach
+    
+    accept_url, decline_url = generate_coach_action_tokens(rtc)
+    
     blocks = [
         {
             "type": "header",
@@ -42,9 +47,9 @@ def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="syste
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"Gute Neuigkeiten! Für dich gibt es eine neue Coaching-Anfrage.\n\n"
-                    f"*Teilnehmer:in:* {rtc.matching_attempt.participant}\n\n"
-                    f"Hättest du Lust, dieses Coaching zu übernehmen?"
+                    f"Gute Neuigkeiten, {coach.first_name}! Hättest du Lust, dieses Coaching zu übernehmen?\n\n"
+                    f"*Teilnehmer:in:* {rtc.matching_attempt.participant}\n"
+                    f"*Unterrichtseinheiten:* {rtc.ue}\n\n"
                 )
             }
         },
@@ -54,35 +59,32 @@ def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="syste
                 "type": "mrkdwn",
                 "text": (
                     # format deadline safely in case it's None
-                    f"Bitte gib uns kurz bis *{rtc.deadline_at.strftime('%d.%m.%Y – %H:%M')} Uhr* Bescheid."
+                    f"Bitte gib uns kurz bis zum *{rtc.deadline_at.strftime('%d.%m.%Y – %H:%M')} Uhr* Bescheid."
                     "Ein Klick genügt 👇"
                 )
             }
         },
         {
             "type": "actions",
-            "block_id": "coach_request_actions",
             "elements": [
                 {
-                    "type": "button",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "✅ Ja, ich übernehme das Coaching"
-                    },
-                    "style": "primary",
-                    "action_id": "accept_request",
-                    "value": str(rtc.id)
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "✅ Ja, ich übernehme das Coaching!"
+                },
+                "url": accept_url,
+                "style": "primary"
                 },
                 {
-                    "type": "button",
-                    "text": {
-                        "type": "plain_text",
-                        "text": "🙂 Diesmal passt es leider nicht"
-                    },
-                    "style": "danger",
-                    "action_id": "decline_request",
-                    "value": str(rtc.id)
-                }
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "🙂 Diesmal passt es leider nicht"
+                },
+                "url": decline_url,
+                "style": "danger"
+                },
             ]
         },
         {

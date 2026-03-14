@@ -1,3 +1,5 @@
+import datetime
+
 from django.db import transaction, IntegrityError
 from django.core.exceptions import ValidationError
 
@@ -7,9 +9,13 @@ from matching.models import MatchingAttempt, MatchingAttemptEvent, RequestToCoac
 from profiles.models import Participant, Coach
 
 
-def create_matching_attempt(participant: Participant, created_by: User):
+def create_matching_attempt(participant: Participant, ue: int, start_date: datetime.date, background_information: str, coaching_target: str, created_by: User):
     attempt = MatchingAttempt.objects.create(
         participant=participant,
+        ue=ue,
+        start_date=start_date,
+        background_information=background_information,
+        coaching_target=coaching_target,
         created_by=created_by,
     )
 
@@ -22,7 +28,7 @@ def create_matching_attempt(participant: Participant, created_by: User):
 
     return attempt
   
-def create_request_to_coach(matching_attempt: MatchingAttempt, coach: Coach, priority: int, triggered_by: str, triggered_by_user: User = None, max_number_of_requests: int = 3):
+def create_request_to_coach(matching_attempt: MatchingAttempt, coach: Coach, priority: int, ue: int, triggered_by: str, triggered_by_user: User = None, max_number_of_requests: int = 3):
     
     if triggered_by not in [RequestToCoachEvent.TriggeredBy.SYSTEM, RequestToCoachEvent.TriggeredBy.STAFF]:
         raise ValueError("Invalid value for triggered_by. Must be either 'system' or 'staff'.")
@@ -33,6 +39,9 @@ def create_request_to_coach(matching_attempt: MatchingAttempt, coach: Coach, pri
     # Basic server-side validation to avoid races and provide clearer errors
     if priority is None or int(priority) < 1:
         raise ValidationError("priority must be an integer >= 1")
+    
+    if ue is None or int(ue) < 1:
+        raise ValidationError("ue (Unterrichtseinheiten) must be an integer >= 1")
 
     if matching_attempt.coach_requests.filter(priority=priority).exists():
         raise ValidationError("priority already exists for this matching attempt")
@@ -42,6 +51,7 @@ def create_request_to_coach(matching_attempt: MatchingAttempt, coach: Coach, pri
             matching_attempt=matching_attempt,
             coach=coach,
             priority=priority,
+            ue=ue,
             max_number_of_requests=max_number_of_requests,
         )
     except IntegrityError as exc:

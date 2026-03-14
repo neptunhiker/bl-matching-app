@@ -138,21 +138,18 @@
       <dl class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
 
         <div class="bg-neutral-50 rounded-xl p-3">
+          <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">UE </dt>
+          <dd class="text-sm font-semibold text-neutral-800">
+              <span class="text-sm font-semibold text-neutral-800">{{ request_to_coach.ue }}</span>
+            
+          </dd>
+        </div>
+
+        <div class="bg-neutral-50 rounded-xl p-3">
           <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Anfragen gesendet</dt>
           <dd class="text-sm font-semibold text-neutral-800">
             {{ request_to_coach.requests_sent }}
             <span class="text-neutral-400 font-normal">/ {{ request_to_coach.max_number_of_requests }}</span>
-          </dd>
-        </div>
-        <div class="bg-neutral-50 rounded-xl p-3">
-          <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Erstmals gesendet</dt>
-          <dd class="text-sm font-semibold text-neutral-800">
-            {% if request_to_coach.first_sent_at %}
-              {{ request_to_coach.first_sent_at|localtime|date:"d.m.Y" }}
-              <span class="block text-xs text-neutral-500">{{ request_to_coach.first_sent_at|localtime|time:"H:i" }} Uhr</span>
-            {% else %}
-              &mdash;
-            {% endif %}
           </dd>
         </div>
 

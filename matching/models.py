@@ -74,6 +74,25 @@ class MatchingAttempt(models.Model):
         related_name="matching_attempts",
         verbose_name="Teilnehmer:in",
     )
+    
+    ue = models.PositiveIntegerField(
+        help_text='Anzahl der genehmigten Unterrichtseinheiten.', 
+        verbose_name='Unterrichtseinheiten')
+    
+    start_date = models.DateTimeField(
+        verbose_name='Geplanter Coaching-Start',
+        help_text='Datum und Uhrzeit des geplanten Coaching-Starts.'
+    )
+    
+    background_information = models.TextField(
+        verbose_name='Hintergrundinformationen',
+        help_text='Zusätzliche Informationen zum Coaching, die für die Coaches relevant sein könnten.',
+    )
+    
+    coaching_target = models.TextField(
+        verbose_name='Coaching-Ziel',
+        help_text='Beschreibung des Coaching-Ziels.',
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -564,6 +583,11 @@ class RequestToCoach(models.Model):
         "profiles.Coach",
         on_delete=models.CASCADE,
         related_name="coach_requests",
+    )
+    
+    ue = models.PositiveIntegerField(
+        verbose_name="Unterrichtseinheiten",
+        help_text="Anzahl der Unterrichtseinheiten, die der Coach übernehmen soll.",
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

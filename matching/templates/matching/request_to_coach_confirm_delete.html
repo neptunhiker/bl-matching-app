@@ -7,12 +7,12 @@
   <div class="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-200 overflow-hidden">
     <div class="p-6">
       <h1 class="text-2xl font-bold mb-4">Anfrage löschen</h1>
-      <p class="text-sm text-neutral-700 mb-4">Möchten Sie die Anfrage an <strong>{{ object.coach }}</strong> wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.</p>
+      <p class="text-sm text-neutral-700 mb-4">Möchtest Du die Matching-Anfrage an <strong>{{ object.coach }}</strong> wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.</p>
 
       <form method="post">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ request.GET.next|default:'' }}">
-        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 text-white">Löschen</button>
+        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-700 border border-red-600 text-white shadow-sm">Löschen</button>
         {% if request.GET.next %}
           <a href="{{ request.GET.next }}" class="ml-3 text-sm text-neutral-500">Abbrechen</a>
         {% else %}
