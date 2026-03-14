@@ -674,7 +674,7 @@ class RequestToCoach(models.Model):
     # Domain Actions
     # -------------------------------------------------------------
 
-    def send_request(self, triggered_by="system", triggered_by_user=None):
+    def send_request(self, triggered_by="system", triggered_by_user=None) -> "RequestToCoach":
 
         if not self.can_send_request():
             raise ValidationError("Maximum number of requests reached")
@@ -722,7 +722,6 @@ class RequestToCoach(models.Model):
                 now,
                 settings.COACH_REQUEST_DEFAULT_DEADLINE_HOURS,
             )
-
         # save timestamp updates
         self.save()
 
@@ -733,6 +732,8 @@ class RequestToCoach(models.Model):
             triggered_by_user=triggered_by_user,
         )
 
+        return self
+    
     def send_reminder(self, triggered_by="system", triggered_by_user=None):
 
         from .locks import _get_locked_request_to_coach
