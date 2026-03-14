@@ -78,21 +78,6 @@ class MatchingAttempt(models.Model):
     ue = models.PositiveIntegerField(
         help_text='Anzahl der genehmigten Unterrichtseinheiten.', 
         verbose_name='Unterrichtseinheiten')
-    
-    start_date = models.DateTimeField(
-        verbose_name='Geplanter Coaching-Start',
-        help_text='Datum und Uhrzeit des geplanten Coaching-Starts.'
-    )
-    
-    background_information = models.TextField(
-        verbose_name='Hintergrundinformationen',
-        help_text='Zusätzliche Informationen zum Coaching, die für die Coaches relevant sein könnten.',
-    )
-    
-    coaching_target = models.TextField(
-        verbose_name='Coaching-Ziel',
-        help_text='Beschreibung des Coaching-Ziels.',
-    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 

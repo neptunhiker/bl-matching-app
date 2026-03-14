@@ -65,6 +65,7 @@ def participant(db):
 def matching_attempt(db, participant):
     return MatchingAttempt.objects.create(
         participant=participant,
+        ue=48,
     )
     
 
@@ -75,6 +76,7 @@ def rtc(db, matching_attempt, coach):
         matching_attempt=matching_attempt,
         coach=coach,
         priority=20,
+        ue=40,
     )
     
 @pytest.fixture

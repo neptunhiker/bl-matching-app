@@ -9,13 +9,10 @@ from matching.models import MatchingAttempt, MatchingAttemptEvent, RequestToCoac
 from profiles.models import Participant, Coach
 
 
-def create_matching_attempt(participant: Participant, ue: int, start_date: datetime.date, background_information: str, coaching_target: str, created_by: User):
+def create_matching_attempt(participant: Participant, ue: int, created_by: User):
     attempt = MatchingAttempt.objects.create(
         participant=participant,
         ue=ue,
-        start_date=start_date,
-        background_information=background_information,
-        coaching_target=coaching_target,
         created_by=created_by,
     )
 

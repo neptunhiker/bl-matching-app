@@ -172,6 +172,7 @@ class TestMatchingAttemptQueueHelpers:
             coach=coach,
             status=RequestToCoach.Status.AWAITING_REPLY,
             priority=1,
+            ue=40,
         )
 
         rtc_2 = RequestToCoach.objects.create(
@@ -179,6 +180,7 @@ class TestMatchingAttemptQueueHelpers:
             coach=coach_2,
             status=RequestToCoach.Status.ACCEPTED_MATCHING,
             priority=30,
+            ue=40,
         )
 
         assert matching_attempt.get_active_requests() == [rtc_1]
@@ -190,12 +192,14 @@ class TestMatchingAttemptQueueHelpers:
             coach=coach,
             status=RequestToCoach.Status.IN_PREPARATION,
             priority=1,
+            ue=40,
         )
         RequestToCoach.objects.create(
             matching_attempt=matching_attempt,
             coach=coach_2,
             status=RequestToCoach.Status.IN_PREPARATION,
             priority=30,
+            ue=40,
         )
 
         assert matching_attempt.get_next_request() == rtc_high
@@ -207,6 +211,7 @@ class TestMatchingAttemptQueueHelpers:
             coach=coach,
             status=RequestToCoach.Status.IN_PREPARATION,
             priority=1,
+            ue=40,
         )
 
         assert matching_attempt.has_remaining_requests() is True
@@ -218,6 +223,7 @@ class TestMatchingAttemptQueueHelpers:
             coach=coach,
             status=RequestToCoach.Status.AWAITING_REPLY,
             priority=1,
+            ue=40,
         )
 
         assert matching_attempt.has_remaining_requests() is False
@@ -233,6 +239,7 @@ class TestRequestToCoachConstraints:
             matching_attempt=matching_attempt,
             coach=coach,
             priority=1,
+            ue=40,
         )
 
         with pytest.raises(IntegrityError):
@@ -255,6 +262,7 @@ class TestRequestToCoachConstraints:
             coach=coach,
             status=RequestToCoach.Status.AWAITING_REPLY,
             priority=1,
+            ue=40,
         )
 
         with pytest.raises(IntegrityError):
@@ -578,23 +586,27 @@ class TestMatchingAttempt:
     def test_only_one_active_matching_attempt_per_participant(self, participant):
         MatchingAttempt.objects.create(
             participant=participant,
+            ue=48,
             status=MatchingAttempt.Status.READY_FOR_MATCHING
         )
 
         with pytest.raises(IntegrityError):
             MatchingAttempt.objects.create(
                 participant=participant,
+                ue=48,
                 status=MatchingAttempt.Status.READY_FOR_MATCHING
             )
 
     def test_new_attempt_allowed_after_failure(self, participant):
         MatchingAttempt.objects.create(
             participant=participant,
+            ue=48,
             status=MatchingAttempt.Status.FAILED
         )
 
         MatchingAttempt.objects.create(
             participant=participant,
+            ue=48,
             status=MatchingAttempt.Status.IN_PREPARATION
         )
 

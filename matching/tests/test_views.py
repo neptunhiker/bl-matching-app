@@ -316,7 +316,7 @@ def test_create_matching_shows_error_when_active_exists(client, staff_user):
 
     participant = Participant.objects.create(first_name='T', last_name='ester')
     # existing active matching
-    MatchingAttempt.objects.create(participant=participant)
+    MatchingAttempt.objects.create(participant=participant, ue=48)
 
     url = reverse('matching_attempt_create')
     r = client.post(url, data={'participant': str(participant.pk)})

@@ -28,15 +28,12 @@ class StaffRequiredMixin(UserPassesTestMixin):
 
 class MatchingAttemptCreateView(StaffRequiredMixin, CreateView):
     model = MatchingAttempt
-    fields = ['participant', 'ue', 'start_date', 'background_information', 'coaching_target']
+    fields = ['participant', 'ue', ]
     template_name = 'matching/matching_attempt_form.html'
 
     def form_valid(self, form):
         participant = form.cleaned_data["participant"]
         ue = form.cleaned_data["ue"]
-        start_date = form.cleaned_data["start_date"]
-        background_information = form.cleaned_data["background_information"]
-        coaching_target = form.cleaned_data["coaching_target"]
 
         if ue < 1:
             messages.error(self.request, "Die Anzahl der Unterrichtseinheiten muss mindestens 1 sein.")
@@ -68,9 +65,6 @@ class MatchingAttemptCreateView(StaffRequiredMixin, CreateView):
             self.object = services.create_matching_attempt(
                 participant=participant,
                 ue=ue,
-                start_date=start_date,
-                background_information=background_information,
-                coaching_target=coaching_target,
                 created_by=self.request.user,
             )
         except IntegrityError:
