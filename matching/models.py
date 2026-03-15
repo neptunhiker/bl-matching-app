@@ -504,8 +504,8 @@ class RequestToCoachQuerySet(models.QuerySet):
                 MatchingAttempt.Status.READY_FOR_MATCHING,
                 MatchingAttempt.Status.MATCHING_ONGOING,
             ],
-            matching_attempt__coach__status__in=[
-                Coach.Status.ACTIVE,
+            coach__status__in=[
+                Coach.Status.AVAILABLE,
             ]
         )
         
