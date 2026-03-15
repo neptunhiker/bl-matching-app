@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Build the Tailwind CSS bundle
-RUN tailwindcss -i ./static/css/input.css -o ./static/css/tailwind.css --minify
+RUN tailwindcss -i ./static/css/src/input.css -o ./static/css/tailwind.css --minify
 
 # Start the application using Gunicorn
 CMD ["gunicorn", "config.asgi:application", "--bind", "0.0.0.0:8000", "-k", "uvicorn.workers.UvicornWorker"]
