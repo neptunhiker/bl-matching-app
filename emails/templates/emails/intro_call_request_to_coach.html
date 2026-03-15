@@ -1,0 +1,69 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+
+<h2 style="margin-bottom:20px;">
+Intro-Call mit {{ participant_name }} vereinbaren
+</h2>
+
+<p>
+Vielen Dank noch einmal, {{ recipient_name }}, dass du das Coaching mit
+<strong>{{ participant_name }}</strong> übernehmen möchtest.
+</p>
+
+<p style="margin-top:16px;">
+Bevor das Coaching startet, fehlt nur noch ein kurzer Schritt:
+ein kurzes Kennenlerngespräch zwischen dir und {{ participant_name }}.
+</p>
+
+<p style="margin-top:16px;">
+Bitte melde dich dafür direkt bei {{ participant_name }}, um einen Termin
+für das Kennenlerngespräch zu vereinbaren:
+</p>
+
+<p style="margin-top:10px;">
+<strong>{{ participant_email }}</strong>
+</p>
+
+<p style="margin-top:16px;">
+{{ participant_name }} weiß bereits Bescheid und wartet auf deine Nachricht.
+</p>
+
+<p style="margin-top:16px;">
+Im Kennenlerngespräch könnt ihr euch kurz austauschen und über die
+Coaching-Ziele sprechen.
+</p>
+
+<p style="margin-top:16px;">
+Sobald ihr gesprochen habt, bitten wir dich anschließend nur noch,
+den Coaching-Start zu bestätigen. Dazu erhältst du automatisch eine
+weitere Nachricht mit einem Link, über den du mit einem Klick
+bestätigen kannst, dass das Gespräch stattgefunden hat und
+das Coaching starten kann.
+</p>
+
+<p style="margin-top:20px;">
+Hier findest du noch einmal alle wichtigen Informationen zu
+<strong>{{ participant_name }}</strong> sowie die Coaching-Ziele:
+</p>
+
+<p>
+<a href="{{ learn_more_url }}">Coaching ansehen</a>
+</p>
+
+{% if urgency_msg %}
+<p style="margin-top:22px; font-size:0.95rem; color:#6b7280;">
+<strong>Hinweis:</strong> {{ urgency_msg }}
+</p>
+{% endif %}
+
+<p style="margin-top:26px;">
+Vielen Dank für dein Engagement und viel Erfolg beim Start des Coachings.
+</p>
+
+<p style="margin-top:16px;">
+Viele Grüße<br>
+{{ author }}
+</p>
+
+{% endblock %}

@@ -29,8 +29,8 @@
       <div class="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <p class="text-xs font-jakarta font-semibold uppercase tracking-widest text-primary-500 mb-1">Matching</p>
-          <h1 class="text-2xl sm:text-3xl font-bold text-tertiary-700 leading-tight">
-            {{ matching_attempt.participant }}
+          <h1 class="text-2xl sm:text-3xl font-bold text-tertiary-700 leading-tight hover:text-primary-600 transition-colors">
+            <a href="{% url 'participant_detail' matching_attempt.participant.id %}">{{ matching_attempt.participant }}</a>
           </h1>
         </div>
         {# Status badge #}
@@ -71,19 +71,8 @@
 
         <div class="bg-neutral-50 rounded-xl p-3">
           <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Gematchter Coach</dt>
-          <dd class="text-sm font-semibold text-neutral-800">
-            {% if matching_attempt.matched_coach %}{{ matching_attempt.matched_coach }}{% else %}&mdash;{% endif %}
-          </dd>
-        </div>
-
-        <div class="bg-neutral-50 rounded-xl p-3">
-          <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">TN-Antwort</dt>
-          <dd class="text-sm font-semibold
-            {% if matching_attempt.participant_status == 'accepted' %}text-green-600
-            {% elif matching_attempt.participant_status == 'rejected' %}text-red-500
-            {% else %}text-neutral-600
-            {% endif %}">
-            {{ matching_attempt.get_participant_status_display }}
+          <dd class="text-sm font-semibold text-neutral-800 hover:text-primary-600 transition-colors">
+            {% if matching_attempt.matched_coach %}<a href="{% url 'coach_detail' matching_attempt.matched_coach.id %}">{{ matching_attempt.matched_coach }}</a></a>{% else %}&mdash;{% endif %}
           </dd>
         </div>
 
@@ -230,8 +219,8 @@
               <p class="font-bold text-tertiary-700 text-base leading-snug">{{ req.coach.first_name }}<br>{{ req.coach.last_name }}</p>
               
               <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
-                {% if req.status == 'accepted_on_time' or req.status == 'accepted_late' %}bg-green-100 text-green-700
-                {% elif req.status == 'rejected_on_time' or req.status == 'rejected_late' %}bg-red-100 text-red-600
+                {% if req.status == 'accepted_matching' %}bg-green-100 text-green-700
+                {% elif req.status == 'rejected_matching' %}bg-red-100 text-red-600
                 {% elif req.status == 'awaiting_reply' %}bg-primary-100 text-primary-700
                 {% elif req.status == 'cancelled' %}bg-neutral-100 text-neutral-500
                 {% else %}bg-secondary-100 text-secondary-700

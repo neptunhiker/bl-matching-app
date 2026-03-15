@@ -15,6 +15,18 @@ from .utils import add_business_hours
 from profiles.models import Participant, Coach
 
 
+class MatchingAttemptQuerySet(models.QuerySet):
+
+    def eligible_for_intro_call_request(self):
+        return self.filter(
+            status=MatchingAttempt.Status.READY_FOR_INTRO_CALL,
+            intro_call_requested_at__isnull=True,
+            automation_enabled=True,
+            matched_coach__status__in=[
+                Coach.Status.AVAILABLE,
+            ]
+        )
+
 class MatchingAttempt(models.Model):
 
     class Status(models.TextChoices):
@@ -22,7 +34,8 @@ class MatchingAttempt(models.Model):
         READY_FOR_MATCHING = "ready_for_matching", "Bereit für Matching"
         MATCHING_ONGOING= "matching_ongoing", "Matching läuft"
         MATCHING_CONFIRMED = "matching_confirmed", "Matching bestätigt"
-        INTRO_CALL_PENDING = "intro_call_pending", "Intro-Gespräch ausstehend"
+        READY_FOR_INTRO_CALL = "ready_for_intro_call", "Bereit für Intro-Call"
+        AWAITING_INTRO_CALL_FEEDBACK = "awaiting_intro_call_feedback", "Warten auf Intro-Call Rückmeldung"
         MATCHING_COMPLETED = "matching_completed", "Matching abgeschlossen"
         FAILED = "failed", "Kein Coach gefunden"
         CANCELLED = "cancelled", "Matching abgebrochen"
@@ -52,11 +65,18 @@ class MatchingAttempt(models.Model):
         }),
 
         Status.MATCHING_CONFIRMED: frozenset({
+            Status.READY_FOR_INTRO_CALL,
             Status.FAILED,
             Status.CANCELLED,
         }),
         
-        Status.INTRO_CALL_PENDING: frozenset({
+        Status.READY_FOR_INTRO_CALL: frozenset({
+            Status.AWAITING_INTRO_CALL_FEEDBACK,
+            Status.FAILED,
+            Status.CANCELLED,
+        }),
+        
+        Status.AWAITING_INTRO_CALL_FEEDBACK: frozenset({
             Status.MATCHING_COMPLETED,
             Status.FAILED,
             Status.CANCELLED,
@@ -123,13 +143,26 @@ class MatchingAttempt(models.Model):
         related_name="successful_matches",
     )
     
+    intro_call_requested_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Zeitpunkt, zu dem der Coach erstmals gebenten wurde, einen Intro-Call mit dem(r) Teilnehmer:in zu organisieren."
+    )
+    
     intro_call_confirmed_at = models.DateTimeField(
         null=True,
         blank=True,
         help_text="Zeitpunkt, zu dem der Coach das Intro-Gespräch bestätigt hat."
     )
 
+    intro_call_info_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Zeitpunkt, zu dem der/die Teilnehmer:in eine Info über den gematchten Coach erhalten hat."
+    )
     cancelled_at = models.DateTimeField(null=True, blank=True)
+    
+    objects = MatchingAttemptQuerySet.as_manager()
 
     class Meta:
 
@@ -271,6 +304,80 @@ class MatchingAttempt(models.Model):
 
         return updated
 
+    def can_send_intro_call_request(self):
+        return self.status == self.Status.READY_FOR_INTRO_CALL and not self.intro_call_requested_at and self.matched_coach and self.matched_coach.status == Coach.Status.AVAILABLE
+    
+    def send_intro_call_request(self, triggered_by="system", triggered_by_user=None) -> "MatchingAttempt":
+
+        if not self.can_send_intro_call_request():
+            raise ValidationError(f"Intro call cannot be requested in the current status: {self.get_status_display()}. It can only be requested when the status is {self.Status.READY_FOR_INTRO_CALL}.")
+
+        if triggered_by == MatchingAttemptEvent.TriggeredBy.COACH:
+            raise ValidationError("Coaches cannot trigger requesting intro calls")
+
+        if triggered_by == MatchingAttemptEvent.TriggeredBy.STAFF and triggered_by_user is None:
+            raise ValidationError(
+                "triggered_by_user must be provided when triggered_by='staff'"
+            )
+
+        if triggered_by == MatchingAttemptEvent.TriggeredBy.SYSTEM and triggered_by_user is not None:
+            raise ValidationError(
+                "triggered_by_user must be None when triggered_by='system'"
+            )
+
+        with transaction.atomic():
+
+            self = self.transition_to(self.Status.AWAITING_INTRO_CALL_FEEDBACK)
+
+            MatchingAttemptEvent.objects.create(
+                matching_attempt=self,
+                event_type=MatchingAttemptEvent.EventType.INTRO_CALL_REQUESTED,
+                triggered_by=triggered_by,
+                triggered_by_user=triggered_by_user,
+            )
+            
+            self.intro_call_requested_at = timezone.now()
+
+            self.save()
+
+        return self
+    
+    def can_send_intro_call_info_to_participant(self):
+        return self.status == self.Status.AWAITING_INTRO_CALL_FEEDBACK and self.intro_call_requested_at and self.matched_coach and self.matched_coach.status == Coach.Status.AVAILABLE
+    
+    def send_intro_call_info_to_participant(self, triggered_by="system", triggered_by_user=None) -> "MatchingAttempt":
+
+        if not self.can_send_intro_call_info_to_participant():
+            raise ValidationError(f"Intro call info cannot be sent in the current status: {self.get_status_display()}. It can only be sent when the status is {self.Status.AWAITING_INTRO_CALL_FEEDBACK}.")
+
+        if triggered_by == MatchingAttemptEvent.TriggeredBy.COACH:
+            raise ValidationError("Coaches cannot trigger requesting intro calls")
+
+        if triggered_by == MatchingAttemptEvent.TriggeredBy.STAFF and triggered_by_user is None:
+            raise ValidationError(
+                "triggered_by_user must be provided when triggered_by='staff'"
+            )
+
+        if triggered_by == MatchingAttemptEvent.TriggeredBy.SYSTEM and triggered_by_user is not None:
+            raise ValidationError(
+                "triggered_by_user must be None when triggered_by='system'"
+            )
+
+        with transaction.atomic():
+
+            MatchingAttemptEvent.objects.create(
+                matching_attempt=self,
+                event_type=MatchingAttemptEvent.EventType.INTRO_CALL_INFO_SENT,
+                triggered_by=triggered_by,
+                triggered_by_user=triggered_by_user,
+            )
+            
+            self.intro_call_info_sent_at = timezone.now()
+
+            self.save()
+
+        return self
+
     # -------------------------------------------------------
     # queue helpers
     # -------------------------------------------------------
@@ -382,28 +489,31 @@ class MatchingAttemptEvent(models.Model):
         COACH_ACCEPTED_LATE = "coach_accepted_late", "Coach hat verspätet akzeptiert"
         COACH_DECLINED_LATE = "coach_declined_late", "Coach hat verspätet abgelehnt"
 
-        # Ignorierte Antworten
+        # Ignored answers
         COACH_RESPONSE_IGNORED = "coach_response_ignored", "Coach-Antwort ignoriert"
 
-        # Fristen
+        # Deadlines
         REQUEST_DEADLINE_PASSED = "request_deadline_passed", "Antwortfrist des Coaches abgelaufen"
 
-        # Chemiegespräch
-        CHEMISTRY_CALL_REQUESTED = "chemistry_call_requested", "Chemiegespräch angefragt"
-        CHEMISTRY_CALL_CONFIRMED = "chemistry_call_confirmed", "Chemiegespräch bestätigt"
-        CHEMISTRY_CALL_DECLINED = "chemistry_call_declined", "Chemiegespräch abgelehnt"
+        # Intro-Call Requests
+        INTRO_CALL_REQUESTED = "intro_call_requested", "Intro-Call angefragt"
+        INTRO_CALL_CONFIRMED = "intro_call_confirmed", "Intro-Call bestätigt"
+        INTRO_CALL_DECLINED = "intro_call_declined", "Intro-Call abgelehnt"
+        
+        # Intro-Call Info to Participant
+        INTRO_CALL_INFO_SENT = "intro_call_info_sent", "Intro-Call Info versendet"
 
-        # Chemie-Fristen
-        CHEMISTRY_CONFIRMATION_DEADLINE_PASSED = (
-            "chemistry_confirmation_deadline_passed",
-            "Frist zur Bestätigung des Chemiegesprächs abgelaufen",
+        # Intro-Call Deadlines
+        INTRO_CONFIRMATION_DEADLINE_PASSED = (
+            "intro_confirmation_deadline_passed",
+            "Frist zur Bestätigung des Intro-Calls abgelaufen",
         )
-        CHEMISTRY_CALL_TIMEOUT = "chemistry_call_timeout", "Chemiegespräch-Frist überschritten"
+        INTRO_CALL_TIMEOUT = "intro_call_timeout", "Intro-Call-Frist überschritten"
 
-        # Erinnerungen
+        # Reminders
         REMINDER_SENT = "reminder_sent", "Erinnerung versendet"
 
-        # Manuelle Aktionen
+        # Manual actions
         MANUAL_OVERRIDE = "manual_override", "Manuelle Entscheidung durch Mitarbeiter"
         STAFF_CANCELLED_REQUESTS = "staff_cancelled_requests", "Coach-Anfragen durch Mitarbeiter abgebrochen"
 

@@ -5,7 +5,7 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from .forms import ParticipantForm, CoachForm
 from .models import Participant, Coach
 
-from matching.models import RequestToCoach
+from matching.models import RequestToCoach, MatchingAttempt
 
 
 class StaffRequiredMixin(UserPassesTestMixin):
@@ -35,12 +35,27 @@ class ParticipantDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView)
     context_object_name = 'participant'
     
     def test_func(self):
-        """Allow access if user is staff or coach with a request for this participant."""
-        coach = getattr(self.request.user, 'coach_profile', None)
-        if coach is None:
-            return self.request.user.is_staff or self.request.user.is_superuser
-        else:
-            return RequestToCoach.objects.filter(coach=coach, matching_attempt__participant=self.get_object()).exists()
+        """Allow access if user is staff, or the coach is related to this participant.
+
+        Staff and superusers have full access. Coaches have access if they are the
+        matched coach for the participant or if they have a RequestToCoach for
+        the participant.
+        """
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return True
+
+        coach = getattr(user, 'coach_profile', None)
+        if not coach:
+            return False
+
+        participant = self.get_object()
+        if MatchingAttempt.objects.filter(participant=participant, matched_coach=coach).exists():
+            return True
+
+        return RequestToCoach.objects.filter(
+            coach=coach, matching_attempt__participant=participant
+        ).exists()
     
     def get_template_names(self):
         user = self.request.user

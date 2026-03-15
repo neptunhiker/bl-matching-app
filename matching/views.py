@@ -528,7 +528,7 @@ class CoachRespondView(View):
                 ma.save(update_fields=['status', 'matched_coach'])
                 
                 ma = rtc.matching_attempt.transition_to(
-                    MatchingAttempt.Status.READY_FOR_CONNECTION,
+                    MatchingAttempt.Status.READY_FOR_INTRO_CALL,
                 )
                 
                 rtc = rtc.transition_to(

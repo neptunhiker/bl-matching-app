@@ -11,7 +11,7 @@
       <h1 class="text-3xl font-bold text-purple-950">Alle Matchings</h1>
       <p class="text-sm text-purple-700/70 mt-1">{{ matching_attempts|length }} Eintrag{{ matching_attempts|length|pluralize:",e" }}</p>
     </div>
-    {% if request.user.is_staff %}
+    {% if request.user.is_staff and matching_attempts %}
      <a href="{% url 'matching_attempt_create' %}"
        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
             bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm">

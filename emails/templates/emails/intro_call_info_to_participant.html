@@ -1,0 +1,49 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+
+<h2 style="margin-bottom:20px;">
+Wir haben einen Coach für dich gefunden 🎉
+</h2>
+
+<p>
+Gute Neuigkeiten, {{ participant.first_name }}!
+</p>
+
+<p style="margin-top:16px;">
+Wir haben einen passenden Coach für dein Coaching gefunden:
+<strong>{{ coach.full_name }}</strong>.
+</p>
+
+<p style="margin-top:16px;">
+{{ coach.first_name }} wird sich in Kürze bei dir melden, um ein kurzes
+Kennenlerngespräch zu vereinbaren. In diesem Gespräch könnt ihr euch
+gegenseitig kennenlernen und kurz über deine Coaching-Ziele sprechen.
+</p>
+
+<p style="margin-top:16px;">
+Falls du möchtest, kannst du auch selbst direkt Kontakt aufnehmen:
+</p>
+
+<p style="margin-top:10px;">
+<strong>{{ coach.user.email }}</strong>
+</p>
+
+<p style="margin-top:16px;">
+Sobald ihr euer Kennenlerngespräch geführt habt, bitten wir den Coach
+noch um eine kurze Bestätigung. Danach geben wir den Start des Coachings
+frei und informieren euch beide noch einmal offiziell, dass das Coaching
+beginnen kann.
+</p>
+
+<p style="margin-top:20px;">
+Wir wünschen dir ein gutes erstes Gespräch und einen erfolgreichen
+Start in das Coaching!
+</p>
+
+<p style="margin-top:26px;">
+Viele Grüße<br>
+{{ author }}
+</p>
+
+{% endblock %}

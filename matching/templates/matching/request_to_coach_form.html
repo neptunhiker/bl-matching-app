@@ -70,6 +70,9 @@
             class="w-32 rounded-xl border border-neutral-300 px-4 py-2.5 text-sm
                    focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent
                    {% if errors.ue %}border-red-400{% endif %}">
+            <p class="mt-1 text-xs text-neutral-400">
+            Unterrichtseinheiten für den Coach.
+            </p>
           {% if errors.ue %}
             <p class="mt-1.5 text-xs text-red-500">{{ errors.ue }}</p>
           {% endif %}
@@ -89,9 +92,9 @@
             class="w-32 rounded-xl border border-neutral-300 px-4 py-2.5 text-sm
                    focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent
                    {% if errors.max_number_of_requests %}border-red-400{% endif %}">
-          <p class="mt-1 text-xs text-neutral-400">
-            Priorität wird automatisch zugewiesen (nächste: {{ next_priority }}).
-          </p>
+            <p class="mt-1 text-xs text-neutral-400">
+              Wie oft der Coach maximal angeschrieben und an die Matching-Anfrage erinnert werden soll. Standard ist 3, Minimum ist 1.
+            </p>
           {% if errors.max_number_of_requests %}
             <p class="mt-1.5 text-xs text-red-500">{{ errors.max_number_of_requests }}</p>
           {% endif %}
@@ -111,9 +114,9 @@
             class="w-40 rounded-xl border border-neutral-300 px-4 py-2.5 text-sm
                    focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent
                    {% if errors.priority %}border-red-400{% endif %}">
-          <p class="mt-1 text-xs text-neutral-400">
-            Falls leer gelassen, wird automatisch {{ next_priority }} verwendet.
-          </p>
+            <p class="mt-1 text-xs text-neutral-400">
+              Priorität bestimmt die Reihenfolge, in der Coaches angefragt werden.
+            </p>
           {% if errors.priority %}
             <p class="mt-1.5 text-xs text-red-500">{{ errors.priority }}</p>
           {% endif %}

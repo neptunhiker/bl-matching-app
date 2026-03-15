@@ -10,6 +10,11 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 
+from django.utils import timezone
+
+from profiles.models import Participant
+
+
 
 def add_business_hours(
     start: datetime,
@@ -67,3 +72,25 @@ def add_business_hours(
             )
 
     return current
+
+def get_urgency_message(participant: Participant, current_date: datetime.date = timezone.now().date(), start_date: datetime.date = None):
+    """Generate an urgency message for the coach based on how soon the coaching should start."""
+    
+    time_until_start = (start_date - current_date).days
+    
+    if time_until_start < 0:
+        urgency_msg = f"Das Coaching hätte bereits am {start_date.strftime('%d.%m.%Y')} starten sollen. Daher melde dich bitte ganz besonders schnell bei {participant.first_name}."
+    elif time_until_start == 0:
+        urgency_msg = f"Das Coaching soll idealerweise schon heute am {start_date.strftime('%d.%m.%Y')} starten. Daher melde dich bitte ganz schnell bei {participant.first_name}."
+    elif time_until_start == 1:
+        urgency_msg = f"Das Coaching soll schon morgen am {start_date.strftime('%d.%m.%Y')} starten. Daher melde dich bitte noch heute bei {participant.first_name}."
+    elif time_until_start == 2:
+        urgency_msg = f"Das Coaching soll schon übermorgen am {start_date.strftime('%d.%m.%Y')} starten. Daher melde dich bitte noch heute, aber spätestens morgen bei {participant.first_name}."
+    elif time_until_start <= 7:
+        urgency_msg = f"Das Coaching soll schon in {time_until_start} Tagen am {start_date.strftime('%d.%m.%Y')} starten. Also melde dich bitte heute oder morgen noch bei {participant.first_name}."
+    elif time_until_start <= 14:
+        urgency_msg = f"Das Coaching soll in {time_until_start} Tagen am {start_date.strftime('%d.%m.%Y')} starten. Das klingt vielleicht noch weit weg, aber lass bitte trotzdem nicht zu viel Zeit verstreichen und melde dich heute oder morgen noch bei {participant.first_name}."
+    else:
+        urgency_msg = f"Das Coaching soll in {time_until_start} Tagen am {start_date.strftime('%d.%m.%Y')} starten. Bitte melde dich bei {participant.first_name} so zeitnah wie möglich, damit ihr euch vor dem Start noch kennelernen könnt."
+        
+    return urgency_msg
