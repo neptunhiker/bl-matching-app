@@ -22,7 +22,8 @@ class MatchingAttempt(models.Model):
         READY_FOR_MATCHING = "ready_for_matching", "Bereit für Matching"
         MATCHING_ONGOING= "matching_ongoing", "Matching läuft"
         MATCHING_CONFIRMED = "matching_confirmed", "Matching bestätigt"
-        READY_FOR_CONNECTION = "ready_for_connection", "Bereit für Vernetzung"
+        INTRO_CALL_PENDING = "intro_call_pending", "Intro-Gespräch ausstehend"
+        MATCHING_COMPLETED = "matching_completed", "Matching abgeschlossen"
         FAILED = "failed", "Kein Coach gefunden"
         CANCELLED = "cancelled", "Matching abgebrochen"
 
@@ -51,15 +52,17 @@ class MatchingAttempt(models.Model):
         }),
 
         Status.MATCHING_CONFIRMED: frozenset({
-            Status.READY_FOR_CONNECTION,
             Status.FAILED,
             Status.CANCELLED,
         }),
         
-        Status.READY_FOR_CONNECTION: frozenset({
+        Status.INTRO_CALL_PENDING: frozenset({
+            Status.MATCHING_COMPLETED,
             Status.FAILED,
             Status.CANCELLED,
         }),
+        
+        Status.MATCHING_COMPLETED: frozenset(),
 
         Status.FAILED: frozenset(),
 
