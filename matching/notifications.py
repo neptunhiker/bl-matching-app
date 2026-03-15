@@ -11,7 +11,7 @@ from accounts.models import User
 from emails.services import send_email
 from emails.models import EmailLog
 from profiles.models import Coach
-from slack.services import send_first_coach_request_slack
+from slack.services import send_first_coach_request_slack, send_reminder_coach_request_slack
 from .locks import _get_locked_request_to_coach
 from .models import RequestToCoach, RequestToCoachEvent
 from .tokens import generate_coach_action_tokens
@@ -22,13 +22,25 @@ logger = logging.getLogger(__name__)
 def send_first_request_notification(request_to_coach, triggered_by: str="system", triggered_by_user: User = None):
 
     coach = request_to_coach.coach
-    print(f"DEBUG: Coach {coach} has communication channel {coach.preferred_communication_channel}")
 
     if coach.preferred_communication_channel == Coach.CommunicationChannel.SLACK:
         send_first_coach_request_slack(request_to_coach, triggered_by=triggered_by, triggered_by_user=triggered_by_user)
         
     elif coach.preferred_communication_channel == Coach.CommunicationChannel.EMAIL:
         send_first_coach_request_email(request_to_coach, triggered_by=triggered_by, triggered_by_user=triggered_by_user)
+    else:
+        raise ValueError(f"Unsupported communication channel for coach {coach}: {coach.preferred_communication_channel}")
+    
+def send_reminder_request_notification(request_to_coach, triggered_by: str="system", triggered_by_user: User = None):
+
+    coach = request_to_coach.coach
+
+    if coach.preferred_communication_channel == Coach.CommunicationChannel.SLACK:
+        logger.debug(f"Sending reminder coach request notification via Slack for RequestToCoach to coach {coach} (user: {coach.user})")
+        send_reminder_coach_request_slack(request_to_coach, triggered_by=triggered_by, triggered_by_user=triggered_by_user)
+        
+    elif coach.preferred_communication_channel == Coach.CommunicationChannel.EMAIL:
+        send_reminder_coach_request_email(request_to_coach, triggered_by=triggered_by, triggered_by_user=triggered_by_user)
     else:
         raise ValueError(f"Unsupported communication channel for coach {coach}: {coach.preferred_communication_channel}")
 

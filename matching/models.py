@@ -516,6 +516,13 @@ class RequestToCoachQuerySet(models.QuerySet):
             requests_sent__lt=models.F("max_number_of_requests"),
             first_sent_at__isnull=False,
             matching_attempt__automation_enabled=True,
+            matching_attempt__status__in=[
+                MatchingAttempt.Status.READY_FOR_MATCHING,
+                MatchingAttempt.Status.MATCHING_ONGOING,
+            ],
+            coach__status__in=[
+                Coach.Status.AVAILABLE,
+            ]
         )
         
 class RequestToCoach(models.Model):
