@@ -50,14 +50,17 @@ def _build_email_context(
     accept_url: str,
     decline_url: str
 ) -> Dict[str, Any]:
+    participant = rtc.matching_attempt.participant
     return {
         "recipient_name": rtc.coach.first_name,
-        "participant_name": rtc.matching_attempt.participant.first_name,
+        "participant_name": participant.first_name,
+        "ue": rtc.ue,
         "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
         "accept_url": accept_url,
         "decline_url": decline_url,
-        "learn_more_url": settings.SITE_URL.rstrip("/") + reverse("landing"),
+        "learn_more_url": settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk}),
         "deadline": rtc.deadline_at,
+        "start_date": rtc.matching_attempt.participant.start_date.strftime("%d.%m.%Y"),
     }
     
 def _send_request_email(
@@ -104,27 +107,24 @@ def send_first_coach_request_email(rtc: RequestToCoach, triggered_by: str="syste
     return rtc
     
 @transaction.atomic
-def send_reminder_coach_request_email(rtc: RequestToCoach, email_trigger: str = EmailLog.EmailTrigger.AUTOMATED) -> RequestToCoach:
+def send_reminder_coach_request_email(rtc: RequestToCoach, triggered_by: str="system", triggered_by_user: User = None) -> RequestToCoach:
     """Send a reminder email to the coach and update status accordingly."""
+    
+    if triggered_by not in [RequestToCoachEvent.TriggeredBy.SYSTEM, RequestToCoachEvent.TriggeredBy.STAFF]:
+        raise ValueError("Invalid value for triggered_by. Must be either 'system' or 'staff'.")
+    if triggered_by == RequestToCoachEvent.TriggeredBy.STAFF and not triggered_by_user:
+        raise ValueError("triggered_by_user must be provided when triggered_by is 'staff'.")
     
     rtc = _get_locked_request_to_coach(rtc)
     
-    if not rtc.can_send_reminder():
-        raise ValidationError(f"Cannot send reminder email for RequestToCoach {rtc.id} in its current state. Status: {rtc.get_status_display()}, Deadline passed: {rtc.is_deadline_passed()}, Requests sent: {rtc.requests_sent}.")
+    rtc.send_reminder(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
     
-    now = timezone.now()
 
     _send_request_email(rtc, 
                         subject=f"Reminder: Matching-Anfrage für {rtc.matching_attempt.participant.first_name} {rtc.matching_attempt.participant.last_name}", 
                         template_name='emails/reminder_match_request_to_coach.html',
-                        triggered_by=email_trigger,
+                        triggered_by=triggered_by,
     )
-    
-    rtc.last_sent_at = now
-    rtc.requests_sent += 1
-    rtc.save()
-    
-    # The RTC is now in the same state as it was when the first email was sent, so we don't transition it again. The only difference is the updated timestamps and request count.
         
     return rtc
 
