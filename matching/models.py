@@ -100,7 +100,6 @@ class MatchingAttempt(models.Model):
     )
 
     # automation
-
     automation_enabled = models.BooleanField(
         default=False,
         help_text="Automatisches Versenden von Coach-Anfragen und Erinnerungen."
@@ -122,6 +121,12 @@ class MatchingAttempt(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="successful_matches",
+    )
+    
+    intro_call_confirmed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Zeitpunkt, zu dem der Coach das Intro-Gespräch bestätigt hat."
     )
 
     cancelled_at = models.DateTimeField(null=True, blank=True)
