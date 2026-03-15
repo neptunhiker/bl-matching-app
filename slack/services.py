@@ -19,6 +19,8 @@ def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="syste
   
     client = WebClient(token=settings.SLACK_BOT_TOKEN)
     coach = rtc.coach
+    participant = rtc.matching_attempt.participant
+    url_participant = settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk})
     user_id = coach.slack_user_id
     start_date = rtc.matching_attempt.participant.start_date
     
@@ -50,7 +52,7 @@ def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="syste
                 "type": "mrkdwn",
                 "text": (
                     f"Gute Neuigkeiten, {coach.first_name}! Hättest du Lust, dieses Coaching zu übernehmen?\n\n"
-                    f"*Teilnehmer:in:* {rtc.matching_attempt.participant}\n"
+                    f"*Teilnehmer:in:* {participant}\n"
                     f"*Unterrichtseinheiten:* {rtc.ue}\n"
                     f"*Startdatum:* {start_date.strftime('%d.%m.%Y')}\n\n"
                 )
@@ -98,7 +100,7 @@ def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="syste
                 "type": "mrkdwn",
                 "text": (
                     f"Mehr Infos zum Coaching mit *{rtc.matching_attempt.participant.first_name}* "
-                    f"findest du hier → <{settings.SITE_URL.rstrip('/') + reverse('landing')}|Coaching ansehen>"
+                    f"findest du hier → <{url_participant}|Coaching ansehen>"
                 )
             },
         },
