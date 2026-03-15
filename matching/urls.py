@@ -29,3 +29,6 @@ urlpatterns = [
     # Public — no login required. Token in URL authorises the action.
     path('response_coach/<str:token>/', CoachRespondView.as_view(), name='coach_respond'),
 ]
+
+
+

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}400 – Ungültige Anfrage{% endblock %}
+
+{% block body %}
+<section class="flex items-center justify-center py-20 px-6">
+  <div class="max-w-xl w-full text-center">
+
+    <!-- Icon -->
+    <div class="flex justify-center mb-8">
+      <div class="relative">
+        <div class="absolute inset-0 rounded-full bg-amber-50 blur-xl"></div>
+        <div class="relative flex items-center justify-center w-16 h-16 rounded-full bg-white border border-gray-200 shadow-sm">
+          <img src="{% static 'icons/warning.svg' %}" alt="Invalid request" class="h-8 w-8" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Code -->
+    <p class="text-sm font-semibold tracking-widest text-gray-400 mb-3">
+      FEHLER 400
+    </p>
+
+    <!-- Heading -->
+    <h1 class="text-3xl font-semibold text-gray-900 mb-4">
+      Ungültige Anfrage
+    </h1>
+
+    <!-- Main message -->
+    <p class="text-gray-600 leading-relaxed mb-4">
+      Die Anfrage konnte vom Server nicht verarbeitet werden.
+    </p>
+
+    <!-- Secondary explanation -->
+    <p class="text-sm text-gray-500 mb-10">
+      Möglicherweise sind die übermittelten Daten unvollständig oder die Anfrage
+      ist nicht korrekt aufgebaut. Lade die Seite bitte neu oder beginne erneut.
+    </p>
+
+    <!-- Home button -->
+    <a href="/"
+       class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium
+              text-white bg-primary-500 rounded-xl shadow-sm
+              hover:bg-primary-600 transition
+              focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2">
+      Zur Startseite
+    </a>
+
+  </div>
+</section>
+{% endblock %}

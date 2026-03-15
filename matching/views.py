@@ -550,4 +550,3 @@ class CoachRespondView(View):
                 'deadline': rtc.deadline_at,
             },
         )
-
