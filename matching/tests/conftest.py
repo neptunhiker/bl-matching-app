@@ -36,6 +36,16 @@ def staff_user(db):
         last_name="Member",
         is_staff=True,
     )
+    
+@pytest.fixture
+def superuser(db):
+    return User.objects.create_user(
+        email="superuser@example.com",
+        password="testpass123",
+        first_name="Super",
+        last_name="User",
+        is_superuser=True,
+    )
 
 
 @pytest.fixture

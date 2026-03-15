@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ participant }} – Teilnehmer:in{% endblock %}
+
+{% block body %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+
+  <!-- Profile card -->
+  <div class="bg-white/70 rounded-2xl shadow-sm border border-white/60 overflow-hidden">
+
+    <!-- Card header -->
+    <div class="bg-bl-gradient px-6 py-5 flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-semibold text-tertiary-700">
+          {{ participant.first_name }} {{ participant.last_name }}
+        </h1>
+      </div>
+    </div>
+
+    <!-- Fields -->
+    <div class="divide-y divide-neutral-100/60">
+
+      <!-- Basic info -->
+      <div class="px-6 py-5 grid grid-cols-2 gap-x-6 gap-y-4">
+        {% include "profiles/_detail_field.html" with label="Gewünschtes Startdatum" value=participant.start_date|date:"d.m.Y" %}
+        {% include "profiles/_detail_field.html" with label="Stadt" value=participant.city %}
+      </div>
+
+      <!-- Languages -->
+      <div class="px-6 py-5">
+        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Sprachen</p>
+        {% if participant.languages.all %}
+        <div class="flex flex-wrap gap-2">
+          {% for lang in participant.languages.all %}
+          <span class="px-3 py-1 rounded-full text-xs font-medium
+                       bg-primary-100 text-primary-700">
+            {{ lang.name }}
+          </span>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-neutral-400 italic">–</p>
+        {% endif %}
+      </div>
+
+      <!-- Coaching formats -->
+      <div class="px-6 py-5">
+        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Gewünschtes Coaching-Format</p>
+        <div class="flex flex-wrap gap-2">
+          {% if participant.coaching_format_online %}
+          <span class="px-3 py-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Online</span>
+          {% endif %}
+          {% if participant.coaching_format_presence %}
+          <span class="px-3 py-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Präsenz</span>
+          {% endif %}
+          {% if participant.coaching_format_hybrid %}
+          <span class="px-3 py-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Hybrid</span>
+          {% endif %}
+          {% if not participant.coaching_format_online and not participant.coaching_format_presence and not participant.coaching_format_hybrid %}
+          <p class="text-sm text-neutral-400 italic">–</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Coaching target -->
+      <div class="px-6 py-5">
+        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Coaching-Ziel</p>
+        {% if participant.coaching_target %}
+        <p class="text-sm text-neutral-700 whitespace-pre-line">{{ participant.coaching_target }}</p>
+        {% else %}
+        <p class="text-sm text-neutral-400 italic">–</p>
+        {% endif %}
+      </div>
+
+      <!-- Background information -->
+      <div class="px-6 py-5">
+        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Hintergrundinformationen</p>
+        {% if participant.background_information %}
+        <p class="text-sm text-neutral-700 whitespace-pre-line">{{ participant.background_information }}</p>
+        {% else %}
+        <p class="text-sm text-neutral-400 italic">–</p>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

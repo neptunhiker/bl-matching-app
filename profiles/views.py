@@ -5,6 +5,8 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from .forms import ParticipantForm, CoachForm
 from .models import Participant, Coach
 
+from matching.models import RequestToCoach
+
 
 class StaffRequiredMixin(UserPassesTestMixin):
     """Restricts access to active staff users only."""
@@ -27,10 +29,25 @@ class ParticipantListView(StaffRequiredMixin, ListView):
     paginate_by = 25
 
 
-class ParticipantDetailView(StaffRequiredMixin, DetailView):
+class ParticipantDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     model = Participant
     template_name = 'profiles/participant_detail.html'
     context_object_name = 'participant'
+    
+    def test_func(self):
+        """Allow access if user is staff or coach with a request for this participant."""
+        coach = getattr(self.request.user, 'coach_profile', None)
+        if coach is None:
+            return self.request.user.is_staff or self.request.user.is_superuser
+        else:
+            return RequestToCoach.objects.filter(coach=coach, matching_attempt__participant=self.get_object()).exists()
+    
+    def get_template_names(self):
+        user = self.request.user
+        print(f"DEBUG: User {user} is_staff={user.is_staff} is_superuser={user.is_superuser}")
+        if user.is_staff or user.is_superuser:
+            return ["profiles/participant_detail.html"]
+        return ["profiles/participant_detail_for_coach.html"]
 
 
 class ParticipantCreateView(StaffRequiredMixin, CreateView):
