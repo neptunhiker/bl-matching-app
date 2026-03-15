@@ -3,6 +3,7 @@ import logging
 from django.conf import settings
 from django.urls import reverse
 from slack_sdk import WebClient
+from django.utils import timezone
 
 from accounts.models import User
 from matching.locks import _get_locked_request_to_coach
@@ -19,6 +20,7 @@ def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="syste
     client = WebClient(token=settings.SLACK_BOT_TOKEN)
     coach = rtc.coach
     user_id = coach.slack_user_id
+    start_date = rtc.matching_attempt.participant.start_date
     
     if not user_id:
         raise ValueError(f"Coach {rtc.coach} does not have a Slack user ID")
@@ -49,7 +51,8 @@ def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="syste
                 "text": (
                     f"Gute Neuigkeiten, {coach.first_name}! Hättest du Lust, dieses Coaching zu übernehmen?\n\n"
                     f"*Teilnehmer:in:* {rtc.matching_attempt.participant}\n"
-                    f"*Unterrichtseinheiten:* {rtc.ue}\n\n"
+                    f"*Unterrichtseinheiten:* {rtc.ue}\n"
+                    f"*Startdatum:* {start_date.strftime('%d.%m.%Y')}\n\n"
                 )
             }
         },
@@ -58,9 +61,11 @@ def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="syste
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    # format deadline safely in case it's None
-                    f"Bitte gib uns kurz bis zum *{rtc.deadline_at.strftime('%d.%m.%Y – %H:%M')} Uhr* Bescheid."
-                    "Ein Klick genügt 👇"
+                    # format deadline safely in case it's None and show it in local time
+                    (
+                        f"Bitte gib uns kurz bis zum *{timezone.localtime(rtc.deadline_at).strftime('%d.%m.%Y – %H:%M')} Uhr* Bescheid. Ein Klick genügt 👇"
+                    )
+                    
                 )
             }
         },
