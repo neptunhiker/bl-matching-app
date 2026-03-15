@@ -124,16 +124,6 @@ class MatchingAttempt(models.Model):
         related_name="successful_matches",
     )
 
-    # chemistry phase
-
-    chemistry_requested_at = models.DateTimeField(null=True, blank=True)
-
-    chemistry_deadline_at = models.DateTimeField(null=True, blank=True)
-
-    chemistry_confirmed_at = models.DateTimeField(null=True, blank=True)
-
-    chemistry_declined_at = models.DateTimeField(null=True, blank=True)
-
     cancelled_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
