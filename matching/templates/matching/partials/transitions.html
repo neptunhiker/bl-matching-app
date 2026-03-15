@@ -45,14 +45,14 @@
           </svg>
           <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold
             {% if t.to_status %}
-              {% if t.to_status == 'accepted_on_time' or t.to_status == 'accepted_late' %}bg-green-100 text-green-700
-              {% elif t.to_status == 'rejected_on_time' or t.to_status == 'rejected_late' or t.to_status == 'cancelled' %}bg-red-100 text-red-600
-              {% elif t.to_status == 'no_response_until_deadline' %}bg-amber-100 text-amber-700
-              {% elif t.to_status == 'awaiting_reply' %}bg-primary-100 text-primary-700
-              {% else %}bg-secondary-100 text-secondary-700
+              {% if t.to_status == 'matching_confirmed' or t.to_status == 'matching_completed' or t.to_status == 'accepted_matching' %}bg-green-100 text-green-700
+              {% elif t.to_status == 'rejected_matching' or t.to_status == 'failed' or t.to_status == 'cancelled' %}bg-secondary-200 text-secondary-700
+              {% else %}bg-neutral-100 text-neutral-600
               {% endif %}
-            {% else %}bg-secondary-100 text-secondary-700{% endif %}">
-            {{ t.get_to_status_display }}
+            {% else %}
+              bg-neutral-100 text-neutral-600
+            {% endif %}">
+            {{ t.get_to_status_display  }}
           </span>
 
           {# Optional comment #}

@@ -40,9 +40,7 @@
           <div class="flex items-center gap-3">
             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
               {% if e.event_type == 'rtc_accepted' or e.event_type == 'accepted' %}bg-green-100 text-green-700
-              {% elif e.event_type == 'rtc_rejected' or e.event_type == 'rtc_cancelled' or e.event_type == 'matching_cancelled' or e.event_type == 'rejected' or e.event_type == 'cancelled' %}bg-red-100 text-red-600
-              {% elif e.event_type == 'rtc_timed_out' or e.event_type == 'timed_out' %}bg-amber-100 text-amber-700
-              {% elif e.event_type == 'request_sent' or e.event_type == 'reminder_sent' %}bg-primary-100 text-primary-700
+              {% elif e.event_type == 'rtc_rejected' or e.event_type == 'rtc_cancelled' or e.event_type == 'matching_cancelled' or e.event_type == 'rejected' or e.event_type == 'cancelled' %}bg-secondary-200 text-secondary-700
               {% else %}bg-neutral-100 text-neutral-600
               {% endif %}">
               {{ e.get_event_type_display }}

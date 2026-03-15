@@ -35,17 +35,17 @@
         </div>
         {# Status badge #}
         <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold
-          {% if matching_attempt.status == 'matched' %}bg-green-100 text-green-700
+          {% if matching_attempt.status == 'matching_confirmed' or matching_attempt.status == 'ready_for_intro_call' or matching_attempt.status == 'awaiting_intro_call_feedback' or matching_attempt.status == 'matching_completed' %}bg-green-100 text-green-700
           {% elif matching_attempt.status == 'cancelled' %}bg-red-100 text-red-600
-          {% elif matching_attempt.status == 'awaiting_participant_reply' %}bg-secondary-100 text-secondary-700
-          {% elif matching_attempt.status == 'awaiting_coach_reply' %}bg-primary-100 text-primary-700
+          {% elif matching_attempt.status == 'ready_for_matching' %}bg-secondary-100 text-secondary-700
+          {% elif matching_attempt.status == 'matching_ongoing' %}bg-primary-100 text-primary-700
           {% else %}bg-neutral-100 text-neutral-600
           {% endif %}">
           <span class="w-2 h-2 rounded-full
-            {% if matching_attempt.status == 'matched' %}bg-green-500
+            {% if matching_attempt.status == 'matching_confirmed' or matching_attempt.status == 'ready_for_intro_call' or matching_attempt.status == 'awaiting_intro_call_feedback' or matching_attempt.status == 'matching_completed' %}bg-green-500
             {% elif matching_attempt.status == 'cancelled' %}bg-red-400
-            {% elif matching_attempt.status == 'awaiting_participant_reply' %}bg-secondary-500
-            {% elif matching_attempt.status == 'awaiting_coach_reply' %}bg-primary-500
+            {% elif matching_attempt.status == 'ready_for_matching' %}bg-secondary-500
+            {% elif matching_attempt.status == 'matching_ongoing' %}bg-primary-500
             {% else %}bg-neutral-400
             {% endif %}"></span>
           {{ matching_attempt.get_status_display }}
@@ -220,10 +220,8 @@
               
               <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
                 {% if req.status == 'accepted_matching' %}bg-green-100 text-green-700
-                {% elif req.status == 'rejected_matching' %}bg-red-100 text-red-600
-                {% elif req.status == 'awaiting_reply' %}bg-primary-100 text-primary-700
-                {% elif req.status == 'cancelled' %}bg-neutral-100 text-neutral-500
-                {% else %}bg-secondary-100 text-secondary-700
+                {% elif req.status == 'rejected_matching' or request_to_coach.status == 'cancelled' %}bg-secondary-200 text-secondary-700
+                {% else %}bg-neutral-100 text-neutral-600
                 {% endif %}">
                 {{ req.get_status_display }}
               </span>

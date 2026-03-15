@@ -62,18 +62,12 @@
           {% endif %}
 
           <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold
-            {% if request_to_coach.status == 'accepted_on_time' or request_to_coach.status == 'accepted_late' %}
+            {% if request_to_coach.status == 'accepted_matching' %}
               bg-green-100 text-green-700
-            {% elif request_to_coach.status == 'rejected_on_time' or request_to_coach.status == 'rejected_late' %}
-              bg-red-100 text-red-600
-            {% elif request_to_coach.status == 'awaiting_reply' %}
-              bg-primary-100 text-primary-700
-            {% elif request_to_coach.status == 'no_response_until_deadline' %}
-              bg-amber-100 text-amber-700
-            {% elif request_to_coach.status == 'cancelled' %}
-              bg-neutral-100 text-neutral-500
+            {% elif request_to_coach.status == 'rejected_matching' or request_to_coach.status == 'cancelled' %}
+              bg-secondary-200 text-secondary-700
             {% else %}
-              bg-secondary-100 text-secondary-700
+              bg-neutral-100 text-neutral-600
             {% endif %}">
 
             <span class="w-2 h-2 rounded-full

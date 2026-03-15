@@ -154,7 +154,7 @@ class MatchingAttemptDetailView(LoginRequiredMixin, DetailView):
         context['all_slack'] = all_slack
         context['notifications'] = notifications
         context['transitions'] = list(
-            matching_attempt.transitions.order_by('created_at')
+            matching_attempt.transitions.order_by('-created_at')
         )
         events = [matching_attempt.events.order_by('created_at')]
         
