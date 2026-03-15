@@ -304,9 +304,25 @@ class RequestToCoachCreateView(StaffRequiredMixin, View):
                 errors["priority"] = (
                     f"Diese Priorität ist bereits vergeben. Bestehende Prioritäten: {existing_sorted}"
                 )
+                
+        if "ue" not in errors:
+            try:
+                ue = int(ue)
+                if ue < 1:
+                    raise ValueError
+            except (ValueError, TypeError):
+                errors["ue"] = "Muss eine positive Zahl sein."
+            
+            try:
+                if ue > matching_attempt.ue:
+                    raise ValueError
+            except (ValueError):
+                errors["ue"] = f"Der Coach darf keinen Coaching-Auftrag erhalten, der mehr UE ({ue}) als die insgesamt genehmigten UE ({matching_attempt.ue}) hat."
 
         if errors:
+            available_coaches = Coach.objects.available().select_related('user').order_by('user__last_name', 'user__first_name')
             return render(request, "matching/request_to_coach_form.html", {
+                "pk": pk,
                 "matching_attempt": matching_attempt,
                 "next_priority": self._next_priority(matching_attempt),
                 "errors": errors,
@@ -315,6 +331,7 @@ class RequestToCoachCreateView(StaffRequiredMixin, View):
                 "posted_max_requests": request.POST.get("max_number_of_requests", "3"),
                 "ue": request.POST.get("ue", ""),
                 "posted_priority": request.POST.get("priority", ""),
+                "available_coaches": available_coaches,
             })
         # priority has been validated above (either user-supplied or auto-assigned)
         services.create_request_to_coach(
