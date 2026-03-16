@@ -44,6 +44,11 @@ class Coach(models.Model):
     languages = models.ManyToManyField(
         Language, related_name='coaches', blank=True, verbose_name='Sprachen'
     )
+    bio = models.TextField(blank=True, verbose_name='Biografie')
+    coaching_style = models.TextField(blank=True, verbose_name='Coaching-Stil', help_text='Coaching-Stil')
+    linkedin_url = models.URLField(blank=True, verbose_name='LinkedIn Profil')
+    profile_photo = models.ImageField(upload_to='coach_photos/', blank=True, null=True, verbose_name='Profilfoto')
+    
     coaching_format_online = models.BooleanField(default=False, verbose_name='Online')
     coaching_format_presence = models.BooleanField(default=False, verbose_name='Präsenz')
     coaching_format_hybrid = models.BooleanField(default=False, verbose_name='Hybrid')
@@ -66,6 +71,11 @@ class Coach(models.Model):
         default=Status.ONBOARDING,
         verbose_name='Status',
     )
+    
+    status_notes = models.TextField(blank=True, verbose_name='Status-Kommentar', help_text='Kommentar zum Status')
+    
+    maximum_capacity = models.PositiveIntegerField(verbose_name='Maximale Kapazität', help_text='Maximale Anzahl von Teilnehmer:innen, die gleichzeitig betreut werden können', blank=True, null=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     
     objects = CoachQuerySet.as_manager()
