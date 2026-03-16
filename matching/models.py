@@ -36,6 +36,8 @@ class MatchingAttempt(models.Model):
         MATCHING_CONFIRMED = "matching_confirmed", "Matching bestätigt"
         READY_FOR_INTRO_CALL = "ready_for_intro_call", "Bereit für Intro-Call"
         AWAITING_INTRO_CALL_FEEDBACK = "awaiting_intro_call_feedback", "Warten auf Intro-Call Rückmeldung"
+        INTRO_CALL_CONFIRMED = "intro_call_confirmed", "Intro-Call bestätigt"
+        READY_FOR_START_EMAIL = "ready_for_start_email", "Bereit für Start-E-Mail"
         MATCHING_COMPLETED = "matching_completed", "Matching abgeschlossen"
         FAILED = "failed", "Kein Coach gefunden"
         CANCELLED = "cancelled", "Matching abgebrochen"
@@ -77,12 +79,22 @@ class MatchingAttempt(models.Model):
         }),
         
         Status.AWAITING_INTRO_CALL_FEEDBACK: frozenset({
-            Status.MATCHING_COMPLETED,
+            Status.INTRO_CALL_CONFIRMED,
             Status.FAILED,
             Status.CANCELLED,
         }),
         
-        Status.MATCHING_COMPLETED: frozenset(),
+        Status.INTRO_CALL_CONFIRMED: frozenset({
+            Status.READY_FOR_START_EMAIL,
+            Status.FAILED,
+            Status.CANCELLED,
+        }),
+        
+        Status.READY_FOR_START_EMAIL: frozenset({
+            Status.MATCHING_COMPLETED,
+            Status.FAILED,
+            Status.CANCELLED,
+        }),
 
         Status.FAILED: frozenset(),
 
@@ -1156,27 +1168,14 @@ def _nullify_user_on_related_events(sender, instance, using, **kwargs):
     
 
 class CoachActionToken(models.Model):
-    """
-    A one-time-use token that authorises a coach to accept or decline a
-    RequestToCoach directly from an email link — no login required.
-
-    One ACCEPT token and one DECLINE token are created each time a coach
-    invitation email is sent (initial send + every reminder).  Old tokens
-    from earlier emails remain valid so the coach can use any email they
-    received.
-
-    The view that handles the URL must:
-      1. Look up the token (invalid link if not found).
-      2. Call consume_token() — shows "already responded" if used_at is set.
-      3. Check request_to_coach.status for a terminal state — shows
-         "already responded" if the coach replied via a different email's token.
-      4. Compare now() against request_to_coach.deadline to decide
-         ACCEPTED_ON_TIME vs ACCEPTED_LATE (or REJECTED_*).
+    """Model to represent action tokens for coaches, such as accepting or declining a match.
+    These tokens are generated when a request is sent to a coach and are used to securely identify the coach's response when they click on links in emails.
     """
 
     class Action(models.TextChoices):
         ACCEPT = 'accept', 'Annehmen'
         DECLINE = 'decline', 'Ablehnen'
+        CONFIRM_INTRO_CALL = 'confirm_intro_call', 'Intro-Call bestätigen'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     token = models.CharField(
@@ -1191,9 +1190,21 @@ class CoachActionToken(models.Model):
         on_delete=models.CASCADE,
         related_name='action_tokens',
         verbose_name='Anfrage an Coach',
+        blank=True,
+        null=True,
+        help_text='Die Coach-Anfrage, auf die sich dieser Token bezieht.'
+    )
+    matching_attempt = models.ForeignKey(
+        MatchingAttempt,
+        on_delete=models.CASCADE,
+        related_name='coach_action_tokens',
+        verbose_name='Matching',
+        blank=True,
+        null=True,
+        help_text='Das Matching, auf das sich dieser Token bezieht.'
     )
     action = models.CharField(
-        max_length=10,
+        max_length=18,
         choices=Action.choices,
         verbose_name='Aktion',
         help_text='Baked in at creation — cannot change after the token is issued.',
@@ -1213,6 +1224,14 @@ class CoachActionToken(models.Model):
         
         indexes = [
             models.Index(fields=["request_to_coach", "used_at"]),
+        ]
+        
+        # constraint only requestocoach or matchingattempt may be used, they cannot both be set or both be null. This ensures that the token is always linked to either a specific coach request (for accept/decline) or to the overall matching attempt (for intro call confirmation).
+        constraints = [
+            models.CheckConstraint(
+                condition=(Q(request_to_coach__isnull=False) & Q(matching_attempt__isnull=True)) | (Q(request_to_coach__isnull=True) & Q(matching_attempt__isnull=False)),
+                name='coach_action_token_linked_to_either_request_or_attempt'
+            )
         ]
 
     def __str__(self):

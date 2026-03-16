@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 from django.urls import reverse
 from django.utils import timezone
 
+
 if TYPE_CHECKING:
     from django.db.models import QuerySet
 
@@ -110,7 +111,7 @@ def consume_token(queryset: "QuerySet", token_value: str) -> tuple:
 # Coach action URL generation
 # ---------------------------------------------------------------------------
 
-def generate_coach_action_tokens(request_to_coach) -> tuple[str, str]:
+def generate_accept_and_decline_token(request_to_coach) -> tuple[str, str]:
     """
     Create one ACCEPT token and one DECLINE token for *request_to_coach* and
     return their absolute URLs as ``(accept_url, decline_url)``.
@@ -157,3 +158,36 @@ def generate_coach_action_tokens(request_to_coach) -> tuple[str, str]:
     decline_url = site_url + reverse('coach_respond', kwargs={'token': decline_token.token})
 
     return accept_url, decline_url
+
+def generate_intro_call_feedback_url(matching_attempt) -> str:
+    """
+    Create a CONFIRM_INTRO_CALL url for *matching_attempt* and return its absolute URL.
+    
+    Absolute URL is built using ``settings.SITE_URL`` so this function works
+    correctly from management commands and cron jobs where no ``HttpRequest`` is available.  Set ``SITE_URL`` in your ``.env`` file (no trailing slash):
+
+        SITE_URL=https://yourdomain.com        # production
+        SITE_URL=http://localhost:8000          # local dev (default)
+        
+    Args:
+        matching_attempt: A ``MatchingAttempt`` instance the token belongs to.
+    Returns:
+        Absolute URL safe to embed directly in an email template.
+    """
+    from django.conf import settings  # noqa: PLC0415
+
+    # Local import avoids a circular dependency:
+    # models.py does not import from tokens.py, but keeping the import here
+    # (rather than at module level) makes the dependency direction explicit.
+    from .models import CoachActionToken  # noqa: PLC0415
+
+    token = CoachActionToken.objects.create(
+        token=generate_secure_token(),
+        matching_attempt=matching_attempt,
+        action=CoachActionToken.Action.CONFIRM_INTRO_CALL,
+    )
+
+    site_url = settings.SITE_URL.rstrip('/')
+    url = site_url + reverse('confirm_intro_call', kwargs={'token': token.token})
+
+    return url

@@ -484,7 +484,7 @@ class CoachRespondView(View):
         )
 
         if token_instance is None:
-            return render(request, 'matching/coach_response_invalid.html', status=200)
+            return render(request, 'matching/coach_response_invalid_token.html', status=200)
 
         rtc = token_instance.request_to_coach
         coach = rtc.coach
@@ -565,5 +565,91 @@ class CoachRespondView(View):
                 'is_accept': is_accept,
                 'on_time': on_time,
                 'deadline': rtc.deadline_at,
+            },
+        )
+
+
+
+
+class ConfirmIntroCallView(View):
+    """Handles coach confirmation of intro call completion.
+
+    Public — no login required. The token in the URL is the sole authorisation.
+
+    Decision tree
+    -------------
+    1. Look up token in DB
+    2. If token not found → render invalid token page
+    3. If token already used (used_at set) → render already used page
+    4. If MatchingAttempt already in a terminal state → render already used page with previous status
+    5. Otherwise, transition MatchingAttempt to READY_FOR_START_EMAIL and render success page"""
+
+
+    # States that mean that the matching has been completed already
+    TERMINAL_STATUSES = {
+        MatchingAttempt.Status.MATCHING_COMPLETED,
+    }
+
+
+    def get(self, request, token):
+        # ── 1. Look up token ────────────────────────────────────────────────
+        token_instance, already_used = consume_token(
+            CoachActionToken.objects.select_related(
+                'matching_attempt__matched_coach__user',
+                'matching_attempt__participant',
+            ),
+            token,
+        )
+
+        if token_instance is None:
+            return render(request, 'matching/coach_response_invalid_token.html', status=200)
+
+        ma = token_instance.matching_attempt
+        coach = ma.matched_coach
+        participant = ma.participant
+
+        base_context = {
+            'coach_name': coach.full_name,
+            'participant_name': f"{participant.first_name} {participant.last_name}",
+            'participant_first_name': participant.first_name,
+        }
+
+        # ── 2. Token already consumed ────────────────────────────────────────
+        if already_used:
+            return render(
+                request,
+                'matching/coach_response_already_used.html',
+                {**base_context},
+            )
+
+        # ── 3. RequestToCoach already in a terminal state ────────────────────
+        if ma.status in self.TERMINAL_STATUSES:
+            return render(
+                request,
+                'matching/coach_response_already_used.html',
+                {**base_context, 'previous_status': ma.get_status_display()},
+            )
+
+        # ── 4 & 5. Determine timing and update status ────────────────────────
+        ma = ma.transition_to(
+            MatchingAttempt.Status.INTRO_CALL_CONFIRMED,
+        )
+        
+        ma = ma.transition_to(
+            MatchingAttempt.Status.READY_FOR_START_EMAIL,
+        )
+        
+        MatchingAttemptEvent.objects.create(
+            matching_attempt=ma,
+            event_type=MatchingAttemptEvent.EventType.INTRO_CALL_CONFIRMED,
+            triggered_by=MatchingAttemptEvent.TriggeredBy.COACH,
+            triggered_by_user=coach.user,
+        )
+
+        return render(
+            request,
+            'matching/coach_response_intro_call.html',
+            {
+                **base_context,
             },
         )

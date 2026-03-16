@@ -44,7 +44,7 @@ def test_reminder_email_updates_counter(rtc):
     rtc.save()
 
     with patch("matching.notifications.send_email"):
-        with patch("matching.notifications.generate_coach_action_tokens", return_value=("a","b")):
+        with patch("matching.notifications.generate_accept_and_decline_token", return_value=("a","b")):
 
             send_reminder_coach_request_email(rtc)
 

@@ -39,7 +39,7 @@
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-3">
             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
-              {% if e.event_type == 'rtc_accepted' or e.event_type == 'accepted' %}bg-green-100 text-green-700
+              {% if e.event_type == 'rtc_accepted' or e.event_type == 'accepted' or e.event_type == 'intro_call_confirmed' %}bg-green-100 text-green-700
               {% elif e.event_type == 'rtc_rejected' or e.event_type == 'rtc_cancelled' or e.event_type == 'matching_cancelled' or e.event_type == 'rejected' or e.event_type == 'cancelled' %}bg-secondary-200 text-secondary-700
               {% else %}bg-neutral-100 text-neutral-600
               {% endif %}">

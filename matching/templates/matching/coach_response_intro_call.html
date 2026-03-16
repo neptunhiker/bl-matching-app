@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Intro-Call bestätigt{% endblock %}
+
+{% block body %}
+<div class="max-w-lg mx-auto px-4 py-16 text-center">
+
+  <div class="flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full bg-green-100">
+    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+    </svg>
+  </div>
+  <h1 class="text-2xl font-bold text-neutral-800 mb-3">Intro-Call bestätigt!</h1>
+  <p class="text-neutral-600">
+    Du hast den Intro-Call mit <strong>{{ participant_name }}</strong> bestätigt.
+  </p>
+
+  <p class="mt-6 text-sm text-neutral-400">
+    Wir werden nun die Start-E-Mail mit weiteren Details sowohl an dich als auch an <strong>{{ participant_first_name }}</strong> verschicken, sodass es losgehen kann. Bei Fragen melde dich gerne bei uns.
+  </p>
+
+</div>
+{% endblock %}

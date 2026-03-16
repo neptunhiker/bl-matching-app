@@ -15,7 +15,7 @@ from profiles.models import Coach
 from slack.services import send_first_coach_request_slack, send_reminder_coach_request_slack, send_intro_call_request_slack
 from .locks import _get_locked_request_to_coach, _get_locked_matching_attempt
 from .models import RequestToCoach, RequestToCoachEvent, MatchingAttempt
-from .tokens import generate_coach_action_tokens
+from .tokens import generate_accept_and_decline_token, generate_intro_call_feedback_url
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ def _send_request_email(
         template_name: str,
         triggered_by: str,
     ):
-    accept_url, decline_url = generate_coach_action_tokens(rtc)
+    accept_url, decline_url = generate_accept_and_decline_token(rtc)
 
     context = _build_email_context(rtc, accept_url, decline_url)
 
@@ -162,6 +162,8 @@ def send_intro_call_request_email(matching_attempt: MatchingAttempt, triggered_b
     
     matching_attempt.send_intro_call_request(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
     
+    intro_call_feedback_url = generate_intro_call_feedback_url(matching_attempt)
+    
     coach = matching_attempt.matched_coach
     context = {
         "recipient_name": coach.first_name,
@@ -169,6 +171,7 @@ def send_intro_call_request_email(matching_attempt: MatchingAttempt, triggered_b
         "participant_email": participant.email,
         "learn_more_url": settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk}),
         "urgency_message": get_urgency_message(participant, start_date=participant.start_date),
+        "intro_call_feedback_url": intro_call_feedback_url,
         "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
     }
     

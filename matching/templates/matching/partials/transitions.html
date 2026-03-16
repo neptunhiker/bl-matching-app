@@ -45,7 +45,7 @@
           </svg>
           <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold
             {% if t.to_status %}
-              {% if t.to_status == 'matching_confirmed' or t.to_status == 'matching_completed' or t.to_status == 'accepted_matching' %}bg-green-100 text-green-700
+              {% if t.to_status == 'matching_confirmed' or t.to_status == 'matching_completed' or t.to_status == 'accepted_matching' or t.to_status == 'intro_call_confirmed' %}bg-green-100 text-green-700
               {% elif t.to_status == 'rejected_matching' or t.to_status == 'failed' or t.to_status == 'cancelled' %}bg-secondary-200 text-secondary-700
               {% else %}bg-neutral-100 text-neutral-600
               {% endif %}

@@ -8,7 +8,7 @@ from django.utils import timezone
 from accounts.models import User
 from matching.locks import _get_locked_request_to_coach, _get_locked_matching_attempt
 from matching.models import RequestToCoach, MatchingAttempt
-from matching.tokens import generate_coach_action_tokens
+from matching.tokens import generate_accept_and_decline_token, generate_intro_call_feedback_url
 from matching.utils import get_urgency_message
 from slack.models import SlackLog
 
@@ -37,7 +37,7 @@ def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="syste
     rtc = _get_locked_request_to_coach(rtc)
     rtc = rtc.send_request(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
     
-    accept_url, decline_url = generate_coach_action_tokens(rtc)
+    accept_url, decline_url = generate_accept_and_decline_token(rtc)
     
     blocks = [
         {
@@ -169,7 +169,7 @@ def send_reminder_coach_request_slack(rtc: RequestToCoach, triggered_by: str="sy
     
     coach = rtc.coach
     
-    accept_url, decline_url = generate_coach_action_tokens(rtc)
+    accept_url, decline_url = generate_accept_and_decline_token(rtc)
     
     blocks = [
         {
@@ -300,6 +300,8 @@ def send_intro_call_request_slack(matching_attempt: MatchingAttempt, triggered_b
     matching_attempt = _get_locked_matching_attempt(matching_attempt)
     matching_attempt = matching_attempt.send_intro_call_request(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
     
+    intro_call_feedback_url = generate_intro_call_feedback_url(matching_attempt)
+    
     blocks = [
         {
             "type": "header",
@@ -346,7 +348,7 @@ def send_intro_call_request_slack(matching_attempt: MatchingAttempt, triggered_b
                 "type": "mrkdwn",
                 "text": (
                     f"*3️⃣ Danach bestätigst du den Coaching-Start*\n"
-                    f"Sobald ihr gesprochen habt, bitten wir dich nur noch, den Coaching-Start zu bestätigen. Dazu bekommst du automatisch eine Nachricht mit einem Link, über den du den Start bestätigen kannst. Danach kann es auch schon losgehen! 🚀"
+                    f"Sobald ihr gesprochen habt, bitten wir dich nur noch, den Coaching-Start zu bestätigen. Das kannst du mit nur einem Klick <{intro_call_feedback_url}|hier> tun. Danach kann es auch schon losgehen! 🚀"
                 )
             }
         },

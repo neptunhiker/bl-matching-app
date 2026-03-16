@@ -12,6 +12,7 @@ from .views import (
     ToggleAutomationView,
     RequestToCoachUpdateView,
     RequestToCoachDeleteView,
+    ConfirmIntroCallView,
 )
 
 
@@ -28,6 +29,7 @@ urlpatterns = [
     path('request-to-coach/<uuid:pk>/delete/', RequestToCoachDeleteView.as_view(), name='request_to_coach_delete'),
     # Public — no login required. Token in URL authorises the action.
     path('response_coach/<str:token>/', CoachRespondView.as_view(), name='coach_respond'),
+    path('confirm_intro_call/<str:token>/', ConfirmIntroCallView.as_view(), name='confirm_intro_call'),
 ]
 
 
