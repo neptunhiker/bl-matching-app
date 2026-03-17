@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.generic import DetailView, ListView, CreateView, View, UpdateView, DeleteView
+from django.views.generic import DetailView, ListView, CreateView, View, UpdateView, DeleteView, TemplateView
 from django.contrib import messages
 from django.db import IntegrityError
 from django.utils.html import format_html
@@ -653,3 +653,6 @@ class ConfirmIntroCallView(View):
                 **base_context,
             },
         )
+
+class FlowChartView(LoginRequiredMixin, TemplateView):
+    template_name = 'matching/flow_chart.html'

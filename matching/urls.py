@@ -13,6 +13,7 @@ from .views import (
     RequestToCoachUpdateView,
     RequestToCoachDeleteView,
     ConfirmIntroCallView,
+    FlowChartView
 )
 
 
@@ -30,6 +31,7 @@ urlpatterns = [
     # Public — no login required. Token in URL authorises the action.
     path('response_coach/<str:token>/', CoachRespondView.as_view(), name='coach_respond'),
     path('confirm_intro_call/<str:token>/', ConfirmIntroCallView.as_view(), name='confirm_intro_call'),
+    path('flow_chart/', FlowChartView.as_view(), name='matching_flow_chart'),
 ]
 
 
