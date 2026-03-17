@@ -400,3 +400,97 @@ def send_intro_call_request_slack(matching_attempt: MatchingAttempt, triggered_b
         sent_by=triggered_by,
         sent_by_user=triggered_by_user,
     )
+    
+def send_coaching_starting_info_slack(matching_attempt: MatchingAttempt, triggered_by: str="system", triggered_by_user: User = None):
+  
+    client = WebClient(token=settings.SLACK_BOT_TOKEN)
+    coach = matching_attempt.matched_coach
+    participant = matching_attempt.participant
+    url_participant = settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk})
+
+    user_id = coach.slack_user_id
+    start_date = participant.start_date
+    
+    if not user_id:
+        raise ValueError(f"Coach {coach} does not have a Slack user ID")
+    
+    # Open a DM channel
+    response = client.conversations_open(users=[user_id])
+    dm_channel = response["channel"]["id"]
+    
+    matching_attempt = _get_locked_matching_attempt(matching_attempt)
+    matching_attempt = matching_attempt.send_coaching_start_info(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
+    
+    
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": f":star-struck: Nächster Schritt: Coaching-Start mit {participant}"
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"Es kann losgehen! Dein Coaching mit *{participant.first_name}* startet jetzt offiziell. 🙌\n\n"
+                )
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"*Bitte organisiere nun die ersten Coaching-Sessions mit {participant.first_name}.* Am besten wäre es, wenn der erste Termin gleich am {start_date.strftime('%d.%m.%Y')} stattfindet.\n"
+                )
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"Falls du noch Fragen hast oder Unterstützung brauchst, melde dich gerne jederzeit bei uns im Team! Wir sind hier, um dich zu unterstützen. 😊"
+                )
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"🔎 *Alle Infos zum Coaching*\n"
+                    f"Hier findest du nochmal die wichtigsten Details zu *{participant.first_name}* "
+                    f"und den Coaching-Zielen:\n"
+                    f"<{url_participant}|➡ Coaching ansehen>"
+                )
+            },
+        },
+    ]
+
+    subject = f":star-struck: Coaching mit {participant.first_name} kann starten"
+    
+    # Send the message
+    client.chat_postMessage(
+        channel=dm_channel,
+        text=subject,
+        blocks=blocks
+    )
+    
+    # turnblocks into a string for logging
+    message = "\n".join([block["text"]["text"] for block in blocks if "text" in block and "text" in block["text"]])
+    
+    # Log the message in the database
+    SlackLog.objects.create(
+        to=coach,
+        subject=subject,
+        message=message,
+        status=SlackLog.Status.SENT,
+        slack_trigger=SlackLog.SlackTrigger.AUTOMATED,
+        matching_attempt=matching_attempt,
+        sent_by=triggered_by,
+        sent_by_user=triggered_by_user,
+    )

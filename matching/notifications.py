@@ -12,7 +12,7 @@ from emails.services import send_email
 from emails.models import EmailLog
 from matching.utils import get_urgency_message
 from profiles.models import Coach
-from slack.services import send_first_coach_request_slack, send_reminder_coach_request_slack, send_intro_call_request_slack
+from slack.services import send_first_coach_request_slack, send_reminder_coach_request_slack, send_intro_call_request_slack, send_coaching_starting_info_slack
 from .locks import _get_locked_request_to_coach, _get_locked_matching_attempt
 from .models import RequestToCoach, RequestToCoachEvent, MatchingAttempt
 from .tokens import generate_accept_and_decline_token, generate_intro_call_feedback_url
@@ -59,6 +59,21 @@ def send_intro_call_request_notification(matching_attempt: MatchingAttempt, trig
     
     # Inform participant
     send_intro_call_info_email_to_participant(matching_attempt, triggered_by=triggered_by, triggered_by_user=triggered_by_user)
+    
+def send_coaching_start_info_notification(matching_attempt: MatchingAttempt, triggered_by: str="system", triggered_by_user: User = None):
+
+    coach = matching_attempt.matched_coach
+
+    if coach.preferred_communication_channel == Coach.CommunicationChannel.SLACK:
+        send_coaching_starting_info_slack(matching_attempt, triggered_by=triggered_by, triggered_by_user=triggered_by_user)
+        
+    elif coach.preferred_communication_channel == Coach.CommunicationChannel.EMAIL:
+        send_coaching_start_info_email_to_coach(matching_attempt, triggered_by=triggered_by, triggered_by_user=triggered_by_user)
+    else:
+        raise ValueError(f"Unsupported communication channel for coach {coach}: {coach.preferred_communication_channel}")
+    
+    # Inform participant
+    send_coaching_start_info_email_to_participant(matching_attempt, triggered_by=triggered_by, triggered_by_user=triggered_by_user)
 
 
 def _build_email_context(
@@ -219,6 +234,91 @@ def send_intro_call_info_email_to_participant(matching_attempt: MatchingAttempt,
             to=participant.email,
             subject=f"Wir haben einen Coach für dich gefunden 🎉",
             template_name='emails/intro_call_info_to_participant.html',
+            context=context,
+            matching_attempt=matching_attempt,
+            sent_by=context["author"],
+            triggered_by=triggered_by
+            )
+    )
+        
+    return matching_attempt
+
+@transaction.atomic
+def send_coaching_start_info_email_to_coach(matching_attempt: MatchingAttempt, triggered_by: str="system", triggered_by_user: User = None) -> MatchingAttempt:
+    """Send an email to the coach to inform them about the official start of the coaching."""
+    
+    if triggered_by not in [RequestToCoachEvent.TriggeredBy.SYSTEM, RequestToCoachEvent.TriggeredBy.STAFF]:
+        raise ValueError("Invalid value for triggered_by. Must be either 'system' or 'staff'.")
+    
+    if triggered_by == RequestToCoachEvent.TriggeredBy.STAFF and not triggered_by_user:
+        raise ValueError("triggered_by_user must be provided when triggered_by is 'staff'.")
+    
+    matching_attempt = _get_locked_matching_attempt(matching_attempt)
+    
+    participant = matching_attempt.participant
+    start_date = participant.start_date.strftime("%d.%m.%Y")
+    
+    matching_attempt.send_coaching_start_info(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
+    
+    coach = matching_attempt.matched_coach
+    context = {
+        "recipient_name": coach.first_name,
+        "participant_name": participant.first_name,
+        "participant_email": participant.email,
+        "start_date": start_date,
+        "learn_more_url": settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk}),
+        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
+    }
+    
+    transaction.on_commit(
+        lambda: send_email(
+            to=coach.user.email,
+            subject=f"Coaching-Start mit {participant}",
+            template_name='emails/info_coaching_start_to_coach.html',
+            context=context,
+            matching_attempt=matching_attempt,
+            sent_by=context["author"],
+            triggered_by=triggered_by
+            )
+    )
+        
+    return matching_attempt
+
+
+@transaction.atomic
+def send_coaching_start_info_email_to_participant(matching_attempt: MatchingAttempt, triggered_by: str="system", triggered_by_user: User = None) -> MatchingAttempt:
+    """Send an email to the participant to inform them about the official start of the coaching."""
+    
+    if triggered_by not in [RequestToCoachEvent.TriggeredBy.SYSTEM, RequestToCoachEvent.TriggeredBy.STAFF]:
+        raise ValueError("Invalid value for triggered_by. Must be either 'system' or 'staff'.")
+    
+    if triggered_by == RequestToCoachEvent.TriggeredBy.STAFF and not triggered_by_user:
+        raise ValueError("triggered_by_user must be provided when triggered_by is 'staff'.")
+    
+    matching_attempt = _get_locked_matching_attempt(matching_attempt)
+    
+    participant = matching_attempt.participant
+    start_date = participant.start_date.strftime("%d.%m.%Y")
+    
+    matching_attempt.send_coaching_start_info_to_participant(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
+    
+    coach = matching_attempt.matched_coach
+    
+    context = {
+        "recipient_name": participant.first_name,
+        "coach_name": coach,
+        "coach_first_name": coach.first_name,
+        "coach_email": coach.user.email,
+        "participant_first_name": participant.first_name,
+        "start_date": start_date,
+        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
+    }
+    
+    transaction.on_commit(
+        lambda: send_email(
+            to=participant.email,
+            subject=f"Coaching-Start mit {coach.full_name}",
+            template_name='emails/info_coaching_start_to_participant.html',
             context=context,
             matching_attempt=matching_attempt,
             sent_by=context["author"],

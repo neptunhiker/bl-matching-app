@@ -1,0 +1,52 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+
+<h2 style="margin-bottom:20px;">
+Coaching-Start mit {{ participant_name }}
+</h2>
+
+<p>
+Gute Nachrichten: Das Coaching mit <strong>{{ participant_name }}</strong> kann jetzt offiziell starten.
+</p>
+
+<p style="margin-top:16px;">
+Bitte organisiere nun die ersten Coaching-Sessions mit {{ participant_name }}.
+Idealerweise findet der erste Termin bereits am <strong>{{ start_date }}</strong> statt.
+</p>
+
+<p style="margin-top:16px;">
+{{ participant_name }} freut sich auf die Zusammenarbeit mit dir – ein früher Start hilft,
+direkt Struktur und Momentum in das Coaching zu bringen.
+</p>
+
+<p style="margin-top:20px;">
+Hier findest du noch einmal alle wichtigen Informationen zu
+<strong>{{ participant_name }}</strong> sowie die vereinbarten Coaching-Ziele:
+</p>
+
+<p>
+<a href="{{ learn_more_url }}">Coaching ansehen</a>
+</p>
+
+<p style="margin-top:20px;">
+Falls du noch Fragen hast oder Unterstützung brauchst, melde dich jederzeit gerne bei uns.
+Wir begleiten dich während des gesamten Coachings.
+</p>
+
+{% if urgency_msg %}
+<p style="margin-top:22px; font-size:0.95rem; color:#6b7280;">
+<strong>Hinweis:</strong> {{ urgency_msg }}
+</p>
+{% endif %}
+
+<p style="margin-top:26px;">
+Vielen Dank für dein Engagement und einen erfolgreichen Start in das Coaching.
+</p>
+
+<p style="margin-top:16px;">
+Viele Grüße<br>
+{{ author }}
+</p>
+
+{% endblock %}

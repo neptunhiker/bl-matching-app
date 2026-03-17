@@ -26,6 +26,13 @@ class MatchingAttemptQuerySet(models.QuerySet):
                 Coach.Status.AVAILABLE,
             ]
         )
+        
+    def eligible_for_start_info_notification(self):
+        return self.filter(
+            status=MatchingAttempt.Status.READY_FOR_START_EMAIL,
+            coaching_start_info_sent_at__isnull=True,
+            automation_enabled=True,
+        )
 
 class MatchingAttempt(models.Model):
 
@@ -158,7 +165,7 @@ class MatchingAttempt(models.Model):
     intro_call_requested_at = models.DateTimeField(
         null=True,
         blank=True,
-        help_text="Zeitpunkt, zu dem der Coach erstmals gebenten wurde, einen Intro-Call mit dem(r) Teilnehmer:in zu organisieren."
+        help_text="Zeitpunkt, zu dem der Coach erstmals gebeten wurde, einen Intro-Call mit dem(r) Teilnehmer:in zu organisieren."
     )
     
     intro_call_confirmed_at = models.DateTimeField(
@@ -170,8 +177,15 @@ class MatchingAttempt(models.Model):
     intro_call_info_sent_at = models.DateTimeField(
         null=True,
         blank=True,
-        help_text="Zeitpunkt, zu dem der/die Teilnehmer:in eine Info über den gematchten Coach erhalten hat."
+        help_text="Zeitpunkt, zu dem der/die Teilnehmer:in und der Coach Infos für ein Kennenlerngespräch (Intro-Call) erhalten haben."
     )
+    
+    coaching_start_info_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Zeitpunkt, zu dem der/die Teilnehmer:in und der Coach eine Info zum Start des Coachings erhalten haben."
+    )
+    
     cancelled_at = models.DateTimeField(null=True, blank=True)
     
     objects = MatchingAttemptQuerySet.as_manager()
@@ -389,6 +403,75 @@ class MatchingAttempt(models.Model):
             self.save()
 
         return self
+    
+    def can_send_coaching_start_info(self):
+        return self.status == self.Status.READY_FOR_START_EMAIL and not self.coaching_start_info_sent_at and self.matched_coach 
+    
+    def send_coaching_start_info(self, triggered_by="system", triggered_by_user=None) -> "MatchingAttempt":
+
+        if not self.can_send_coaching_start_info():
+            raise ValidationError(f"Coaching start info cannot be sent in the current status: {self.get_status_display()}. It can only be sent when the status is {self.Status.READY_FOR_START_EMAIL}.")
+
+        if triggered_by == MatchingAttemptEvent.TriggeredBy.COACH:
+            raise ValidationError("Coaches cannot trigger sending coaching start info")
+
+        if triggered_by == MatchingAttemptEvent.TriggeredBy.STAFF and triggered_by_user is None:
+            raise ValidationError(
+                "triggered_by_user must be provided when triggered_by='staff'"
+            )
+
+        if triggered_by == MatchingAttemptEvent.TriggeredBy.SYSTEM and triggered_by_user is not None:
+            raise ValidationError(
+                "triggered_by_user must be None when triggered_by='system'"
+            )
+
+        with transaction.atomic():
+
+            self = self.transition_to(self.Status.MATCHING_COMPLETED)
+
+            MatchingAttemptEvent.objects.create(
+                matching_attempt=self,
+                event_type=MatchingAttemptEvent.EventType.COACHING_START_INFO_SENT,
+                triggered_by=triggered_by,
+                triggered_by_user=triggered_by_user,
+            )
+            
+            self.coaching_start_info_sent_at = timezone.now()
+
+            self.save()
+
+        return self
+
+    
+    def send_coaching_start_info_to_participant(self, triggered_by="system", triggered_by_user=None) -> "MatchingAttempt":
+
+        if triggered_by == MatchingAttemptEvent.TriggeredBy.COACH:
+            raise ValidationError("Coaches cannot trigger sending coaching start info")
+
+        if triggered_by == MatchingAttemptEvent.TriggeredBy.STAFF and triggered_by_user is None:
+            raise ValidationError(
+                "triggered_by_user must be provided when triggered_by='staff'"
+            )
+
+        if triggered_by == MatchingAttemptEvent.TriggeredBy.SYSTEM and triggered_by_user is not None:
+            raise ValidationError(
+                "triggered_by_user must be None when triggered_by='system'"
+            )
+
+        with transaction.atomic():
+
+            MatchingAttemptEvent.objects.create(
+                matching_attempt=self,
+                event_type=MatchingAttemptEvent.EventType.COACHING_START_INFO_SENT,
+                triggered_by=triggered_by,
+                triggered_by_user=triggered_by_user,
+            )
+            
+            self.coaching_start_info_sent_at = timezone.now()
+
+            self.save()
+
+        return self
 
     # -------------------------------------------------------
     # queue helpers
@@ -515,6 +598,9 @@ class MatchingAttemptEvent(models.Model):
         # Intro-Call Info to Participant
         INTRO_CALL_INFO_SENT = "intro_call_info_sent", "Intro-Call Info versendet"
 
+        # Coaching Start Info
+        COACHING_START_INFO_SENT = "coaching_start_info_sent", "Coaching-Start Info versendet"
+        
         # Intro-Call Deadlines
         INTRO_CONFIRMATION_DEADLINE_PASSED = (
             "intro_confirmation_deadline_passed",
