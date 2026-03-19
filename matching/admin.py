@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import CoachActionToken, MatchingAttempt, RequestToCoach, MatchingAttemptTransition, RequestToCoachTransition, RequestToCoachEvent, MatchingAttemptEvent
+from .models import CoachActionToken, MatchingAttempt, RequestToCoach, MatchingAttemptTransition, RequestToCoachTransition, RequestToCoachEvent, MatchingAttemptEvent, MatchingEvent
 
 
 
@@ -73,5 +73,11 @@ class MatchingAttemptEventAdmin(admin.ModelAdmin):
     ordering = ['-created_at']
 
       
+@admin.register(MatchingEvent)
+class MatchingEventAdmin(admin.ModelAdmin):
+    list_display = ['id', 'matching_attempt', 'event_type', 'created_at']
+    list_filter = ['event_type']
+    search_fields = ['matching_attempt__participant__first_name', 'matching_attempt__participant__last_name', 'matching_attempt__participant__email']
+    ordering = ['-created_at']
     
 
