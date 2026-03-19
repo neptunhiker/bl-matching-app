@@ -9,6 +9,8 @@ from django.utils import timezone
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 
+from django_fsm import FSMField, transition
+
 from accounts.models import User
 from .locks import _get_locked_matching_attempt
 from .utils import add_business_hours
@@ -36,6 +38,17 @@ class MatchingAttemptQuerySet(models.QuerySet):
 
 class MatchingAttempt(models.Model):
 
+    class State(models.TextChoices):
+        IN_PREPARATION = "in_preparation", "In Vorbereitung"
+        READY_FOR_FIRST_COACH_REQUEST= "ready_for_first_coach_request", "Bereit für erste Coach-Anfrage"
+        AWAITING_RTC_REPLY = "awaiting_rtc_reply", "Warten auf Coach-Antwort zu Matching-Anfrage"
+        READY_FOR_INTRO_CALL_REQUEST = "ready_for_intro_call_request", "Bereit für Intro-Call Anfrage"
+        AWAITING_INTRO_CALL_REPLY = "awaiting_intro_call_reply", "Warten auf Coach-Antwort zu Intro-Call Anfrage"
+        READY_FOR_START_NOTIFICATION = "ready_for_start_notification", "Bereit für Coaching-Start-Benachrichtigung"
+        MATCHING_COMPLETED = "matching_completed", "Matching abgeschlossen"
+        FAILED = "failed", "Kein Coach gefunden"
+        CANCELLED = "cancelled", "Matching abgebrochen"
+        
     class Status(models.TextChoices):
         IN_PREPARATION = "in_preparation", "In Vorbereitung"
         READY_FOR_MATCHING = "ready_for_matching", "Bereit für Matching"
@@ -137,6 +150,14 @@ class MatchingAttempt(models.Model):
         default=Status.IN_PREPARATION,
         db_index=True,
     )
+    
+    state = FSMField(
+        choices=State.choices,
+        default=Status.IN_PREPARATION,
+        protected=True,
+        db_index=True,
+    )
+    
 
     # automation
     automation_enabled = models.BooleanField(
@@ -329,6 +350,10 @@ class MatchingAttempt(models.Model):
         )
 
         return updated
+    
+    @transition(field=state, source=State.READY_FOR_FIRST_COACH_REQUEST, target=State.AWAITING_RTC_REPLY)
+    def _transition_to_awaiting_rtc_reply(self):
+        pass
 
     def can_send_intro_call_request(self):
         return self.status == self.Status.READY_FOR_INTRO_CALL and not self.intro_call_requested_at and self.matched_coach and self.matched_coach.status == Coach.Status.AVAILABLE
@@ -559,6 +584,92 @@ class MatchingAttemptTransition(models.Model):
     def __str__(self):
         return f"{self.from_status} → {self.to_status}"
         
+class MatchingEvent(models.Model):
+    
+    class EventType(models.TextChoices):
+
+        # =========================================================
+        # 1. MATCHING LIFECYCLE (high-level state transitions)
+        # =========================================================
+        CREATED = "created", "Matching erstellt"
+        STARTED = "started", "Matching gestartet"
+
+        COMPLETED = "completed", "Matching erfolgreich abgeschlossen"
+        FAILED = "failed", "Matching fehlgeschlagen / kein Coach gefunden"
+        CANCELLED = "cancelled", "Matching abgebrochen"
+
+
+        # =========================================================
+        # 2. AUTOMATION CONTROL (system behavior)
+        # =========================================================
+        AUTOMATION_ENABLED = "automation_enabled", "Automatisierung aktiviert"
+        AUTOMATION_DISABLED = "automation_disabled", "Automatisierung deaktiviert"
+
+
+        # =========================================================
+        # 3. REQUEST-TO-COACH (RTC) LIFECYCLE
+        # one RTC = one attempt with a specific coach
+        # =========================================================
+        RTC_CREATED = "rtc_created", "Matching-Anfrage an Coach erstellt"
+        RTC_SENT_TO_COACH = "rtc_sent_to_coach", "Matching-Anfrage an Coach versendet"
+        RTC_REMINDER_SENT_TO_COACH = "rtc_reminder_sent_to_coach", "Erinnerung versendet"
+
+        # Terminal states (important for automation logic!)
+        RTC_ACCEPTED = "rtc_accepted", "Anfrage akzeptiert"
+        RTC_DECLINED = "rtc_declined", "Anfrage abgelehnt"
+        RTC_TIMED_OUT = "rtc_timed_out", "Keine Antwort (Timeout)"
+        RTC_CANCELLED = "rtc_cancelled", "Anfrage abgebrochen"
+
+        # Optional but useful for debugging / audit
+        RTC_DELETED = "rtc_deleted", "Matching-Anfrage gelöscht"
+
+
+        # =========================================================
+        # 4. INTRO CALL PROCESS
+        # (after a coach shows interest)
+        # =========================================================
+        INTRO_CALL_REQUEST_SENT_TO_COACH = "intro_call_request_sent_to_coach", "Intro-Call Anfrage an Coach versendet"
+        INTRO_CALL_REMINDER_SENT_TO_COACH = "intro_call_reminder_sent_to_coach", "Reminder für Intro-Call Anfrage"
+
+        INTRO_CALL_FEEDBACK_RECEIVED_FROM_COACH = "intro_call_feedback_received_from_coach", "Feedback vom Coach erhalten"
+
+
+        # =========================================================
+        # 5. COACHING START COMMUNICATION
+        # =========================================================
+        COACHING_START_INFO_SENT_TO_PARTICIPANT = "coaching_start_info_sent_to_participant", "Start-Info an Teilnehmer:in"
+        COACHING_START_INFO_SENT_TO_COACH = "coaching_start_info_sent_to_coach", "Start-Info an Coach"
+
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    matching_attempt = models.ForeignKey(
+        MatchingAttempt,
+        on_delete=models.CASCADE,
+        related_name="matching_events",
+    )
+    
+    event_type = models.CharField(
+        max_length=50,
+        choices=EventType.choices,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    payload = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Optionales JSON-Feld für zusätzliche Informationen zum Ereignis (z.B. Coach-ID bei RTC-bezogenen Ereignissen)",
+    )
+    
+    class Meta:
+        ordering = ["created_at"]
+        verbose_name = "Matching Ereignis"
+        verbose_name_plural = "Matching Ereignisse"
+        
+    def __str__(self):
+         return f"{self.get_event_type_display()} - {self.matching_attempt} - {self.created_at}"
+
 
 class MatchingAttemptEvent(models.Model):
 
@@ -733,6 +844,14 @@ class RequestToCoachQuerySet(models.QuerySet):
         
 class RequestToCoach(models.Model):
 
+    class State(models.TextChoices):
+        IN_PREPARATION = "in_preparation", "In Vorbereitung"
+        AWAITING_REPLY = "awaiting_reply", "Warten auf Antwort"
+        ACCEPTED = "accepted", "Akzeptiert"
+        REJECTED = "rejected", "Abgelehnt"
+        NO_RESPONSE_UNTIL_DEADLINE = "no_response_until_deadline", "Keine Rückmeldung bis zur Deadline"
+        CANCELLED = "cancelled", "Anfrage abgebrochen"
+        
     class Status(models.TextChoices):
         IN_PREPARATION = "in_preparation", "In Vorbereitung"
         AWAITING_REPLY = "awaiting_reply", "Warten auf Antwort"
@@ -807,6 +926,14 @@ class RequestToCoach(models.Model):
         default=Status.IN_PREPARATION,
         db_index=True,
     )
+    
+    state = FSMField(
+        max_length=50,
+        choices=State.choices,
+        default=State.IN_PREPARATION,
+        protected=True,
+        db_index=True,
+    )
 
     deadline_at = models.DateTimeField(
         null=True,
@@ -825,10 +952,6 @@ class RequestToCoach(models.Model):
     def allowed_transitions(self):
         return self.ALLOWED_COACH_REQUEST_TRANSITIONS.get(self.status, frozenset())
 
-    def can_send_request(self):
-        return (
-            self.status == self.Status.IN_PREPARATION and self.requests_sent < 1 and self.first_sent_at is None
-        )
 
     def can_send_reminder(self):
         return (
@@ -899,57 +1022,32 @@ class RequestToCoach(models.Model):
     # Domain Actions
     # -------------------------------------------------------------
 
-    def send_request(self, triggered_by="system", triggered_by_user=None) -> "RequestToCoach":
-
-        if not self.can_send_request():
-            raise ValidationError("Maximum number of requests reached")
-
-        if triggered_by == "coach":
-            raise ValidationError("Coaches cannot trigger sending requests")
-
-        if triggered_by == "staff" and triggered_by_user is None:
-            raise ValidationError(
-                "triggered_by_user must be provided when triggered_by='staff'"
-            )
-
-        if triggered_by == "system" and triggered_by_user is not None:
-            raise ValidationError(
-                "triggered_by_user must be None when triggered_by='system'"
-            )
-
-        now = timezone.now()
-
-        # transition the request state using the state machine
-        if self.status == self.Status.IN_PREPARATION:
-            self = self.transition_to(
-                self.Status.AWAITING_REPLY,
-            )
+    @transition(field=state, source=State.IN_PREPARATION, target=State.AWAITING_REPLY)
+    def _send_request(self, triggered_by="system", triggered_by_user=None) -> "RequestToCoach":
 
         # transition the matching attempt if needed
-        ma = _get_locked_matching_attempt(self.matching_attempt)
-
-        if ma.status == MatchingAttempt.Status.READY_FOR_MATCHING:
-            ma = ma.transition_to(
-                MatchingAttempt.Status.MATCHING_ONGOING,
-            )
-
-        self.matching_attempt = ma
-        
-        # update send timestamps
-        if self.first_sent_at is None:
-            self.first_sent_at = now
-
-        self.last_sent_at = now
-        self.requests_sent += 1
+        if self.matching_attempt.status == MatchingAttempt.State.READY_FOR_FIRST_COACH_REQUEST:
+            self.matching_attempt._transition_to_awaiting_rtc_reply()
         
         if self.deadline_at is None:
             self.deadline_at = add_business_hours(
-                now,
+                timezone.now(),
                 settings.COACH_REQUEST_DEFAULT_DEADLINE_HOURS,
             )
-        # save timestamp updates
-        self.save()
 
+        MatchingEvent.objects.create(
+            matching_attempt=self.matching_attempt,
+            event_type=MatchingEvent.EventType.RTC_SENT_TO_COACH,
+            payload={
+                "rtc_id": str(self.id),
+                "coach_id": str(self.coach_id) if self.coach_id is not None else None,
+                "deadline_at": self.deadline_at.isoformat(),
+                "triggered_by": triggered_by,
+                "triggered_by_user": str(triggered_by_user.id) if triggered_by_user else None,
+
+            }
+        )
+        
         RequestToCoachEvent.objects.create(
             request=self,
             event_type=RequestToCoachEvent.EventType.REQUEST_SENT,
@@ -957,97 +1055,138 @@ class RequestToCoach(models.Model):
             triggered_by_user=triggered_by_user,
         )
 
+
+    @transaction.atomic
+    def trigger_send_request(self, triggered_by: str="staff", triggered_by_user: User=None) -> "RequestToCoach":
+        self._send_request(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
+        self.save()
         return self
     
     def send_reminder(self, triggered_by="system", triggered_by_user=None):
-
-        from .locks import _get_locked_request_to_coach
-
-        locked = _get_locked_request_to_coach(self)
-
-        if not locked.can_send_reminder():
-            raise ValidationError("Reminder cannot be sent")
-
-        locked.last_sent_at = timezone.now()
-        locked.requests_sent += 1
-
-        locked.save()
+        
+        MatchingEvent.objects.create(
+            matching_attempt=self.matching_attempt,
+            event_type=MatchingEvent.EventType.RTC_REMINDER_SENT_TO_COACH,
+            payload={
+                "rtc_id": str(self.id),
+                "coach_id": str(self.coach_id) if self.coach_id is not None else None,
+                "deadline_at": self.deadline_at.isoformat(),
+                "triggered_by": triggered_by,
+                "triggered_by_user": str(triggered_by_user.id) if triggered_by_user else None,
+            }
+        )
 
         RequestToCoachEvent.objects.create(
-            request=locked,
+            request=self,
             event_type=RequestToCoachEvent.EventType.REMINDER_SENT,
             triggered_by=triggered_by,
             triggered_by_user=triggered_by_user,
         )
 
-        return locked
 
+    @transition(field=state, source=State.AWAITING_REPLY, target=State.NO_RESPONSE_UNTIL_DEADLINE)
     def mark_deadline_passed(self):
+        
 
-        if self.status != self.Status.AWAITING_REPLY:
-            return
-
-        if not self.is_deadline_passed():
-            return
-
-        updated = self.transition_to(self.Status.NO_RESPONSE_UNTIL_DEADLINE)
-
+        MatchingEvent.objects.create(
+            matching_attempt=self.matching_attempt,
+            event_type=MatchingEvent.EventType.RTC_TIMED_OUT,
+            payload={
+                "rtc_id": str(self.id),
+                "coach_id": str(self.coach_id) if self.coach_id is not None else None,
+                "deadline_at": self.deadline_at.isoformat() if self.deadline_at else None,
+            }
+        )
+        
         RequestToCoachEvent.objects.create(
-            request=updated,
+            request=self,
             event_type=RequestToCoachEvent.EventType.TIMED_OUT,
             triggered_by=RequestToCoachEvent.TriggeredBy.SYSTEM,
         )
+        
+        self.save()
 
-    def accept(self, triggered_by="coach", triggered_by_user=None):
-
-        if self.status != self.Status.AWAITING_REPLY:
-            raise ValidationError("Cannot accept request in this state")
-
-        if triggered_by == "coach" and triggered_by_user is None:
-            triggered_by_user = self.coach.user
-
-        updated = self.transition_to(self.Status.ACCEPTED_MATCHING)
-
-        ma = _get_locked_matching_attempt(updated.matching_attempt)
-
-        ma.transition_to(
-            MatchingAttempt.Status.MATCHING_CONFIRMED,
+    @transition(field=state, source=State.AWAITING_REPLY, target=State.ACCEPTED)
+    def _accept(self, triggered_by=str, triggered_by_user: User=None):
+        
+        self.matching_attempt.matched_coach = self.coach
+        
+        MatchingEvent.objects.create(
+            matching_attempt=self.matching_attempt,
+            event_type=MatchingEvent.EventType.RTC_ACCEPTED,
+            payload={
+                "rtc_id": str(self.id),
+                "coach_id": str(self.coach_id) if self.coach_id is not None else None,
+                "deadline_at": self.deadline_at.isoformat(),
+                "triggered_by": triggered_by,
+                "triggered_by_user": str(triggered_by_user.id) if triggered_by_user else None,
+                
+            }
         )
         
-        ma.matched_coach = updated.coach
-        ma.save(update_fields=["matched_coach"])
-
-        updated.mark_responded()
-
         RequestToCoachEvent.objects.create(
-            request=updated,
+            request=self,
             event_type=RequestToCoachEvent.EventType.MATCHING_ACCEPTED,
             triggered_by=triggered_by,
             triggered_by_user=triggered_by_user,
         )
 
-        return updated
 
-    def reject(self, triggered_by="coach", triggered_by_user=None):
+    @transaction.atomic
+    def trigger_accept(self, triggered_by: str="coach", triggered_by_user: User=None):
+        self._accept(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
+        self.save()
+        return self
 
-        if self.status != self.Status.AWAITING_REPLY:
-            raise ValidationError("Cannot reject request in this state")
 
-        if triggered_by == "coach" and triggered_by_user is None:
-            triggered_by_user = self.coach.user
+    @transition(field=state, source=State.AWAITING_REPLY, target=State.REJECTED)
+    def _reject(self, triggered_by="coach", triggered_by_user=None):
 
-        updated = self.transition_to(self.Status.REJECTED_MATCHING)
-
-        updated.mark_responded()
-
+        MatchingEvent.objects.create(
+            matching_attempt=self.matching_attempt,
+            event_type=MatchingEvent.EventType.RTC_DECLINED,
+            payload={
+                "rtc_id": str(self.id),
+                "coach_id": str(self.coach_id) if self.coach_id is not None else None,
+                "deadline_at": self.deadline_at.isoformat(),
+                "triggered_by": triggered_by,
+                "triggered_by_user": str(triggered_by_user.id) if triggered_by_user else None,
+            }
+        )
+        
         RequestToCoachEvent.objects.create(
-            request=updated,
+            request=self,
             event_type=RequestToCoachEvent.EventType.MATCHING_REJECTED,
             triggered_by=triggered_by,
             triggered_by_user=triggered_by_user,
         )
+        
+    @transaction.atomic
+    def trigger_reject(self, triggered_by: str="coach", triggered_by_user: User=None):
+        self._reject(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
+        self.save()
+        return self
+    
+    @transition(field=state, source=[State.AWAITING_REPLY, State.NO_RESPONSE_UNTIL_DEADLINE, State.REJECTED, State.IN_PREPARATION], target=State.CANCELLED)
+    def _cancel(self, triggered_by="staff", triggered_by_user=None):
 
-        return updated
+        MatchingEvent.objects.create(
+            matching_attempt=self.matching_attempt,
+            event_type=MatchingEvent.EventType.RTC_CANCELLED,
+            payload={
+                "rtc_id": str(self.id),
+                "coach_id": str(self.coach_id) if self.coach_id is not None else None,
+                "deadline_at": self.deadline_at.isoformat(),
+                "triggered_by": triggered_by,
+                "triggered_by_user": str(triggered_by_user.id) if triggered_by_user else None,
+            }
+        )
+
+    @transaction.atomic
+    def trigger_cancel(self, triggered_by: str="coach", triggered_by_user: User=None):
+        self._cancel(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
+        self.save()
+        return self
         
     # -------------------------------------------------------------
     # Django Metadata
@@ -1082,7 +1221,7 @@ class RequestToCoach(models.Model):
         return (
             f"Matching-Anfrage an {self.coach} "
             f"für Coaching mit {self.matching_attempt.participant} "
-            f"- Status: {self.get_status_display()}"
+            f"- Status: {self.get_state_display()}"
         )
 
 class RequestToCoachTransition(models.Model):

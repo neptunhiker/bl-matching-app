@@ -31,7 +31,7 @@ class CoachActionTokenAdmin(admin.ModelAdmin):
     
 @admin.register(MatchingAttempt)
 class MatchingAttemptAdmin(admin.ModelAdmin):
-    list_display = ['id', 'participant', 'status', 'automation_enabled', 'created_at']
+    list_display = ['id', 'participant', 'status', 'state', 'automation_enabled', 'created_at']
     list_filter = ['status', 'automation_enabled']
     search_fields = ['participant__first_name', 'participant__last_name', 'participant__email']
     ordering = ['-created_at']

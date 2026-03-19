@@ -48,7 +48,7 @@
             {% elif matching_attempt.status == 'matching_ongoing' %}bg-primary-500
             {% else %}bg-neutral-400
             {% endif %}"></span>
-          {{ matching_attempt.get_status_display }}
+          {{ matching_attempt.get_state_display }}
         </span>
       </div>
 
@@ -219,11 +219,11 @@
               <p class="font-bold text-tertiary-700 text-base leading-snug">{{ req.coach.first_name }}<br>{{ req.coach.last_name }}</p>
               
               <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
-                {% if req.status == 'accepted_matching' %}bg-green-100 text-green-700
-                {% elif req.status == 'rejected_matching' or request_to_coach.status == 'cancelled' %}bg-secondary-200 text-secondary-700
+                {% if req.state == 'accepted' %}bg-green-100 text-green-700
+                {% elif req.state == 'rejected' or req.state == 'cancelled' %}bg-secondary-200 text-secondary-700
                 {% else %}bg-neutral-100 text-neutral-600
                 {% endif %}">
-                {{ req.get_status_display }}
+                {{ req.get_state_display }}
               </span>
             </div>
 

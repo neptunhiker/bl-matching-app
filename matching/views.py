@@ -156,18 +156,8 @@ class MatchingAttemptDetailView(LoginRequiredMixin, DetailView):
         context['transitions'] = list(
             matching_attempt.transitions.order_by('-created_at')
         )
-        events = [matching_attempt.events.order_by('created_at')]
-        
-        for rtc in matching_attempt.coach_requests.all():
-            rtc_events = rtc.events.order_by('created_at').select_related('request__coach')
-            events.append(rtc_events)
-        
-        ordered_events = sorted(
-            [event for sublist in events for event in sublist],  # flatten list of querysets
-            reverse=True,
-            key=lambda e: e.created_at,
-        )
-        context['events'] = ordered_events
+
+        context['events'] = matching_attempt.matching_events.order_by('-created_at')
             
 
         return context
