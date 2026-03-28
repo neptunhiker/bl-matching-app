@@ -1,14 +1,17 @@
+import logging
 
 from django.core.management.base import BaseCommand
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 
-from matching.models import RequestToCoach
+from matching.models import RequestToCoach, TriggeredByOptions
 from matching.notifications import send_reminder_request_notification
+from profiles.models import Coach
 
+logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
-    help = "Send first matching request notification to coaches"
+    help = "Send reminder matching request notification to coaches"
 
     MAX_PER_RUN = 5
 
@@ -39,12 +42,7 @@ class Command(BaseCommand):
 
         for rtc in pending.iterator():
             try:
-                # Ensure any select_for_update inside the send routine runs
-                # within a transaction (required by Django).
-                with transaction.atomic():
-                    send_reminder_request_notification(rtc, triggered_by="system", triggered_by_user=None)
-
-                sent += 1
+                rtc.send_reminder(triggered_by=TriggeredByOptions.SYSTEM, triggered_by_user=None)
 
                 self.stdout.write(
                     self.style.SUCCESS(

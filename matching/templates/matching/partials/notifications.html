@@ -7,22 +7,17 @@
     <summary class="flex items-center justify-between px-5 sm:px-6 py-4 cursor-pointer select-none
                     hover:bg-neutral-50 transition-colors list-none">
       <div class="flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary-500" fill="none"
-             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round"
-                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-        </svg>
+        <span class="h-6 w-6 text-primary-500">
+            {% include "components/icons/envelope.html" %}
+        </span>
         <span class="text-sm font-semibold text-tertiary-700">Benachrichtigungen</span>
         <span class="ml-1 text-xs font-jakarta font-semibold bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">
           {{ notifications|length }}
         </span>
       </div>
-
-      <svg xmlns="http://www.w3.org/2000/svg"
-           class="h-5 w-5 text-neutral-400 transition-transform duration-200 group-open:rotate-180"
-           fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-      </svg>
+      <span class="h-5 w-5 text-neutral-400 transition-transform duration-200 group-open:rotate-180">
+          {% include "components/icons/down_arrow.html" %}
+      </span>
     </summary>
 
     {% if notifications %}
@@ -63,11 +58,7 @@
             {% if n.type == 'email' %}{{ obj.subject }}{% else %}{{ obj.subject }}{% endif %}
           </p>
           <p class="text-xs text-neutral-400 mt-0.5">
-            {% if obj.request_to_coach %}
-              An: <a href="{% url 'coach_detail' obj.request_to_coach.coach.pk %}" class="text-primary-600 hover:text-primary-800">Coach {{ obj.request_to_coach.coach }}</a>
-            {% else %}
               An: {{ obj.to }}
-            {% endif %}
           </p>
         </div>
 
@@ -79,7 +70,11 @@
                 <span class="inline-flex items-center gap-1 text-xs font-semibold text-neutral-500 whitespace-nowrap">            <img src="{% static 'icons/envelope.svg' %}" alt="E-Mail" class="h-4 w-4" /> E-Mail</span>
             </a>
           {% else %}
+            <a href="{% url 'slack:slack_log_detail' obj.id %}"
+               class="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-800 transition-colors whitespace-nowrap">
             <span class="inline-flex items-center gap-1 text-xs font-semibold text-neutral-500 whitespace-nowrap">            <img src="{% static 'icons/slack.svg' %}" alt="Slack" class="h-4 w-4" /> Slack</span>
+            </a>
+
           {% endif %}
         </div>
 

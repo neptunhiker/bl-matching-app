@@ -2,22 +2,27 @@ import os
 
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Max, Q
+
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.views.generic import DetailView, ListView, CreateView, View, UpdateView, DeleteView, TemplateView
-from django.contrib import messages
-from django.db import IntegrityError
 from django.utils.html import format_html
+from django.views.generic import DetailView, ListView, CreateView, View, UpdateView, DeleteView, TemplateView
 from urllib3 import request
 from urllib.parse import urlparse
 
 
+from matching.tests.conftest import matching_attempt
 from profiles.models import Coach
-from .models import CoachActionToken, MatchingAttempt, RequestToCoach, MatchingAttemptEvent, RequestToCoachEvent
+from .models import CoachActionToken, MatchingAttempt, RequestToCoach, MatchingEvent, TriggeredByOptions, ParticipantActionToken
 from .tokens import consume_token
 from matching import services
+from django.utils import dateparse
+import json
 
 
 class StaffRequiredMixin(UserPassesTestMixin):
@@ -28,57 +33,52 @@ class StaffRequiredMixin(UserPassesTestMixin):
 
 class MatchingAttemptCreateView(StaffRequiredMixin, CreateView):
     model = MatchingAttempt
-    fields = ['participant', 'ue', ]
+    fields = ['participant', 'ue', 'bl_contact']
     template_name = 'matching/matching_attempt_form.html'
 
     def form_valid(self, form):
         participant = form.cleaned_data["participant"]
         ue = form.cleaned_data["ue"]
+        bl_contact = form.cleaned_data.get("bl_contact")
+
+
 
         if ue < 1:
             messages.error(self.request, "Die Anzahl der Unterrichtseinheiten muss mindestens 1 sein.")
             return self.form_invalid(form)
-        
-        # Prevent DB integrity error by validating existence first and provide link.
-        active_ma = MatchingAttempt.objects.filter(
-            participant=participant,
-            status__in=[
-                MatchingAttempt.Status.IN_PREPARATION,
-                MatchingAttempt.Status.READY_FOR_MATCHING,
-                MatchingAttempt.Status.MATCHING_ONGOING,
-            ],
-        ).order_by("-created_at").first()
 
-        if active_ma is not None:
-            messages.error(
-                self.request,
-                format_html(
-                    "Konnte Matching nicht erstellen: es existiert bereits ein <a href='{}' style='text-decoration:underline'>aktives Matching</a> für {}.",
-                    active_ma.get_absolute_url(),
-                    participant,
-                ),
-            )
-            return self.form_invalid(form)
-
-        # Race conditions may still cause an IntegrityError; handle gracefully.
         try:
             self.object = services.create_matching_attempt(
                 participant=participant,
                 ue=ue,
+                bl_contact=bl_contact,
                 created_by=self.request.user,
             )
+
+        except ValidationError as e:
+            existing = e.message if hasattr(e, "message") else None
+
+            if existing:
+                messages.error(
+                    self.request,
+                    format_html(
+                        "Konnte Matching nicht erstellen: es existiert bereits ein <a href='{}' style='text-decoration:underline'>aktives Matching</a> für {}.",
+                        existing.get_absolute_url(),
+                        participant,
+                    ),
+                )
+            else:
+                messages.error(self.request, "Es existiert bereits ein aktives Matching.")
+
+            return self.form_invalid(form)
+
         except IntegrityError:
-            # In case of a race, try to find the active matching to link to.
             conflicting = MatchingAttempt.objects.filter(
                 participant=participant,
-                status__in=[
-                    MatchingAttempt.Status.IN_PREPARATION,
-                    MatchingAttempt.Status.READY_FOR_MATCHING,
-                    MatchingAttempt.Status.MATCHING_ONGOING,
-                ],
+                state__in=MatchingAttempt.ACTIVESTATES, 
             ).order_by("-created_at").first()
 
-            if conflicting is not None:
+            if conflicting:
                 messages.error(
                     self.request,
                     format_html(
@@ -90,7 +90,7 @@ class MatchingAttemptCreateView(StaffRequiredMixin, CreateView):
             else:
                 messages.error(
                     self.request,
-                    f"Konnte Matching nicht erstellen: bereits ein aktives Matching vorhanden."
+                    "Konnte Matching nicht erstellen: bereits ein aktives Matching vorhanden."
                 )
             return self.form_invalid(form)
 
@@ -153,14 +153,35 @@ class MatchingAttemptDetailView(LoginRequiredMixin, DetailView):
         context['all_emails'] = all_emails
         context['all_slack'] = all_slack
         context['notifications'] = notifications
-        context['transitions'] = list(
-            matching_attempt.transitions.order_by('-created_at')
-        )
+        # context['transitions'] = list(
+        #     matching_attempt.transitions.order_by('-created_at')
+        # )
 
         context['events'] = matching_attempt.matching_events.order_by('-created_at')
-            
+        
+        context['show_start_button'] = (
+            self.request.user.is_staff
+            and matching_attempt.automation_enabled
+            and matching_attempt.coach_requests.count() > 0
+            and matching_attempt.state in ["in_preparation"]
+        )
+        
+        context['show_resume_button'] = (
+            self.request.user.is_staff
+            and matching_attempt.automation_enabled
+            and matching_attempt.coach_requests.count() > 0
+            and matching_attempt.state in ["failed"]
+        )
 
         return context
+    
+class MatchingAttemptDeleteView(UserPassesTestMixin, DeleteView):
+    model = MatchingAttempt
+    template_name = "matching/matching_attempt_delete.html"
+    success_url = reverse_lazy("matching_attempts")
+
+    def test_func(self):
+        return self.request.user.is_staff
 
 class StartMatchingView(StaffRequiredMixin, View):
     """Transition a MatchingAttempt from DRAFT → READY_FOR_MATCHING.
@@ -173,6 +194,23 @@ class StartMatchingView(StaffRequiredMixin, View):
         matching_attempt.start_matching(
             triggered_by_user=request.user,
         )
+        matching_attempt.save()
+       
+        return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
+    
+class ResumeMatchingView(StaffRequiredMixin, View):
+    """Transition a MatchingAttempt from FAILED → READY_FOR_MATCHING.
+
+    POST /matching/<pk>/resume/
+    """
+
+    def post(self, request, pk):
+        matching_attempt = get_object_or_404(MatchingAttempt, pk=pk)
+        matching_attempt.resume_matching(
+            triggered_by_user=request.user,
+        )
+        matching_attempt.save()
+       
         return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
 
 
@@ -194,31 +232,6 @@ class ToggleAutomationView(StaffRequiredMixin, View):
 
         return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
 
-
-class CoachAutocompleteView(StaffRequiredMixin, View):
-    """JSON endpoint: GET /matching/coaches/search/?q=<term>
-    Returns up to 20 coaches whose name or email matches the query.
-    """
-
-    def get(self, request):
-        q = request.GET.get("q", "").strip()
-        qs = Coach.objects.available().select_related('user')
-        if q:
-            qs = qs.filter(
-                Q(user__first_name__icontains=q)
-                | Q(user__last_name__icontains=q)
-                | Q(user__email__icontains=q)
-            )
-        results = [
-            {
-                "id": str(coach.pk),
-                "name": coach.full_name,
-                "email": coach.email,
-                "status": coach.get_status_display(),
-            }
-            for coach in qs[:20]
-        ]
-        return JsonResponse({"results": results})
 
 
 class RequestToCoachCreateView(StaffRequiredMixin, View):
@@ -260,10 +273,12 @@ class RequestToCoachCreateView(StaffRequiredMixin, View):
             except (Coach.DoesNotExist, ValueError):
                 errors["coach"] = "Ungültiger Coach."
                 coach = None
-        if coach.status != Coach.Status.AVAILABLE:
-            errors["coach"] = f"Coach {coach.full_name} ist derzeit nicht verfügbar (Status: {coach.get_status_display()})."
+        # Only check status if coach is valid and no previous coach error
+        if coach and "coach" not in errors:
+            if coach.status != Coach.Status.AVAILABLE:
+                errors["coach"] = f"Coach {coach.full_name} ist derzeit nicht verfügbar (Status: {coach.get_status_display()})."
 
-        if "coach" not in errors:
+        if coach and "coach" not in errors:
             # Double-check that the coach doesn't already have a request for this matching attempt to prevent races
             if matching_attempt.coach_requests.filter(coach=coach).exists():
                 errors["coach"] = f"Coach {coach.full_name} hat bereits eine Anfrage für dieses Matching."
@@ -330,7 +345,7 @@ class RequestToCoachCreateView(StaffRequiredMixin, View):
             priority=priority,
             ue=ue,
             max_number_of_requests=max_requests,
-            triggered_by=RequestToCoachEvent.TriggeredBy.STAFF,
+            triggered_by=TriggeredByOptions.STAFF,
             triggered_by_user=request.user,
         )
 
@@ -380,6 +395,21 @@ class RequestToCoachUpdateView(StaffRequiredMixin, UpdateView):
 class RequestToCoachDeleteView(StaffRequiredMixin, DeleteView):
     model = RequestToCoach
     template_name = 'matching/request_to_coach_confirm_delete.html'
+    
+    def post(self, request, *args, **kwargs):
+        from matching.services import create_matching_event
+        
+        self.object = self.get_object()
+        create_matching_event(
+            matching_attempt=self.object.matching_attempt,
+            event_type=MatchingEvent.EventType.RTC_DELETED,
+            triggered_by=TriggeredByOptions.STAFF,
+            triggered_by_user=request.user,
+            payload={
+                "rtc_id": str(self.object.id),
+            }
+        )
+        return super().post(request, *args, **kwargs)
 
     def get_success_url(self):
         # Allow deletion to redirect back to an explicit `next` parameter when present.
@@ -427,9 +457,6 @@ class RequestToCoachDetailView(LoginRequiredMixin, DetailView):
         context['slack_logs'] = slack_logs
         context['notifications'] = notifications
 
-        context['transitions'] = list(
-            self.object.transitions.order_by('-created_at')
-        )
         context['events'] = list(
             self.object.events.order_by('-created_at')
         )
@@ -446,21 +473,21 @@ class CoachRespondView(View):
     Decision tree
     -------------
     1. Token not found in DB          → coach_response_invalid.html
-    2. Token already used (used_at set) → coach_response_already_used.html
-    3. RequestToCoach already resolved  → coach_response_already_used.html
+    2. Token already used (used_at set) → response_already_used.html
+    3. RequestToCoach already resolved  → response_already_used.html
        (coach replied via a different email's token — e.g. accepted email 1,
        then clicked the decline link in the reminder email)
     4. Determine on-time vs. late:
          now <= deadline  → ACCEPTED_ON_TIME / REJECTED_ON_TIME
          now >  deadline  → ACCEPTED_LATE    / REJECTED_LATE
          no deadline set  → treat as on-time (safe fallback)
-    5. Save new status and render coach_response_success.html
+    5. Save new status and render coach_response_after_intro_call.html
     """
 
     # States that mean the coach has already given a definitive answer.
-    TERMINAL_STATUSES = {
-        RequestToCoach.Status.ACCEPTED_MATCHING,
-        RequestToCoach.Status.REJECTED_MATCHING,
+    TERMINAL_STATES = {
+        RequestToCoach.State.ACCEPTED,
+        RequestToCoach.State.REJECTED,
     }
 
     def get(self, request, token):
@@ -474,7 +501,7 @@ class CoachRespondView(View):
         )
 
         if token_instance is None:
-            return render(request, 'matching/coach_response_invalid_token.html', status=200)
+            return render(request, 'matching/response_invalid_token.html', status=200)
 
         rtc = token_instance.request_to_coach
         coach = rtc.coach
@@ -483,72 +510,44 @@ class CoachRespondView(View):
         base_context = {
             'coach_name': coach.full_name,
             'participant_name': f"{participant.first_name} {participant.last_name}",
+            'participant_first_name': participant.first_name,
+            'coach': coach,
         }
 
         # ── 2. Token already consumed ────────────────────────────────────────
         if already_used:
             return render(
                 request,
-                'matching/coach_response_already_used.html',
-                {**base_context, 'previous_status': rtc.get_status_display()},
+                'matching/response_already_used.html',
+                {**base_context, 'previous_state': rtc.get_state_display()},
             )
 
         # ── 3. RequestToCoach already in a terminal state ────────────────────
-        if rtc.status in self.TERMINAL_STATUSES:
+        if rtc.state in self.TERMINAL_STATES:
             return render(
                 request,
-                'matching/coach_response_already_used.html',
-                {**base_context, 'previous_status': rtc.get_status_display()},
+                'matching/response_already_used.html',
+                {**base_context, 'previous_state': rtc.get_state_display()},
             )
 
-        # ── 4 & 5. Determine timing and update status ────────────────────────
-        now = timezone.now()
+        # ── 4 & 5. Determine update state ────────────────────────
         is_accept = token_instance.action == CoachActionToken.Action.ACCEPT
+        
+        now = timezone.now()
+        deadline = rtc.deadline_at
+        on_time = (deadline is None) or (now <= deadline)
+        
+        services.accept_or_decline_request_to_coach(
+            rtc=rtc,
+            accept=is_accept,
+            response_time=timezone.now(),
+            responded_by_user=coach.user,
+        )
 
-        if rtc.deadline_at is None or now <= rtc.deadline_at:
-            on_time = True
-
-            if is_accept:
-                
-                ma = rtc.matching_attempt.transition_to(
-                    MatchingAttempt.Status.MATCHING_CONFIRMED,
-                )
-                
-                ma.matched_coach = rtc.coach
-                ma.save(update_fields=['status', 'matched_coach'])
-                
-                ma = rtc.matching_attempt.transition_to(
-                    MatchingAttempt.Status.READY_FOR_INTRO_CALL,
-                )
-                
-                rtc = rtc.transition_to(
-                    RequestToCoach.Status.ACCEPTED_MATCHING,
-                )
-
-                RequestToCoachEvent.objects.create(
-                    request=rtc,
-                    event_type=RequestToCoachEvent.EventType.MATCHING_ACCEPTED,
-                    triggered_by=RequestToCoachEvent.TriggeredBy.COACH,
-                    triggered_by_user=coach.user,
-                )
-            else:
-                # Decline
-                rtc = rtc.transition_to(
-                    RequestToCoach.Status.REJECTED_MATCHING,
-                )
-
-                RequestToCoachEvent.objects.create(
-                    request=rtc,
-                    event_type=RequestToCoachEvent.EventType.MATCHING_REJECTED,
-                    triggered_by=RequestToCoachEvent.TriggeredBy.COACH,
-                    triggered_by_user=coach.user,
-                )
-        else:
-            on_time = False
 
         return render(
             request,
-            'matching/coach_response_success.html',
+            'matching/coach_response_matching_request.html',
             {
                 **base_context,
                 'action': token_instance.action, # 'accept' or 'decline'
@@ -558,6 +557,100 @@ class CoachRespondView(View):
             },
         )
 
+class ParticipantRespondView(View):
+    """Handles participant response for their answer after Intro-Call with coach to check whether the coaching can start or whether they still have a clarification need.
+
+    Public — no login required. The token in the URL is the sole authorisation.
+
+    GET /matching/response_participant/<token>/
+
+    Decision tree
+    -------------
+    1. Token not found in DB          → participant_response_invalid.html
+    2. Token already used (used_at set) → participant_response_already_used.html
+    3. MatchingAttempt already resolved  → participant_response_already_used.html
+       (participant replied via a different email's token — e.g. accepted email 1,
+       then clicked the decline link in the reminder email)
+    4. Determine on-time vs. late:
+         not implemented yet as no deadline yet
+    5. Save new status and render participant_response_success.html
+    """
+
+    # States that mean the participant has already given a definitive answer.
+    TERMINAL_STATES = {
+        MatchingAttempt.State.MATCHING_COMPLETED,
+        MatchingAttempt.State.CLARIFICATION_WITH_PARTICIPANT_NEEDED,
+    }
+
+    def get(self, request, token):
+        # ── 1. Look up token ────────────────────────────────────────────────
+        token_instance, already_used = consume_token(
+            ParticipantActionToken.objects.select_related(
+                'matching_attempt__matched_coach__user',
+                'matching_attempt__participant',
+            ),
+            token,
+        )
+
+        if token_instance is None:
+            return render(request, 'matching/participant_response_invalid_token.html', status=200)
+
+        matching_attempt = token_instance.matching_attempt
+        coach = matching_attempt.matched_coach
+        participant = matching_attempt.participant
+
+        base_context = {
+            'coach': coach,
+            'participant': participant,
+        }
+
+        # ── 2. Token already consumed ────────────────────────────────────────
+        if already_used:
+            return render(
+                request,
+                'matching/response_already_used.html',
+                {**base_context},
+            )
+
+        # ── 3. MatchingAttempt already in a terminal state ────────────────────
+        if matching_attempt.state in self.TERMINAL_STATES:
+            return render(
+                request,
+                'matching/participant_response_already_used.html',
+                {**base_context},
+            )
+
+        # ── 4 & 5. Determine update state ────────────────────────
+        coaching_can_start = token_instance.action == ParticipantActionToken.Action.START_COACHING
+        
+        services.continue_matching_after_participant_responded_to_intro_call_feedback(
+            matching_attempt=matching_attempt,
+            coaching_can_start=coaching_can_start,
+            response_time=timezone.now(),
+            responded_by_participant=participant,
+        )
+
+        if coaching_can_start:
+            return render(
+                request,
+                'matching/participant_response_coaching_can_start.html',
+                {
+                    **base_context,
+                    'action': token_instance.action,
+                    'coacing_can_start': coaching_can_start,
+                },
+            )
+        else:
+            return render(
+                request,
+                'matching/participant_response_clarification_needed.html',
+                {
+                    **base_context,
+                    'action': token_instance.action,
+                    'coacing_can_start': coaching_can_start,
+                    'bl_contact': matching_attempt.bl_contact,
+                },
+            )
 
 
 
@@ -576,8 +669,8 @@ class ConfirmIntroCallView(View):
 
 
     # States that mean that the matching has been completed already
-    TERMINAL_STATUSES = {
-        MatchingAttempt.Status.MATCHING_COMPLETED,
+    TERMINAL_STATES = {
+        MatchingAttempt.State.MATCHING_COMPLETED,
     }
 
 
@@ -592,7 +685,7 @@ class ConfirmIntroCallView(View):
         )
 
         if token_instance is None:
-            return render(request, 'matching/coach_response_invalid_token.html', status=200)
+            return render(request, 'matching/response_invalid_token.html', status=200)
 
         ma = token_instance.matching_attempt
         coach = ma.matched_coach
@@ -608,34 +701,26 @@ class ConfirmIntroCallView(View):
         if already_used:
             return render(
                 request,
-                'matching/coach_response_already_used.html',
+                'matching/response_already_used.html',
                 {**base_context},
             )
 
-        # ── 3. RequestToCoach already in a terminal state ────────────────────
-        if ma.status in self.TERMINAL_STATUSES:
+        # ── 3. MatchingAttempt already in a terminal state ────────────────────
+        if ma.state in MatchingAttempt.TERMINAL_STATES:
             return render(
                 request,
-                'matching/coach_response_already_used.html',
-                {**base_context, 'previous_status': ma.get_status_display()},
+                'matching/response_already_used.html',
+                {**base_context, 'previous_state': ma.get_state_display()},
             )
 
-        # ── 4 & 5. Determine timing and update status ────────────────────────
-        ma = ma.transition_to(
-            MatchingAttempt.Status.INTRO_CALL_CONFIRMED,
-        )
         
-        ma = ma.transition_to(
-            MatchingAttempt.Status.READY_FOR_START_EMAIL,
-        )
-        
-        MatchingAttemptEvent.objects.create(
+        services.create_matching_event(
             matching_attempt=ma,
-            event_type=MatchingAttemptEvent.EventType.INTRO_CALL_CONFIRMED,
-            triggered_by=MatchingAttemptEvent.TriggeredBy.COACH,
+            event_type=MatchingEvent.EventType.INTRO_CALL_FEEDBACK_RECEIVED_FROM_COACH,
+            triggered_by=TriggeredByOptions.COACH,
             triggered_by_user=coach.user,
         )
-
+        
         return render(
             request,
             'matching/coach_response_intro_call.html',
@@ -646,3 +731,87 @@ class ConfirmIntroCallView(View):
 
 class FlowChartView(LoginRequiredMixin, TemplateView):
     template_name = 'matching/flow_chart.html'
+    
+    
+class MatchingEventDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailView):
+    model = MatchingEvent
+    template_name = 'matching/matching_event_detail.html'
+    context_object_name = 'matching_event'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['matching_attempt'] = context['matching_event'].matching_attempt
+        # Pre-format payload values so templates can render dates/times correctly.
+        payload = context['matching_event'].payload or {}
+        formatted = []
+        for k, v in payload.items():
+            display = None
+            # Try Django's dateparse to parse ISO datetime strings
+            if isinstance(v, str):
+                dt = dateparse.parse_datetime(v)
+                if dt is not None:
+                    try:
+                        display = timezone.localtime(dt).strftime('%d.%m.%Y %H:%M:%S %Z')
+                    except Exception:
+                        display = dt.strftime('%d.%m.%Y %H:%M:%S')
+            if display is None:
+                # datetime/date/time objects
+                if isinstance(v, (timezone.datetime,)):
+                    try:
+                        display = timezone.localtime(v).strftime('%d.%m.%Y %H:%M:%S %Z')
+                    except Exception:
+                        display = str(v)
+                elif hasattr(v, 'isoformat') and not isinstance(v, (dict, list)):
+                    display = str(v)
+                elif isinstance(v, (dict, list)):
+                    try:
+                        display = json.dumps(v, ensure_ascii=False, indent=2)
+                    except Exception:
+                        display = str(v)
+                else:
+                    display = str(v)
+
+            formatted.append((k, display))
+
+        context['formatted_payload'] = formatted
+        return context
+    
+class CancelMatchingView(StaffRequiredMixin, View):
+    """Transition a MatchingAttempt to CANCELLED.
+
+    POST /matching/<pk>/cancel/
+    """
+
+    def post(self, request, pk):
+        matching_attempt = get_object_or_404(MatchingAttempt, pk=pk)
+        services.cancel_matching(matching_attempt, triggered_by_user=request.user)
+       
+        return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
+    
+class ManualOverrideMatchingView(StaffRequiredMixin, TemplateView):
+    """Manually set a matched coach on a MatchingAttempt, bypassing the normal flow. Used for exceptional cases where automation fails or manual intervention is desired.
+
+    POST /matching/<pk>/manual_matching_override/
+    """
+    
+    template_name = 'matching/manual_matching_override.html'
+    
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        matching_attempt_pk = self.kwargs.get("matching_attempt_pk")
+        matching_attempt = get_object_or_404(MatchingAttempt, pk=matching_attempt_pk)
+        context["matching_attempt"] = matching_attempt
+        context["available_coaches"] = Coach.objects.available().select_related('user').order_by('user__last_name', 'user__first_name')
+        return context
+    
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+    
+    
+    def post(self, request, matching_attempt_pk):
+        matching_attempt = get_object_or_404(MatchingAttempt, pk=matching_attempt_pk)
+        coach_id = request.POST.get("coach_id")
+        coach = get_object_or_404(Coach, pk=coach_id)
+        services.manually_match_participant_to_coach(matching_attempt, coach, triggered_by_user=request.user)
+        return redirect(reverse("matching_attempt_detail", kwargs={"pk": matching_attempt_pk}))

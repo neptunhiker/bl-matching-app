@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import dj_database_url
 from pathlib import Path
 import os
 
@@ -97,14 +98,9 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'bl_matching'),
-        'USER': os.environ.get('DB_USER', 'bl_user'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),  # always set via environment
-        'HOST': os.environ.get('DB_HOST', 'localhost'),  # set DB_HOST=db in docker-compose for containerised runs
-        'PORT': os.environ.get('DB_PORT', '5432'),
-    }
+    "default": dj_database_url.parse(
+        os.environ.get("DATABASE_URL")
+    )
 }
 
 

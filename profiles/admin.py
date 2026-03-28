@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Language, Coach, Participant
+from .models import Language, Coach, Participant, BeginnerLuftStaff
 
 
 @admin.register(Language)
@@ -29,3 +29,10 @@ class ParticipantAdmin(admin.ModelAdmin):
     search_fields = ('first_name', 'last_name', 'email', 'city')
     filter_horizontal = ('languages',)
     ordering = ('last_name', 'first_name')
+
+
+@admin.register(BeginnerLuftStaff)
+class BeginnerLuftStaffAdmin(admin.ModelAdmin):
+    list_display = ('user__last_name', 'user__first_name', 'user__email')
+    search_fields = ('user__first_name', 'user__last_name', 'user__email')
+    ordering = ('user__last_name', 'user__first_name')

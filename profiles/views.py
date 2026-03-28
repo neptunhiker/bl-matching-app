@@ -2,7 +2,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 
-from .forms import ParticipantForm, CoachForm
+from .forms import ParticipantForm, CoachForm, CoachUpdateForm
 from .models import Participant, Coach
 
 from matching.models import RequestToCoach, MatchingAttempt
@@ -182,11 +182,18 @@ class CoachCreateView(StaffRequiredMixin, CreateView):
 
 class CoachUpdateView(StaffRequiredMixin, UpdateView):
     model = Coach
-    form_class = CoachForm
+    form_class = CoachUpdateForm
     template_name = 'profiles/coach_form.html'
 
     def get_success_url(self):
         return reverse_lazy('coach_detail', kwargs={'pk': self.object.pk})
+
+    def form_valid(self, form):
+        self.object = form.save(commit=False)
+        if not self.object.slack_user_id and self.object.preferred_communication_channel == Coach.CommunicationChannel.SLACK:
+            form.add_error('slack_user_id', 'Slack User ID ist erforderlich, wenn der bevorzugte Kommunikationskanal Slack ist.')
+            return self.form_invalid(form)
+        return super().form_valid(form)
 
 
 class CoachDeleteView(StaffRequiredMixin, DeleteView):

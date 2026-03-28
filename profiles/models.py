@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
 
 
 class Language(models.Model):
@@ -95,6 +96,10 @@ class Coach(models.Model):
     @property
     def last_name(self):
         return self.user.last_name
+    
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('coach_detail', kwargs={'pk': self.pk})
 
     class Meta:
         ordering = ['user__last_name', 'user__first_name']
@@ -123,7 +128,15 @@ class Participant(models.Model):
     background_information = models.TextField(blank=True, verbose_name='Hintergrundinformationen')
     coaching_target = models.TextField(blank=True, verbose_name='Coaching-Ziel')
     avgs_data_docs_available = models.BooleanField(default=False, verbose_name='AVGS-Daten verfügbar', help_text='Liegen alle notwendigen AVGS-Daten vor, um mit dem Matching zu starten?')
+    
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
 
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('participant_detail', kwargs={'pk': self.pk})
+    
     class Meta:
         ordering = ['last_name', 'first_name']
         verbose_name = 'Teilnehmer:in'
@@ -131,3 +144,29 @@ class Participant(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+    
+class BeginnerLuftStaff(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='staff_profile',
+    )
+    
+    slack_user_id = models.CharField(
+        max_length=100,
+        help_text="ID des Slack-Benutzers, z.B. U12345678.",
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        if not self.user.is_staff:
+            raise ValidationError("Der zugeordnete User muss ein Mitarbeiter:in sein (is_staff=True).")
+        
+    class Meta:
+        verbose_name = 'BeginnLuft Mitarbeiter:in'
+        verbose_name_plural = 'BeginnLuft Mitarbeiter:innen'
+
+    def __str__(self):
+        return f"{self.user.first_name} {self.user.last_name}"

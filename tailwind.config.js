@@ -8,6 +8,7 @@
 // --bl-exciting-bg-img : linear-gradient(90deg, primary → secondary)
 
 module.exports = {
+
   content: [
     "./templates/**/*.html",       // project templates
     "./**/templates/**/*.html",    // templates inside Django apps

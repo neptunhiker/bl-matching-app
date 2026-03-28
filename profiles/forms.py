@@ -62,4 +62,7 @@ class CoachForm(forms.ModelForm):
             'slack_user_id',
         ]
 
+class CoachUpdateForm(CoachForm):
+    class Meta(CoachForm.Meta):
+        exclude = ['user']
 

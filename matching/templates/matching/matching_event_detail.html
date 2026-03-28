@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load tz %}
+{% load static %}
+
+{% block title %}Matching für {{ matching_attempt.participant }}{% endblock %}
+
+{% block body %}
+
+<div class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+	<div class="mb-4 flex items-center justify-between">
+		<h1 class="text-2xl sm:text-3xl font-bold text-tertiary-700 leading-tight hover:text-primary-600 transition-colors">Matching Ereignis</h1>
+		<a href="{% url 'matching_attempt_detail' matching_event.matching_attempt.pk %}" class="text-sm text-primary-600 hover:underline">Zurück zum Matching</a>
+	</div>
+
+	<div class="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-200 overflow-hidden">
+		<div class="h-2 bg-bl-gradient"></div>
+		<div class="p-6 sm:p-8 space-y-6">
+
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+				<div>
+					  <h2 class="text-xs text-neutral-500 mb-0.5">Ereignis</h2>
+					<p class="mt-1 text-lg text-tertiary-700">{{ matching_event.get_event_type_display }}</p>
+				</div>
+				<div>
+					  <h2 class="text-xs text-neutral-500 mb-0.5">Ausgelöst von</h2>
+					<p class="mt-1 text-lg text-tertiary-700">
+						{{ matching_event.get_triggered_by_display }}
+						{% if matching_event.triggered_by_user %}
+							{% with user=matching_event.triggered_by_user %}
+								&nbsp;|&nbsp;{{ user.get_full_name|default:user }}
+							{% endwith %}
+						{% endif %}
+					</p>
+				</div>
+
+				<div>
+					  <h2 class="text-xs text-neutral-500 mb-0.5">Erstellt am</h2>
+					<p class="mt-1 text-lg text-tertiary-700">{{ matching_event.created_at|localtime|date:"d.m.Y" }} um {{ matching_event.created_at|localtime|time:"H:i" }} Uhr</p>
+				</div>
+
+				<div>
+					  <h2 class="text-xs text-neutral-500 mb-0.5">Matching</h2>
+					<p class="mt-1 text-lg"><a href="{% url 'matching_attempt_detail' matching_event.matching_attempt.pk %}" class="text-primary-600 hover:underline">Matching für {{ matching_event.matching_attempt.participant }}</a></p>
+				</div>
+
+        {% if matching_event.request_to_coach %}
+				<div>
+					  <h2 class="text-xs text-neutral-500 mb-0.5">Matching-Anfrage an Coach</h2>
+						<p class="mt-1 text-lg"><a href="{% url 'request_to_coach_detail' matching_event.request_to_coach.pk %}" class="text-primary-600 hover:underline">Request {{ matching_event.request_to_coach.id }}</a></p>
+          </div>
+					{% endif %}
+
+				<div class="sm:col-span-2">
+					<h2 class="text-xs text-neutral-500 mb-0.5">Event ID</h2>
+					<p class="mt-1 text-sm text-neutral-700 break-words">{{ matching_event.id }}</p>
+				</div>
+			</div>
+
+      {% if matching_event.payload %}
+			<div>
+				<h3 class="text-lg font-bold text-tertiary-700 mb-2">Payload</h3>
+					<div class="overflow-x-auto">
+						<table class="min-w-full divide-y divide-neutral-100">
+							<thead>
+								<tr>
+									<th class="px-4 py-2 text-left text-sm font-medium text-neutral-500">Key</th>
+									<th class="px-4 py-2 text-left text-sm font-medium text-neutral-500">Value</th>
+								</tr>
+							</thead>
+							<tbody class="bg-white divide-y divide-neutral-100">
+								{% for key, val in formatted_payload %}
+									<tr class="align-top">
+										<td class="px-4 py-2 align-top text-sm text-neutral-700 break-words w-1/3">{{ key }}</td>
+										<td class="px-4 py-2 text-sm text-neutral-700 break-words w-2/3">
+											{% if val == 'null' %}
+												<span class="text-neutral-400">null</span>
+											{% elif val|slice:":1" == "{" or val|slice:":1" == "[" %}
+												<pre class="text-xs text-neutral-700 whitespace-pre-wrap">{{ val }}</pre>
+											{% else %}
+												{{ val }}
+											{% endif %}
+										</td>
+									</tr>
+								{% endfor %}
+							</tbody>
+						</table>
+					</div>
+      </div>
+      {% endif %}
+
+		</div>
+	</div>
+</div>
+
+{% endblock %}

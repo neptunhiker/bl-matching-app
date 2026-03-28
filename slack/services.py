@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from accounts.models import User
 from matching.locks import _get_locked_request_to_coach, _get_locked_matching_attempt
-from matching.models import RequestToCoach, MatchingAttempt
+
 from matching.tokens import generate_accept_and_decline_token, generate_intro_call_feedback_url
 from matching.utils import get_urgency_message
 from slack.models import SlackLog
@@ -16,7 +16,36 @@ from slack.models import SlackLog
 
 logger = logging.getLogger(__name__)
 
-def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="system", triggered_by_user: User = None):
+def create_slack_log(to: User, subject: str, message: str, request_to_coach=None, matching_attempt=None, sent_by=SlackLog.SentBy.SYSTEM):
+    
+    # Only request_to_coach or matching_attempt can be set, not both
+    if request_to_coach and matching_attempt:
+        raise ValueError("Only request_to_coach or matching_attempt can be set, not both.")
+    
+    if not request_to_coach and not matching_attempt:
+        raise ValueError("Either request_to_coach or matching_attempt must be set.")
+    
+    if request_to_coach:
+        slack_log = SlackLog.objects.create(
+            to=to,
+            subject=subject,
+            message=message,
+            request_to_coach=request_to_coach,
+            sent_by=sent_by,
+        )
+    else:
+        slack_log = SlackLog.objects.create(
+            to=to,
+            subject=subject,
+            message=message,
+            matching_attempt=matching_attempt,
+            sent_by=sent_by,
+        )
+    
+    return slack_log
+
+
+def send_first_coach_request_slack(rtc):
   
     client = WebClient(token=settings.SLACK_BOT_TOKEN)
     coach = rtc.coach
@@ -35,7 +64,6 @@ def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="syste
     dm_channel = response["channel"]["id"]
     
     rtc = _get_locked_request_to_coach(rtc)
-    rtc = rtc.send_request(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
     
     accept_url, decline_url = generate_accept_and_decline_token(rtc)
     
@@ -101,7 +129,8 @@ def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="syste
                 "type": "mrkdwn",
                 "text": (
                     f"Mehr Infos zum Coaching mit *{participant.first_name}* "
-                    f"findest du hier → <{url_participant}|Coaching ansehen>"
+                    f"findest du hier\n\n"
+                    f"<{url_participant}|➡ Coaching ansehen>"
                 )
             },
         },
@@ -111,8 +140,8 @@ def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="syste
                 {
                     "type": "mrkdwn",
                     "text": (
-                        f"Wenn du annimmst, verbinden wir dich direkt mit "
-                        f"*{participant.first_name}* für ein Kennenlerngespräch. "
+                        f"Wenn du annimmst, geben wir dir die Kontaktdaten von "
+                        f"*{participant.first_name}*, damit du ein  Kennenlerngespräch vereinbaren kannst. "
                         "So könnt ihr euch vor dem Start kurz austauschen."
                     )
                 }
@@ -122,8 +151,6 @@ def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="syste
 
     subject = f"Matching-Anfrage für {participant.first_name}"
 
-
-    
     # Send the message
     client.chat_postMessage(
         channel=dm_channel,
@@ -135,20 +162,16 @@ def send_first_coach_request_slack(rtc: RequestToCoach, triggered_by: str="syste
     message = "\n".join([block["text"]["text"] for block in blocks if "text" in block and "text" in block["text"]])
     
     # Log the message in the database
-    SlackLog.objects.create(
-        to=coach,
+    create_slack_log(
+        to=coach.user,
         subject=subject,
         message=message,
-        status=SlackLog.Status.SENT,
-        slack_trigger=SlackLog.SlackTrigger.AUTOMATED,
         request_to_coach=rtc,
-        sent_by=triggered_by,
-        sent_by_user=triggered_by_user,
-    )
-    
+        sent_by=SlackLog.SentBy.SYSTEM,
+    )    
     
 
-def send_reminder_coach_request_slack(rtc: RequestToCoach, triggered_by: str="system", triggered_by_user: User = None):
+def send_reminder_coach_request_slack(rtc, triggered_by: str="system", triggered_by_user: User = None):
   
     client = WebClient(token=settings.SLACK_BOT_TOKEN)
     coach = rtc.coach
@@ -165,7 +188,6 @@ def send_reminder_coach_request_slack(rtc: RequestToCoach, triggered_by: str="sy
     dm_channel = response["channel"]["id"]
     
     rtc = _get_locked_request_to_coach(rtc)
-    rtc = rtc.send_reminder(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
     
     coach = rtc.coach
     
@@ -232,7 +254,8 @@ def send_reminder_coach_request_slack(rtc: RequestToCoach, triggered_by: str="sy
                 "type": "mrkdwn",
                 "text": (
                     f"Mehr Infos zum Coaching mit *{rtc.matching_attempt.participant.first_name}* "
-                    f"findest du hier → <{url_participant}|Coaching ansehen>"
+                    f"findest du hier\n\n"
+                    f"<{url_participant}|➡ Coaching ansehen>"
                 )
             },
         },
@@ -242,8 +265,8 @@ def send_reminder_coach_request_slack(rtc: RequestToCoach, triggered_by: str="sy
                 {
                     "type": "mrkdwn",
                     "text": (
-                        f"Wenn du annimmst, verbinden wir dich direkt mit "
-                        f"*{rtc.matching_attempt.participant.first_name}* für ein Kennenlerngespräch. "
+                        f"Wenn du annimmst, geben wir dir die Kontaktdaten von "
+                        f"*{participant.first_name}*, damit du ein  Kennenlerngespräch vereinbaren kannst. "
                         "So könnt ihr euch vor dem Start kurz austauschen."
                     )
                 }
@@ -266,18 +289,15 @@ def send_reminder_coach_request_slack(rtc: RequestToCoach, triggered_by: str="sy
     message = "\n".join([block["text"]["text"] for block in blocks if "text" in block and "text" in block["text"]])
     
     # Log the message in the database
-    SlackLog.objects.create(
-        to=coach,
+    create_slack_log(
+        to=coach.user,
         subject=subject,
         message=message,
-        status=SlackLog.Status.SENT,
-        slack_trigger=SlackLog.SlackTrigger.AUTOMATED,
         request_to_coach=rtc,
-        sent_by=triggered_by,
-        sent_by_user=triggered_by_user,
+        sent_by=SlackLog.SentBy.SYSTEM,
     )
     
-def send_intro_call_request_slack(matching_attempt: MatchingAttempt, triggered_by: str="system", triggered_by_user: User = None):
+def send_intro_call_request_slack(matching_attempt):
   
     client = WebClient(token=settings.SLACK_BOT_TOKEN)
     coach = matching_attempt.matched_coach
@@ -297,9 +317,6 @@ def send_intro_call_request_slack(matching_attempt: MatchingAttempt, triggered_b
     response = client.conversations_open(users=[user_id])
     dm_channel = response["channel"]["id"]
     
-    matching_attempt = _get_locked_matching_attempt(matching_attempt)
-    matching_attempt = matching_attempt.send_intro_call_request(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
-    
     intro_call_feedback_url = generate_intro_call_feedback_url(matching_attempt)
     
     blocks = [
@@ -307,7 +324,7 @@ def send_intro_call_request_slack(matching_attempt: MatchingAttempt, triggered_b
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": f"📅 Nächster Schritt: Intro-Call mit {participant}"
+                "text": f"📅 Bitte vereinbare ein Kennenlerngespräch mit {participant}"
             }
         },
         {
@@ -315,8 +332,7 @@ def send_intro_call_request_slack(matching_attempt: MatchingAttempt, triggered_b
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"Vielen Dank nochmal, dass du das Coaching mit *{participant.first_name}* übernehmen möchtest! 🙌\n\n"
-                    f"Jetzt fehlt nur noch ein kurzer Schritt, bevor es losgehen kann."
+                    f"🙌 Vielen Dank nochmal, dass du das Coaching mit *{participant.first_name}* übernehmen möchtest! Jetzt fehlt nicht mehr viel, bevor es losgehen kann."
                 )
             }
         },
@@ -325,10 +341,9 @@ def send_intro_call_request_slack(matching_attempt: MatchingAttempt, triggered_b
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"*1️⃣ Bitte melde dich bei {participant.first_name}*\n"
-                    f"Schreib kurz eine Nachricht, um ein *Kennenlerngespräch* zu vereinbaren.\n\n"
-                    f"📧 `{participant.email}`\n\n"
-                    f"*{participant.first_name}* weiß bereits Bescheid und wartet auf deine Nachricht 🙂"
+                    f"*① Bitte vereinbare ein Kennenlerngespräch mit {participant.first_name}*\n"
+                    f"*{participant.first_name}* weiß bereits Bescheid und wartet darauf, von Dir zu hören 🙂. "
+                    f"📧 `{participant.email}`"
                 )
             }
         },
@@ -337,8 +352,8 @@ def send_intro_call_request_slack(matching_attempt: MatchingAttempt, triggered_b
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"*2️⃣ Führt ein kurzes Kennenlerngespräch*\n"
-                    f"Dabei könnt ihr euch austauschen und kurz über die Coaching-Ziele sprechen."
+                    f"*② Führt ein kurzes Kennenlerngespräch*\n"
+                    f"Dabei kannst du *{participant.first_name}* (besser) kennenlernen und über die Coaching-Ziele sprechen."
                 )
             }
         },
@@ -347,8 +362,31 @@ def send_intro_call_request_slack(matching_attempt: MatchingAttempt, triggered_b
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"*3️⃣ Danach bestätigst du den Coaching-Start*\n"
-                    f"Sobald ihr gesprochen habt, bitten wir dich nur noch, den Coaching-Start zu bestätigen. Das kannst du mit nur einem Klick <{intro_call_feedback_url}|hier> tun. Danach kann es auch schon losgehen! 🚀"
+                    f"*③ Danach bestätigst du den Coaching-Start*\n"
+                    f"*Nach* dem Kennenlerngespräch bestätige uns bitte, dass ihr gesprochen habt und dass es aus deiner Sicht losgehen kann. Wichtig: Bitte erst bestätigen nachdem ihr gesprochen habt, denn wir informieren {participant.first_name} *sofort* nach deiner Bestätigung."
+                )
+            }
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                "type": "button",
+                "text": {
+                    "type": "plain_text",
+                    "text": "🚀 Kennenlerngespräch hat stattgefunden!"
+                },
+                "url": intro_call_feedback_url,
+                "style": "primary"
+                },
+            ]
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"*④ Nachdem wir die Bestätigung von Dir erhalten haben, fragen wir auch bei {participant.first_name}* nach, ob alles in Ordnung ist und das Coaching starten kann. Sobald wir grünes Licht haben, geht es offiziell los! 🎉"
                 )
             }
         },
@@ -359,7 +397,7 @@ def send_intro_call_request_slack(matching_attempt: MatchingAttempt, triggered_b
                 "text": (
                     f"🔎 *Alle Infos zum Coaching*\n"
                     f"Hier findest du nochmal die wichtigsten Details zu *{participant.first_name}* "
-                    f"und den Coaching-Zielen:\n"
+                    f"und den Coaching-Zielen:\n\n\n"
                     f"<{url_participant}|➡ Coaching ansehen>"
                 )
             },
@@ -377,7 +415,7 @@ def send_intro_call_request_slack(matching_attempt: MatchingAttempt, triggered_b
         }
     ]
 
-    subject = f"Intro-Call ansetzen mit {participant.first_name}"
+    subject = f"Vereinbare ein Kennenlerngespräch mit {participant.first_name}"
     
     # Send the message
     client.chat_postMessage(
@@ -390,18 +428,15 @@ def send_intro_call_request_slack(matching_attempt: MatchingAttempt, triggered_b
     message = "\n".join([block["text"]["text"] for block in blocks if "text" in block and "text" in block["text"]])
     
     # Log the message in the database
-    SlackLog.objects.create(
-        to=coach,
+    create_slack_log(
+        to=coach.user,
         subject=subject,
         message=message,
-        status=SlackLog.Status.SENT,
-        slack_trigger=SlackLog.SlackTrigger.AUTOMATED,
         matching_attempt=matching_attempt,
-        sent_by=triggered_by,
-        sent_by_user=triggered_by_user,
+        sent_by=SlackLog.SentBy.SYSTEM,
     )
     
-def send_coaching_starting_info_slack(matching_attempt: MatchingAttempt, triggered_by: str="system", triggered_by_user: User = None):
+def send_coaching_starting_info_slack(matching_attempt):
   
     client = WebClient(token=settings.SLACK_BOT_TOKEN)
     coach = matching_attempt.matched_coach
@@ -418,16 +453,12 @@ def send_coaching_starting_info_slack(matching_attempt: MatchingAttempt, trigger
     response = client.conversations_open(users=[user_id])
     dm_channel = response["channel"]["id"]
     
-    matching_attempt = _get_locked_matching_attempt(matching_attempt)
-    matching_attempt = matching_attempt.send_coaching_start_info(triggered_by=triggered_by, triggered_by_user=triggered_by_user)
-    
-    
     blocks = [
         {
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": f":star-struck: Nächster Schritt: Coaching-Start mit {participant}"
+                "text": f"🤩 Coaching mit {participant.first_name} bitte starten"
             }
         },
         {
@@ -435,7 +466,7 @@ def send_coaching_starting_info_slack(matching_attempt: MatchingAttempt, trigger
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"Es kann losgehen! Dein Coaching mit *{participant.first_name}* startet jetzt offiziell. 🙌\n\n"
+                    f"Es kann losgehen! Wir haben auch von {participant.first_name} eine positive Rückmeldung zu eurem Kennenlerngespräch erhalten. Dein Coaching mit *{participant.first_name}* startet jetzt also offiziell. 🙌\n\n"
                 )
             }
         },
@@ -444,7 +475,7 @@ def send_coaching_starting_info_slack(matching_attempt: MatchingAttempt, trigger
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"*Bitte organisiere nun die ersten Coaching-Sessions mit {participant.first_name}.* Am besten wäre es, wenn der erste Termin gleich am {start_date.strftime('%d.%m.%Y')} stattfindet.\n"
+                    f"*Bitte organisiere nun die ersten Coaching-Sessions.* Am besten wäre es, wenn der erste Termin gleich am {start_date.strftime('%d.%m.%Y')} stattfindet.\n"
                 )
             }
         },
@@ -464,14 +495,14 @@ def send_coaching_starting_info_slack(matching_attempt: MatchingAttempt, trigger
                 "text": (
                     f"🔎 *Alle Infos zum Coaching*\n"
                     f"Hier findest du nochmal die wichtigsten Details zu *{participant.first_name}* "
-                    f"und den Coaching-Zielen:\n"
+                    f"und den Coaching-Zielen:\n\n\n"
                     f"<{url_participant}|➡ Coaching ansehen>"
                 )
             },
         },
     ]
 
-    subject = f":star-struck: Coaching mit {participant.first_name} kann starten"
+    subject = f"🤩 Coaching mit {participant.first_name} kann starten"
     
     # Send the message
     client.chat_postMessage(
@@ -484,13 +515,272 @@ def send_coaching_starting_info_slack(matching_attempt: MatchingAttempt, trigger
     message = "\n".join([block["text"]["text"] for block in blocks if "text" in block and "text" in block["text"]])
     
     # Log the message in the database
+    create_slack_log(
+        to=coach.user,
+        subject=subject,
+        message=message,
+        matching_attempt=matching_attempt,
+        sent_by=SlackLog.SentBy.SYSTEM,
+    )
+    
+def send_escalation_info_slack(matching_attempt):
+    """Send a Slack message to the BL contact when the participant has indicated that there are still open questions after the intro call and an escalation is needed."""
+    client = WebClient(token=settings.SLACK_BOT_TOKEN)
+
+    coach = matching_attempt.matched_coach
+    participant = matching_attempt.participant
+    bl_contact = matching_attempt.bl_contact
+
+    url_participant = settings.SITE_URL.rstrip("/") + reverse(
+        "participant_detail", kwargs={"pk": participant.pk}
+    )
+
+    user_id = bl_contact.slack_user_id
+
+    if not user_id:
+        raise ValueError(f"BL contact {bl_contact} does not have a Slack user ID")
+
+    # Open DM channel
+    response = client.conversations_open(users=[user_id])
+    dm_channel = response["channel"]["id"]
+
+    # 🚨 ESCALATION MESSAGE
+    subject = f"⚠️ Klärungsbedarf bei {participant.first_name}"
+
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": f"⚠️ {participant} benötigt Klärung"
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"*{participant.first_name}* hat sich nach dem Kennenlerngespräch "
+                    f"mit *{coach}* gegen einen direkten Coaching-Start entschieden und stattdessen "
+                    f"*Klärungsbedarf angemeldet.*"
+                )
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"👉 *Bitte kontaktiere {participant.first_name} proaktiv so schnell wie möglich*, "
+                    "um die offenen Fragen zu klären."
+                )
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"🔎 *Teilnehmerdetails*\n\n"
+                    f"<{url_participant}|➡ Zum Profil von {participant.first_name}>"
+                )
+            },
+        },
+    ]
+
+    # Send Slack message
+    client.chat_postMessage(
+        channel=dm_channel,
+        text=subject,
+        blocks=blocks
+    )
+
+    # Convert blocks to plain text for logging
+    message = "\n".join(
+        [
+            block["text"]["text"]
+            for block in blocks
+            if "text" in block and "text" in block["text"]
+        ]
+    )
+
+    logger.info(f"Sent escalation info Slack message to BL contact {bl_contact} for participant {participant} (matching_attempt: {matching_attempt})")
+    # Log message
     SlackLog.objects.create(
-        to=coach,
+        to=bl_contact.user,  
         subject=subject,
         message=message,
         status=SlackLog.Status.SENT,
-        slack_trigger=SlackLog.SlackTrigger.AUTOMATED,
         matching_attempt=matching_attempt,
-        sent_by=triggered_by,
-        sent_by_user=triggered_by_user,
+        sent_by=SlackLog.SentBy.SYSTEM,
+    )
+    
+def send_all_rtcs_declined_info_slack(matching_attempt):
+    """Send a Slack message to the BL contact when all RTCs have been declined and the matching attempt has failed."""
+    client = WebClient(token=settings.SLACK_BOT_TOKEN)
+
+    participant = matching_attempt.participant
+    bl_contact = matching_attempt.bl_contact
+
+    url_participant = settings.SITE_URL.rstrip("/") + reverse(
+        "participant_detail", kwargs={"pk": participant.pk}
+    )
+
+    user_id = bl_contact.slack_user_id
+
+    if not user_id:
+        raise ValueError(f"BL contact {bl_contact} does not have a Slack user ID")
+
+    # Open DM channel
+    response = client.conversations_open(users=[user_id])
+    dm_channel = response["channel"]["id"]
+
+    # 🚨 ESCALATION MESSAGE
+    subject = f"⚠️ Alle Matching-Anfragen für ein Coaching mit {participant.first_name} abgelehnt"
+
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": f"⚠️ Alle Matching-Anfragen für ein Coaching mit {participant.first_name} abgelehnt"
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"Alle angefragten Coaches haben ein Coaching mit *{participant.first_name}* abgelehnt. "
+                    f"Das Matching ist damit (vorerst) gescheitert."
+                )
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"👉 *Bitte schau Dir schnellstmöglich das <{matching_attempt.get_absolute_url()}|➡ Matching> an und nimm Kontakt mit {participant.first_name} auf.*"
+                )
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"🔎 *Teilnehmerdetails*\n\n"
+                    f"<{url_participant}|➡ Zum Profil von {participant.first_name}>"
+                )
+            },
+        },
+    ]
+
+    # Send Slack message
+    client.chat_postMessage(
+        channel=dm_channel,
+        text=subject,
+        blocks=blocks
+    )
+
+    # Convert blocks to plain text for logging
+    message = "\n".join(
+        [
+            block["text"]["text"]
+            for block in blocks
+            if "text" in block and "text" in block["text"]
+        ]
+    )
+
+    logger.info(f"Sent all RTCs declined info Slack message to BL contact {bl_contact} for participant {participant} (matching_attempt: {matching_attempt})")
+    # Log message
+    create_slack_log(
+        to=bl_contact.user,  
+        subject=subject,
+        message=message,
+        matching_attempt=matching_attempt,
+        sent_by=SlackLog.SentBy.SYSTEM,
+    )
+    
+def send_clarification_need_info_to_coach_slack(matching_attempt):
+    client = WebClient(token=settings.SLACK_BOT_TOKEN)
+
+    coach = matching_attempt.matched_coach
+    participant = matching_attempt.participant
+
+    user_id = coach.slack_user_id
+
+    if not user_id:
+        raise ValueError(f"Coach {coach} does not have a Slack user ID")
+
+    # Open DM channel
+    response = client.conversations_open(users=[user_id])
+    dm_channel = response["channel"]["id"]
+
+    # ℹ️ INFORMATION MESSAGE (NO ACTION REQUIRED)
+    subject = f"ℹ️ Update zu {participant.first_name}"
+
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": f"ℹ️ Update zum Matching mit {participant}"
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"*{participant.first_name}* hat nach dem Kennenlerngespräch mit Dir noch *Klärungsbedarf* bei uns angemeldet."
+                )
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"Wir meldens uns jetzt erstmal bei *{participant.first_name}* und klären, was genau noch offen ist. Wir melden uns dann anschließend wieder bei dir. "
+                )
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    "👉 *Für dich gibt es aktuell nichts zu tun.* "
+                    "Sobald alles geklärt ist oder wir weitere Infos von dir benötigen, "
+                    "melden wir uns mit den nächsten Schritten."
+                )
+            }
+        },
+    ]
+
+    # Send Slack message
+    client.chat_postMessage(
+        channel=dm_channel,
+        text=subject,
+        blocks=blocks
+    )
+
+    # Convert blocks to plain text for logging
+    message = "\n".join(
+        [
+            block["text"]["text"]
+            for block in blocks
+            if "text" in block and "text" in block["text"]
+        ]
+    )
+
+    # Log message
+    create_slack_log(
+        to=coach.user,  
+        subject=subject,
+        message=message,
+        matching_attempt=matching_attempt,
+        sent_by=SlackLog.SentBy.SYSTEM,
     )

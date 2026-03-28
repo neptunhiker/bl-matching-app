@@ -10,10 +10,9 @@
   {# ── Back link ──────────────────────────────────────────────────────── #}
   <a href="{% url 'matching_attempt_detail' request_to_coach.matching_attempt.pk %}"
      class="inline-flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-800 transition-colors">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
-         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
-    </svg>
+    <span class="h-4 w-4">
+      {% include "components/icons/back_arrow.html" %}
+    </span>
     Zurück zum Matching für {{ request_to_coach.matching_attempt.participant }}
   </a>
 
@@ -30,13 +29,13 @@
           <p class="text-xs font-jakarta font-semibold uppercase tracking-widest text-primary-500 mb-1">
             Matching-Anfrage an Coach
           </p>
-          <h1 class="text-2xl sm:text-3xl font-bold text-tertiary-700 leading-tight">
-            {{ request_to_coach.coach }}
+          <h1 class="text-2xl sm:text-3xl font-bold text-tertiary-700 leading-tight hover:text-primary-600 transition-colors">
+            <a href="{{ request_to_coach.coach.get_absolute_url }}">{{ request_to_coach.coach }}</a>
           </h1>
 
           <p class="mt-1 text-sm text-neutral-500">
             Matching für
-            <span class="font-semibold text-neutral-700">{{ request_to_coach.matching_attempt.participant }}</span>
+            <a href="{{ request_to_coach.matching_attempt.participant.get_absolute_url }}" class="font-semibold text-neutral-700 hover:text-primary-600 transition-colors">{{ request_to_coach.matching_attempt.participant }}</a>
           </p>
         </div>
 
@@ -46,11 +45,7 @@
               <a href="{% url 'request_to_coach_edit' request_to_coach.pk %}?next={{ request.GET.next|default:request.path }}"
                 class="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-md text-neutral-700 hover:bg-neutral-100 transition-colors"
                 aria-label="Bearbeiten">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
-                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 00.707-.293l9.414-9.414a1 1 0 000-1.414L16.121 6.12a1 1 0 00-1.414 0L5.293 15.535A1 1 0 005 16.243V20z"/>
-                </svg>
+                <img src="{% static 'icons/edit.svg' %}" alt="Löschen" class="h-4 w-4" />
               </a>
 
               <a href="{% url 'request_to_coach_delete' request_to_coach.pk %}?next={{ request.GET.next|default:request.path }}"
@@ -62,31 +57,14 @@
           {% endif %}
 
           <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold
-            {% if request_to_coach.status == 'accepted_matching' %}
+            {% if request_to_coach.state == 'accepted' %}
               bg-green-100 text-green-700
-            {% elif request_to_coach.status == 'rejected_matching' or request_to_coach.status == 'cancelled' %}
+            {% elif request_to_coach.state == 'rejected' or request_to_coach.state == 'cancelled' or request_to_coach.state == 'no_response_until_deadline' %}
               bg-secondary-200 text-secondary-700
             {% else %}
               bg-neutral-100 text-neutral-600
             {% endif %}">
-
-            <span class="w-2 h-2 rounded-full
-              {% if request_to_coach.status == 'accepted_on_time' or request_to_coach.status == 'accepted_late' %}
-                bg-green-500
-              {% elif request_to_coach.status == 'rejected_on_time' or request_to_coach.status == 'rejected_late' %}
-                bg-red-400
-              {% elif request_to_coach.status == 'awaiting_reply' %}
-                bg-primary-500
-              {% elif request_to_coach.status == 'no_response_until_deadline' %}
-                bg-amber-400
-              {% elif request_to_coach.status == 'cancelled' %}
-                bg-neutral-400
-              {% else %}
-                bg-secondary-400
-              {% endif %}">
-            </span>
-
-            {{ request_to_coach.get_status_display }}
+            {{ request_to_coach.get_state_display }}
           </span>
         </div>
       </div>
@@ -142,14 +120,6 @@
         </div>
 
         <div class="bg-neutral-50 rounded-xl p-3">
-          <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Anfragen gesendet</dt>
-          <dd class="text-sm font-semibold text-neutral-800">
-            {{ request_to_coach.requests_sent }}
-            <span class="text-neutral-400 font-normal">/ {{ request_to_coach.max_number_of_requests }}</span>
-          </dd>
-        </div>
-
-        <div class="bg-neutral-50 rounded-xl p-3">
           <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Deadline</dt>
           <dd class="text-sm font-semibold {% if request_to_coach.deadline_at %}text-amber-600{% else %}text-neutral-400{% endif %}">
             {% if request_to_coach.deadline_at %}
@@ -171,9 +141,8 @@
     </div>
   </div>
 
-  {% include 'matching/partials/transitions.html' with transitions=transitions %}
 
-  {% include 'matching/partials/events.html' with events=events %}
+  {% include 'matching/partials/notifications.html' with notifications=notifications %}
 
 </div>
 {% endblock %}

@@ -1,11 +1,3 @@
-"""
-General-purpose utilities for the matching app.
-
-add_business_hours(start, hours, holidays=None)
-    Advance a datetime by *hours* business hours, skipping weekends and
-    optionally a set of holiday dates.
-"""
-
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
@@ -16,62 +8,49 @@ from profiles.models import Participant
 
 
 
-def add_business_hours(
+def get_deadline(
     start: datetime,
-    hours: int,
-    holidays: set[date] | None = None,
+    hours: int=24,
 ) -> datetime:
-    """
-    Advance *start* by *hours* business hours, skipping weekends.
+    """Advance a datetime by a given number of business hours, skipping weekends and dark hours (22:00–08:00)."""
+    def round_up_to_next_hour(dt):
+        if dt.minute == 0 and dt.second == 0 and dt.microsecond == 0:
+            return dt
+        return dt.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
 
-    Weekends (Saturday = 5, Sunday = 6) are skipped entirely: the clock
-    resumes at midnight on the following Monday.
+    def next_business_day(dt):
+        days = 1
+        if dt.weekday() == 4:  # Friday
+            days = 3
+        elif dt.weekday() == 5:  # Saturday
+            days = 2
+        elif dt.weekday() == 6:  # Sunday
+            days = 1
+        return dt + timedelta(days=days)
+    
+    # 0. Friday evenings after 18:00 should be treated like the weekend
+    if start.weekday() == 4 and start.hour >= 18:
+        monday = start + timedelta(days=(7 - start.weekday()))
+        return monday.replace(hour=20, minute=0, second=0, microsecond=0)
 
-    Args:
-        start:    Timezone-aware (or naive) datetime to count forward from.
-        hours:    Number of business hours to add.  Must be >= 0.
-        holidays: Optional set of ``datetime.date`` objects treated as
-                  non-business days (e.g. public holidays).  When the cursor
-                  lands on one of these dates it is skipped in the same way
-                  as a weekend.  Pass ``None`` (default) to ignore holidays.
+    # 1. Weekend → Monday 20:00
+    if start.weekday() >= 5:
+        monday = start + timedelta(days=(7 - start.weekday()))
+        return monday.replace(hour=20, minute=0, second=0, microsecond=0)
 
-    Returns:
-        A datetime of the same type (aware/naive) as *start*.
+    # 2. Business hours
+    if 8 <= start.hour < 18:
+        next_hour = round_up_to_next_hour(start)
+        return next_business_day(next_hour)
+        
 
-    Examples:
-        >>> from datetime import datetime
-        >>> thu = datetime(2026, 3, 5, 11, 0)   # Thursday 11:00
-        >>> add_business_hours(thu, 24)
-        datetime.datetime(2026, 3, 6, 11, 0)    # Friday 11:00
+    # 3. Off-hours (weekday)
+    if start.hour < 8:
+        return start.replace(hour=20, minute=0, second=0, microsecond=0)
 
-        >>> fri = datetime(2026, 3, 6, 13, 0)   # Friday 13:00
-        >>> add_business_hours(fri, 24)
-        datetime.datetime(2026, 3, 9, 13, 0)    # Monday 13:00
-
-        >>> add_business_hours(fri, 48)
-        datetime.datetime(2026, 3, 10, 13, 0)   # Tuesday 13:00
-    """
-    if hours < 0:
-        raise ValueError("hours must be >= 0")
-
-    holidays = holidays or set()
-    current = start
-
-    for _ in range(hours):
-        current = current + timedelta(hours=1)
-        # If we have landed on a non-business day, advance to midnight of the
-        # next business day.  We do NOT preserve the start time-of-day here:
-        # the cursor is at e.g. Saturday 00:00 and we simply fast-forward to
-        # Monday 00:00 so that subsequent loop iterations continue counting
-        # from there.  This ensures "Friday 13:00 + 24 h = Monday 13:00":
-        #   11 iterations reach Saturday 00:00  → jump to Monday 00:00
-        #   13 more iterations reach Monday 13:00
-        while current.weekday() >= 5 or current.date() in holidays:
-            current = (current + timedelta(days=1)).replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
-
-    return current
+    # after 18:00
+    next_day = next_business_day(start)
+    return next_day.replace(hour=20, minute=0, second=0, microsecond=0)
 
 def get_urgency_message(participant: Participant, current_date: datetime.date = timezone.now().date(), start_date: datetime.date = None):
     """Generate an urgency message for the coach based on how soon the coaching should start."""

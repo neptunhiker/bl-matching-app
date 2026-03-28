@@ -10,12 +10,31 @@
   {# ── Back link ─────────────────────────────────────────────────── #}
   <a href="{% url 'matching_attempts' %}"
      class="inline-flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-800 transition-colors">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
-         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
-    </svg>
+    <span class="h-4 w-4 text-primary-400 shrink-0">
+      {% include "components/icons/back_arrow.html" %}
+    </span>
     Alle Matchings
   </a>
+
+
+      {% if request.user.is_staff %}
+      <div class="flex mb-1 justify-between gap-2">
+        <!-- Management Commands Modal Trigger -->
+        <button type="button"
+          id="open-management-modal"
+          class="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-primary-600 hover:bg-primary-600 hover:text-white transition-colors shadow-sm min-w-[2.5rem] min-h-[2.5rem]">
+          <span class="flex items-center justify-center h-5 w-5">
+            {% include 'components/icons/settings.html' %}
+          </span> Admin
+        </button>
+        <!-- Existing Delete Button -->
+        <a href="{% url 'matching_attempt_delete' matching_attempt.pk %}"
+          class="inline-flex items-center justify-center w-8 h-8 rounded-md text-red-600 hover:bg-secondary-50 transition-colors"
+          aria-label="Löschen">
+          <img src="{% static 'icons/delete.svg' %}" alt="Löschen" class="h-4 w-4" />
+        </a>
+      </div>
+      {% endif %}
 
   {# ── Matching-Attempt Hero Card ────────────────────────────────── #}
   <div class="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-200 overflow-hidden">
@@ -23,31 +42,30 @@
     {# Gradient header bar #}
     <div class="h-2 bg-bl-gradient"></div>
 
+
     <div class="p-6 sm:p-8">
+
 
       {# Heading + status badge #}
       <div class="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <p class="text-xs font-jakarta font-semibold uppercase tracking-widest text-primary-500 mb-1">Matching</p>
           <h1 class="text-2xl sm:text-3xl font-bold text-tertiary-700 leading-tight hover:text-primary-600 transition-colors">
-            <a href="{% url 'participant_detail' matching_attempt.participant.id %}">{{ matching_attempt.participant }}</a>
+            <a href="{{ matching_attempt.participant.get_absolute_url }}">{{ matching_attempt.participant }}</a>
           </h1>
         </div>
-        {# Status badge #}
+        {# State badge #}
         <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold
-          {% if matching_attempt.status == 'matching_confirmed' or matching_attempt.status == 'ready_for_intro_call' or matching_attempt.status == 'awaiting_intro_call_feedback' or matching_attempt.status == 'matching_completed' %}bg-green-100 text-green-700
-          {% elif matching_attempt.status == 'cancelled' %}bg-red-100 text-red-600
-          {% elif matching_attempt.status == 'ready_for_matching' %}bg-secondary-100 text-secondary-700
-          {% elif matching_attempt.status == 'matching_ongoing' %}bg-primary-100 text-primary-700
+          {% if matching_attempt.state == 'matching_completed' %}bg-green-100 text-green-700
+          {% elif matching_attempt.state == 'cancelled' or matching_attempt.state == 'failed' or matching_attempt.state == 'clarification_with_participant_needed'%}bg-secondary-100 text-secondary-700
           {% else %}bg-neutral-100 text-neutral-600
           {% endif %}">
           <span class="w-2 h-2 rounded-full
-            {% if matching_attempt.status == 'matching_confirmed' or matching_attempt.status == 'ready_for_intro_call' or matching_attempt.status == 'awaiting_intro_call_feedback' or matching_attempt.status == 'matching_completed' %}bg-green-500
-            {% elif matching_attempt.status == 'cancelled' %}bg-red-400
-            {% elif matching_attempt.status == 'ready_for_matching' %}bg-secondary-500
-            {% elif matching_attempt.status == 'matching_ongoing' %}bg-primary-500
-            {% else %}bg-neutral-400
-            {% endif %}"></span>
+          {% if matching_attempt.state == 'matching_completed' %}bg-green-500 text-green-700
+          {% elif matching_attempt.state == 'cancelled' or matching_attempt.state == 'failed' or matching_attempt.state == 'clarification_with_participant_needed' %}bg-secondary-500 text-secondary-700
+          {% else %}bg-neutral-500 text-neutral-600
+          {% endif %}">
+          </span>
           {{ matching_attempt.get_state_display }}
         </span>
       </div>
@@ -72,7 +90,14 @@
         <div class="bg-neutral-50 rounded-xl p-3">
           <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Gematchter Coach</dt>
           <dd class="text-sm font-semibold text-neutral-800 hover:text-primary-600 transition-colors">
-            {% if matching_attempt.matched_coach %}<a href="{% url 'coach_detail' matching_attempt.matched_coach.id %}">{{ matching_attempt.matched_coach }}</a></a>{% else %}&mdash;{% endif %}
+            {% if matching_attempt.matched_coach %}<a href="{% url 'coach_detail' matching_attempt.matched_coach.id %}">{{ matching_attempt.matched_coach }}</a>{% else %}&mdash;{% endif %}
+          </dd>
+        </div>
+
+        <div class="bg-neutral-50 rounded-xl p-3">
+          <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">BL-Kontakt</dt>
+          <dd class="text-sm font-semibold text-neutral-800 hover:text-primary-600 transition-colors">
+            {% if matching_attempt.bl_contact %}{{ matching_attempt.bl_contact }}{% else %}&mdash;{% endif %}
           </dd>
         </div>
 
@@ -94,77 +119,91 @@
         </div>
       </details>
 
-      {# ── Start Matching ───────────────────────────────────────────── #}
-      {% if request.user.is_staff and matching_attempt.status == 'in_preparation' and matching_attempt.coach_requests.count > 0 %}
-      <div class="mt-6 pt-5 border-t border-neutral-100">
+      {# ── Automation Control ──────────────────────────────────────── #}
+      {% if matching_attempt.state != "matching_completed" and matching_attempt.state != "cancelled" and matching_attempt.coach_requests.count > 0 %}
+        <div class="mt-8 pt-6 ">
+        <div class="flex flex-wrap items-center justify-between gap-3 bg-neutral-50 rounded-xl p-4">
+
+          {# Status flag #}
+          <div>
+            <p class="text-xs font-jakarta text-neutral-500 mb-1">Auto-Benachrichtigungen</p>
+            <div class="flex items-center gap-2 flex-wrap">
+              {% if matching_attempt.automation_enabled %}
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                  <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                  Aktiviert
+                </span>
+                {% if matching_attempt.automation_enabled_at %}
+                  <span class="text-xs text-neutral-400">seit {{ matching_attempt.automation_enabled_at|date:"d.m.Y" }}, {{ matching_attempt.automation_enabled_at|time:"H:i" }} Uhr</span>
+                {% endif %}
+                {% if not matching_attempt.automation_is_allowed %}
+                  <span class="text-xs text-amber-600 font-medium">(inaktiv bei diesem Status)</span>
+                {% endif %}
+              {% else %}
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-500">
+                  <span class="w-1.5 h-1.5 rounded-full bg-neutral-400"></span>
+                  Deaktiviert
+                </span>
+              {% endif %}
+            </div>
+          </div>
+
+          {# Toggle action – staff only #}
+          {% if request.user.is_staff %}
+            <form method="post" action="{% url 'matching_attempt_automation' matching_attempt.pk %}">
+              {% csrf_token %}
+              {% if matching_attempt.automation_enabled %}
+                <input type="hidden" name="action" value="disable">
+                <button type="submit"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                              bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-colors">
+                  Deaktivieren
+                </button>
+              {% else %}
+                <input type="hidden" name="action" value="enable">
+                <button type="submit"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                              bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 transition-colors">
+                  Aktivieren
+                </button>
+              {% endif %}
+            </form>
+          {% endif %}
+
+        </div>
+        </div>
+      {% endif %}
+
+{# ── Start Matching ───────────────────────────────────────────── #}
+    {% if show_start_button %}
+      <div class="mt-6 pt-5 border-t border-neutral-100 flex justify-center">
         <form method="post" action="{% url 'matching_attempt_start' matching_attempt.pk %}">
           {% csrf_token %}
           <button type="submit"
                   class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
-                         bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
-                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-4.586-2.651A1 1 0 009 9.382v5.236a1 1 0 001.166.984l4.586-1.054a1 1 0 00.748-.97v-1.44a1 1 0 00-.748-.97z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
+                        bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm">
+            <span class="h-4 w-4">
+                {% include "components/icons/play_circle.html" %}
+            </span>
             Matching starten
           </button>
         </form>
       </div>
-      {% endif %}
-
-      {# ── Automation Control ──────────────────────────────────────── #}
-      <div class="mt-8 pt-6 ">
-      <div class="flex flex-wrap items-center justify-between gap-3 bg-neutral-50 rounded-xl p-4">
-
-        {# Status flag #}
-        <div>
-          <p class="text-xs font-jakarta text-neutral-500 mb-1">Auto-Benachrichtigungen</p>
-          <div class="flex items-center gap-2 flex-wrap">
-            {% if matching_attempt.automation_enabled %}
-              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                Aktiviert
-              </span>
-              {% if matching_attempt.automation_enabled_at %}
-                <span class="text-xs text-neutral-400">seit {{ matching_attempt.automation_enabled_at|date:"d.m.Y" }}, {{ matching_attempt.automation_enabled_at|time:"H:i" }} Uhr</span>
-              {% endif %}
-              {% if not matching_attempt.automation_is_allowed %}
-                <span class="text-xs text-amber-600 font-medium">(inaktiv bei diesem Status)</span>
-              {% endif %}
-            {% else %}
-              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-500">
-                <span class="w-1.5 h-1.5 rounded-full bg-neutral-400"></span>
-                Deaktiviert
-              </span>
-            {% endif %}
-          </div>
-        </div>
-
-        {# Toggle action – staff only #}
-        {% if request.user.is_staff %}
-          <form method="post" action="{% url 'matching_attempt_automation' matching_attempt.pk %}">
-            {% csrf_token %}
-            {% if matching_attempt.automation_enabled %}
-              <input type="hidden" name="action" value="disable">
-              <button type="submit"
-                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
-                             bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-colors">
-                Deaktivieren
-              </button>
-            {% else %}
-              <input type="hidden" name="action" value="enable">
-              <button type="submit"
-                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
-                             bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 transition-colors">
-                Aktivieren
-              </button>
-            {% endif %}
-          </form>
-        {% endif %}
-
+      {% elif show_resume_button %}
+      <div class="mt-6 pt-5 border-t border-neutral-100 flex justify-center">
+        <form method="post" action="{% url 'matching_attempt_resume' matching_attempt.pk %}">
+          {% csrf_token %}
+          <button type="submit"
+                  class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
+                        bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm">
+            <span class="h-4 w-4">
+                {% include "components/icons/play_circle.html" %}
+            </span>
+            Matching fortsetzen
+          </button>
+        </form>
       </div>
-      </div>
+    {% endif %}
 
     </div>
   </div>
@@ -173,24 +212,21 @@
   <section>
     <div class="flex items-center justify-between gap-3 mb-4">
       <h2 class="text-lg font-bold text-tertiary-700 flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary-500" fill="none"
-             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round"
-                d="M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87m6-4a4 4 0 11-8 0 4 4 0 018 0zm6 4a4 4 0 10-8 0"/>
-        </svg>
+        <span class="h-5 w-5 text-primary-500 shrink-0">
+            {% include "components/icons/people.html" %}
+        </span>
         Matching-Anfragen an Coaches
         <span class="ml-1 text-xs font-jakarta font-semibold bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">
           {{ matching_attempt.coach_requests.count }}
         </span>
       </h2>
-      {% if request.user.is_staff and matching_attempt.is_active %}
+      {% if request.user.is_staff and matching_attempt.is_active or matching_attempt.state == 'failed' %}
         <a href="{% url 'request_to_coach_create' matching_attempt.pk %}"
            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
                   bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none"
-               viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-          </svg>
+          <span class="h-3.5 w-3.5">
+              {% include "components/icons/plus.html" %}
+          </span>
           Erstellen
         </a>
       {% endif %}
@@ -216,7 +252,7 @@
 
             {# Coach name + status #}
             <div class="flex items-start justify-between gap-2">
-              <p class="font-bold text-tertiary-700 text-base leading-snug">{{ req.coach.first_name }}<br>{{ req.coach.last_name }}</p>
+              <p class="font-bold text-tertiary-700 text-base leading-snug hover:text-primary-600 transition-colors"><a href="{{ req.coach.get_absolute_url }}">{{ req.coach.first_name }}<br>{{ req.coach.last_name }}</a></p>
               
               <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
                 {% if req.state == 'accepted' %}bg-green-100 text-green-700
@@ -282,9 +318,9 @@
               <a href="{% url 'request_to_coach_detail' req.pk %}"
                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-neutral-50 text-primary-700 hover:bg-neutral-100 transition-colors">
                 Details
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
+                <span class="h-3 w-3">
+                    {% include "components/icons/forward_arrow.html" %}
+                </span>
               </a>
             </div>
           </div>
@@ -306,10 +342,153 @@
   
   {% include 'matching/partials/notifications.html' with notifications=notifications %}
   
-  {% include 'matching/partials/transitions.html' with transitions=transitions %}
+
   
   {% include 'matching/partials/events.html' with events=events %}
 
   </div>
 </section>
+
+{% if request.user.is_staff %}
+  <div
+    id="management-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-neutral-950/50 px-4 backdrop-blur-sm"
+  >
+    <div
+      class="relative w-full max-w-lg overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-900"
+    >
+      <!-- Header -->
+      <div class="border-b border-neutral-100 px-6 py-5 dark:border-neutral-800">
+        <button
+          type="button"
+          aria-label="Schließen"
+          class="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+          onclick="closeManagementModal()"
+        >
+            <span class="h-6 w-6">
+              {% include 'components/icons/cross.html' %}
+            </span>
+        </button>
+
+        <div class="flex items-start gap-4 pr-10">
+
+          <div>
+            <h2 class="text-xl font-semibold text-neutral-900 dark:text-white">
+              Management-Befehle
+            </h2>
+            <p class="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+              Führe manuelle Aktionen für dieses Matching aus. 
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="space-y-4 px-6 py-6">
+        
+
+        <a
+          href="{% url 'manual_override_matching' matching_attempt.pk %}"
+          class="group flex w-full items-start gap-4 rounded-2xl  bg-stone-200 px-5 py-4 text-left transition duration-200 hover:-translate-y-0.5 border-2 hover:border-green-600"
+        >
+          <div class="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-stone-100">
+            <span class="h-5 w-5 text-green-500">
+              {% include 'components/icons/heart.html' %}
+            </span>
+          </div>
+
+          <div class="flex-1">
+            <div class="flex items-center justify-between gap-3 ">
+              <span class="font-semibold ">
+                Coach manuell matchen
+              </span>
+                <span class="h-5 w-5">
+                  {% include 'components/icons/forward_arrow.html' %}
+                </span>
+            </div>
+            <p class="mt-1 text-sm leading-5">
+              Weise diesem Matching direkt einen bestimmten Coach zu.
+            </p>
+          </div>
+        </a>
+
+<form
+          method="post"
+          action="{% url 'matching_attempt_cancel' matching_attempt.pk %}"
+          onsubmit="return confirm('Bist du sicher, dass Sie das Matching abbrechen möchten?');"
+        >
+          {% csrf_token %}
+          <input type="hidden" name="command" value="cancel_matching">
+
+          <button
+            type="submit"
+            class="group flex w-full items-start gap-4 rounded-2xl bg-stone-200 px-5 py-4 text-left transition duration-200 hover:-translate-y-0.5 border-2 hover:border-secondary-600 "
+          >
+            <div class="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-stone-100 ">
+              <span class="h-5 w-5 text-secondary-600">
+                {% include 'components/icons/cross.html' %}
+              </span>
+            </div>
+
+            <div class="flex-1">
+              <div class="flex items-center justify-between gap-3">
+                <span class="font-semibold">
+                  Matching abbrechen
+                </span>
+                  <span class="h-5 w-5">
+                    {% include 'components/icons/forward_arrow.html' %}
+                  </span>
+              </div>
+              <p class="mt-1 text-sm leading-5">
+                Beendet das Matching und setzt den Status auf „Abgebrochen“.
+              </p>
+            </div>
+          </button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openManagementModal() {
+      const modal = document.getElementById('management-modal');
+      if (!modal) return;
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function closeManagementModal() {
+      const modal = document.getElementById('management-modal');
+      if (!modal) return;
+
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const openBtn = document.getElementById('open-management-modal');
+      const modal = document.getElementById('management-modal');
+
+      openBtn?.addEventListener('click', openManagementModal);
+
+      modal?.addEventListener('click', function (event) {
+        if (event.target === modal) {
+          closeManagementModal();
+        }
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          closeManagementModal();
+        }
+      });
+    });
+  </script>
+{% endif %}
+
+
 {% endblock %}

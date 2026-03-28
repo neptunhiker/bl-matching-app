@@ -16,13 +16,13 @@ from django.conf import settings
 
 from .models import EmailLog
 
+logger = logging.getLogger(__name__)
 
 class EmailLogDetailView(LoginRequiredMixin, DetailView):
     model = EmailLog
     template_name = 'emails/email_log_detail.html'
     context_object_name = 'email_log'
 
-logger = logging.getLogger(__name__)
 
 
 def _get_client_ip(request) -> str:

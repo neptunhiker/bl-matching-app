@@ -31,8 +31,20 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    class SexChoices(models.TextChoices):
+        DIVERS = "divers", "Divers"
+        FEMALE = "frau", "Frau"
+        MALE = "herr", "Herr"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
+    sex = models.CharField(
+        max_length=10,
+        choices=SexChoices.choices,
+        blank=True,
+        verbose_name="Anrede",
+        help_text="Anrede für den Benutzer (Herr, Frau, Divers). Wichtig, um die Person korrekt ansprechen zu können.",
+    )
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
     is_staff = models.BooleanField(default=False)
@@ -43,6 +55,15 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
+    
+    # property
+    @property
+    def german_article(self):
+        if self.sex in [self.SexChoices.DIVERS, self.SexChoices.FEMALE]:
+            return "die"
+        else:
+            return "der"
+
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}".strip() or self.email

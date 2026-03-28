@@ -2,70 +2,77 @@
 
 {% block content %}
 
-<h2 style="margin-bottom:20px;">✨ Neue Coaching-Anfrage</h2>
+<h2 style="margin:0 0 18px; font-size:24px; color:#111827;">
+  Neue Coaching-Anfrage
+</h2>
 
-<p>Gute Neuigkeiten, {{ recipient_name }}! Hättest du Lust, dieses Coaching zu übernehmen?</p>
-
-<p style="margin-top:16px;">
-<strong>Teilnehmer:in:</strong> {{ participant_name }}<br>
-<strong>Unterrichtseinheiten:</strong> {{ ue }}<br>
-<strong>Startdatum:</strong> {{ start_date }}
+<p style="margin:0 0 16px;">
+  Gute Neuigkeiten, {{ recipient_name }} – hättest du Lust, dieses Coaching zu übernehmen?
 </p>
 
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:24px 0; background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px;">
+  <tr>
+    <td style="padding:18px 20px; font-size:15px; line-height:1.7; color:#374151;">
+      <strong>Teilnehmer:in:</strong> {{ participant_name }}<br>
+      <strong>Unterrichtseinheiten:</strong> {{ ue }}<br>
+      <strong>Startdatum:</strong> {{ start_date }}
+      <br>
+      <strong>Details:</strong>  <a href="{{ learn_more_url }}" style="color:#8b5cf6; text-decoration:none; font-weight:600;">
+    Coaching ansehen
+  </a><br>
+    </td>
+  </tr>
+</table>
+
 {% if deadline %}
-<p style="margin-top:16px; color:#6b7280; font-size:0.9rem;">
-Bitte gib uns bis zum <strong>{{ deadline|date:"d.m.Y – H:i" }} Uhr</strong> Bescheid.<br>
-Ein Klick genügt 👇
+<p style="margin:0 0 24px; color:#6b7280; font-size:14px; line-height:1.6;">
+  Bitte gib uns bis zum
+  <strong>{{ deadline|date:"d.m.Y – H:i" }} Uhr</strong>
+  Bescheid.
 </p>
 {% endif %}
 
-<!-- Action buttons -->
-<table border="0" cellpadding="0" cellspacing="0" style="margin-top:20px;">
+<!-- Primary Button -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 12px;">
   <tr>
-    <td style="padding-right:10px;">
+    <td bgcolor="#16a34a" style="border-radius:6px; text-align:center;">
       <a href="{{ accept_url }}"
-         style="
-           background-color:#16a34a;
-           color:#ffffff;
-           padding:12px 18px;
-           text-decoration:none;
-           border-radius:6px;
-           font-weight:600;
-           display:inline-block;
-         ">
-        ✅ Ja, ich übernehme das Coaching!
-      </a>
-    </td>
-    <td>
-      <a href="{{ decline_url }}"
-         style="
-           background-color:#dc2626;
-           color:#ffffff;
-           padding:12px 18px;
-           text-decoration:none;
-           border-radius:6px;
-           font-weight:600;
-           display:inline-block;
-         ">
-        🙂 Diesmal passt es leider nicht
+         style="display:inline-block; padding:12px 20px; font-size:15px; font-weight:700; line-height:1; color:#ffffff; text-decoration:none;">
+        Coaching übernehmen
       </a>
     </td>
   </tr>
 </table>
 
-<p style="margin-top:22px;">
-Mehr Infos zum Coaching mit <strong>{{ participant_name }}</strong> findest du hier →
-<a href="{{ learn_more_url }}">Coaching ansehen</a>
+<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#6b7280;">
+  Wenn du zusagst, schicken wir dir anschließend die Kontaktdaten von
+  <strong>{{ participant_name }}</strong>, damit ihr ein kurzes Kennenlerngespräch vereinbaren könnt.
 </p>
 
-<p style="font-size:0.9rem; color:#6b7280; margin-top:18px;">
-Wenn du annimmst, verbinden wir dich direkt mit <strong>{{ participant_name }}</strong>
-für ein Kennenlerngespräch. So könnt ihr euch vor dem Start kurz austauschen.
-</p>
+<!-- Secondary Button -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 28px;">
+  <tr>
+    <td bgcolor="#ffffff"
+        style="border:1px solid #d1d5db; border-radius:6px; text-align:center;">
+      <a href="{{ decline_url }}"
+         style="
+           display:inline-block;
+           padding:8px 14px;
+           font-size:12px;
+           font-weight:600;
+           line-height:1;
+           color:#6b7280;
+           text-decoration:none;
+         ">
+        Diesmal passt es leider nicht
+      </a>
+    </td>
+  </tr>
+</table>
 
-<p style="margin-top:24px;">
-Viele Grüße<br>
-{{ author }}
+<p style="margin:0;">
+  Viele Grüße<br>
+  {{ author }}
 </p>
 
 {% endblock %}

@@ -16,14 +16,17 @@
   <form method="post" novalidate class="bg-white/70 rounded-2xl shadow-sm border border-white/60 overflow-hidden">
     {% csrf_token %}
     <div class="divide-y divide-neutral-100/60">
+
+      {% if form.user %}
       <div class="px-6 py-6">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {% include "profiles/_form_field.html" with field=form.user %}
         </div>
       </div>
+      {% endif %}
 
-      <div class="px-6">
-        <h2 class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-4">Grunddaten</h2>
+
+      <div class="px-6 py-6">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {% include "profiles/_form_field.html" with field=form.city %}
           {% include "profiles/_form_field.html" with field=form.status %}

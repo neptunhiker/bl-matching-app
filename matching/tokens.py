@@ -191,3 +191,39 @@ def generate_intro_call_feedback_url(matching_attempt) -> str:
     url = site_url + reverse('confirm_intro_call', kwargs={'token': token.token})
 
     return url
+
+
+def generate_start_coaching_and_clarification_needed_urls(matching_attempt) -> tuple[str, str]:
+    """
+    Create one START_COACHING token and one CLARIFICATION_NEEDED token for a *matching_attempt* and return their absolute URLs as ``(start_coaching_url, clarification_needed_url)``.
+
+    A new pair of tokens is created on every call, so each email (initial send + every reminder) gets its own fresh links.  Old tokens from earlier emails remain valid — the view's terminal-status guard prevents a participant from changing their answer after they have already responded.
+
+    Absolute URLs are built using ``settings.SITE_URL``.
+
+    Args:
+        matching_attempt: A ``MatchingAttempt`` instance the tokens belong to.
+
+    Returns:
+        ``(start_coaching_url, clarification_needed_url)`` — fully qualified URLs safe to embed
+        directly in an email template.
+    """
+    from django.conf import settings  # noqa: PLC0415
+    from .models import ParticipantActionToken  # noqa: PLC0415
+
+    start_coaching_token = ParticipantActionToken.objects.create(
+        token=generate_secure_token(),
+        matching_attempt=matching_attempt,
+        action=ParticipantActionToken.Action.START_COACHING,
+    )
+    clarification_needed_token = ParticipantActionToken.objects.create(
+        token=generate_secure_token(),
+        matching_attempt=matching_attempt,
+        action=ParticipantActionToken.Action.CLARIFICATION_NEEDED,
+    )
+
+    site_url = settings.SITE_URL.rstrip('/')
+    start_coaching_url = site_url + reverse('participant_respond', kwargs={'token': start_coaching_token.token})
+    clarification_needed_url = site_url + reverse('participant_respond', kwargs={'token': clarification_needed_token.token})
+
+    return start_coaching_url, clarification_needed_url

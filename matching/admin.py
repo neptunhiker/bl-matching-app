@@ -1,7 +1,8 @@
 from django.contrib import admin
 
-from .models import CoachActionToken, MatchingAttempt, RequestToCoach, MatchingAttemptTransition, RequestToCoachTransition, RequestToCoachEvent, MatchingAttemptEvent, MatchingEvent
+from .models import CoachActionToken, MatchingAttempt, RequestToCoach, MatchingEvent
 
+from django.contrib import admin
 
 
 
@@ -31,47 +32,18 @@ class CoachActionTokenAdmin(admin.ModelAdmin):
     
 @admin.register(MatchingAttempt)
 class MatchingAttemptAdmin(admin.ModelAdmin):
-    list_display = ['id', 'participant', 'status', 'state', 'automation_enabled', 'created_at']
-    list_filter = ['status', 'automation_enabled']
+    list_display = ['id', 'participant', 'state', 'automation_enabled', 'created_at']
+    list_filter = ['automation_enabled']
     search_fields = ['participant__first_name', 'participant__last_name', 'participant__email']
     ordering = ['-created_at']
     
 @admin.register(RequestToCoach)
 class RequestToCoachAdmin(admin.ModelAdmin):
-    list_display = ['id', 'matching_attempt', 'coach', 'status', 'priority', 'first_sent_at', 'deadline_at']
-    list_filter = ['status', 'priority']
+    list_display = ['id', 'matching_attempt', 'coach', 'state', 'priority', 'first_sent_at', 'deadline_at']
+    list_filter = ['state', 'priority']
     search_fields = ['matching_attempt__participant__first_name', 'matching_attempt__participant__last_name', 'matching_attempt__participant__email', 'coach__user__email']
     ordering = ['-first_sent_at']
     
-    
-@admin.register(MatchingAttemptTransition)
-class MatchingAttemptTransitionAdmin(admin.ModelAdmin):
-    list_display = ['id', 'matching_attempt', 'from_status', 'to_status', 'created_at']
-    list_filter = ['from_status', 'to_status']
-    search_fields = ['matching_attempt__participant__first_name', 'matching_attempt__participant__last_name', 'matching_attempt__participant__email']
-    ordering = ['-created_at']
-    
-@admin.register(RequestToCoachTransition)
-class RequestToCoachTransitionAdmin(admin.ModelAdmin):
-    list_display = ['id', 'request', 'from_status', 'to_status', 'created_at']
-    list_filter = ['from_status', 'to_status']
-    search_fields = ['request__matching_attempt__participant__first_name', 'request__matching_attempt__participant__last_name', 'request__matching_attempt__participant__email', 'request__coach__user__email']
-    ordering = ['-created_at']
-    
-@admin.register(RequestToCoachEvent)
-class RequestToCoachEventAdmin(admin.ModelAdmin):
-    list_display = ['id', 'request', 'event_type', 'triggered_by', 'created_at']
-    list_filter = ['event_type', 'triggered_by']
-    search_fields = ['request__matching_attempt__participant__first_name', 'request__matching_attempt__participant__last_name', 'request__matching_attempt__participant__email', 'request__coach__user__email']
-    ordering = ['-created_at']
-    
-@admin.register(MatchingAttemptEvent)
-class MatchingAttemptEventAdmin(admin.ModelAdmin):
-    list_display = ['id', 'matching_attempt', 'event_type', 'triggered_by', 'created_at']
-    list_filter = ['event_type', 'triggered_by']
-    search_fields = ['matching_attempt__participant__first_name', 'matching_attempt__participant__last_name', 'matching_attempt__participant__email']
-    ordering = ['-created_at']
-
       
 @admin.register(MatchingEvent)
 class MatchingEventAdmin(admin.ModelAdmin):

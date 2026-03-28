@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Antwort bestätigt{% endblock %}
+
+{% block body %}
+<div class="max-w-lg mx-auto px-4 py-16 text-center">
+<div class="flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full bg-red-100">
+    <img src="{% static 'icons/question_mark.svg' %}" class="w-8 h-8 text-red-500" alt="Fragezeichen" />
+</div>
+    <h1 class="text-2xl font-bold text-neutral-800 mb-3">Klärungsbedarf</h1>
+    <p class="text-neutral-600">
+      Du bist dir unsicher, ob <strong>{{ coach }}</strong> {{ coach.user.german_article }} richtige Coach für dich ist? Kein Problem.
+    </p>
+    <p class="text-neutral-600 mt-4">
+      Melde dich am besten direkt bei {% if bl_contact.user.sex == 'herr' %}deinem persönlichen <strong>BeginnerLuft Ansprechpartner</strong>{% else %}deiner persönlichen <strong>BeginnerLuft Ansprechpartnerin</strong>{% endif %}. Du kannst <strong>{{ bl_contact.user.first_name }}</strong> per E-Mail über <a href="mailto:{{ bl_contact.user.email }}">{{ bl_contact.user.email }}</a> erreichen. 
+    </p>
+
+    <p class="text-sm text-neutral-400 mt-4">
+      Wir helfen dir gerne weiter, damit du bald mit deinem Coaching starten kannst.
+    </p>
+</div>
+{% endblock %}
