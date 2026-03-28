@@ -24,8 +24,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
-# Load .env (if present) then get SECRET_KEY from environment
-load_dotenv(BASE_DIR / '.env', override=True)
+
+env_file = os.environ.get("DJANGO_ENV_FILE", ".env.dev")
+env_path = BASE_DIR / env_file
+if env_path.exists():
+    load_dotenv(env_path, override=True)
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY')
 if not SECRET_KEY:
@@ -35,13 +39,20 @@ if not SECRET_KEY:
 DEBUG = os.environ.get('DEBUG', 'False').lower() in ('1', 'true', 'yes')
 
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1').split(',')
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', '127.0.0.1').split(',') if h.strip()]
 
-# Required when running behind a reverse proxy (Caddy) — Django 4.0+
-CSRF_TRUSTED_ORIGINS = os.environ.get(
-    'CSRF_TRUSTED_ORIGINS', 'http://127.0.0.1,http://localhost'
-).split(',')
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in os.environ.get(
+        'CSRF_TRUSTED_ORIGINS',
+        'http://127.0.0.1,http://localhost'
+    ).split(',') if o.strip()
+]
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 # Application definition
 
@@ -94,13 +105,12 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("Missing DATABASE_URL environment variable")
 
 DATABASES = {
-    "default": dj_database_url.parse(
-        os.environ.get("DATABASE_URL")
-    )
+    "default": dj_database_url.parse(DATABASE_URL)
 }
 
 
@@ -138,7 +148,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'  # target for collectstatic
 STATICFILES_DIRS = [BASE_DIR / 'static']  # source dirs for collectstatic / runserver
 
