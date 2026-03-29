@@ -6,6 +6,8 @@ media/
 staticfiles/
 .env
 .env.*
+!.env.example
+
 Caddyfile
 caddy/
 docker-compose.yml
