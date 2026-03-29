@@ -38,6 +38,8 @@ if not SECRET_KEY:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() in ('1', 'true', 'yes')
 
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "development")
+
 
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', '127.0.0.1').split(',') if h.strip()]
 
@@ -97,6 +99,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'config.context_processors.environment_context',
             ],
         },
     },

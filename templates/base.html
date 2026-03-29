@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{% block title %}BL-Matching{% endblock %}</title>
+    <title>{% if IS_STAGING %}[STAGING] {% endif %}{% block title %}BeginnerLuft Matching{% endblock %}</title>
     <link rel="icon" type="image/png" href="{% static 'img/bl_logo_schwarz.png' %}" />
     <link rel="stylesheet" href="{% static 'css/tailwind.css' %}?v={% now 'U' %}" />
     {% block extra_head %}{% endblock %}
@@ -12,7 +12,7 @@
   <body class="min-h-screen bg-gradient-to-br from-secondary-100 via-primary-100 to-primary-200 font-sans text-neutral-800 flex flex-col">
 
     <!-- ===== Navbar ===== -->
-    <nav class="bg-bl-gradient border-b border-white/30 shadow-sm sticky top-0 z-50">
+    <nav class="{% if IS_STAGING %}bg-orange-600{% else %} bg-bl-gradient border-b border-white/30 shadow-sm sticky top-0 z-50 {% endif %}">
       <div class="max-w-5xl mx-auto px-4 sm:px-6">
         <div class="flex items-center justify-between h-16">
 
