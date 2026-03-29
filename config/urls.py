@@ -18,9 +18,11 @@ from django.contrib import admin
 from django.contrib.auth.decorators import login_required
 from django.urls import path, include
 from django.views.generic import TemplateView
+from config.views import healthcheck
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path("health/", healthcheck, name="healthcheck"),
     path('accounts/', include('accounts.urls')),
     path('profiles/', include('profiles.urls')),
     path('emails/', include('emails.urls')),
