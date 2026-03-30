@@ -625,6 +625,9 @@ def send_all_rtcs_declined_info_slack(matching_attempt):
     url_participant = settings.SITE_URL.rstrip("/") + reverse(
         "participant_detail", kwargs={"pk": participant.pk}
     )
+    url_matching_attempt = settings.SITE_URL.rstrip("/") + reverse(
+        "matching_attempt_detail", kwargs={"pk": matching_attempt.pk}
+    )
 
     user_id = bl_contact.slack_user_id
 
@@ -660,9 +663,7 @@ def send_all_rtcs_declined_info_slack(matching_attempt):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": (
-                    f"👉 *Bitte schau Dir schnellstmöglich das <{matching_attempt.get_absolute_url()}|➡ Matching> an und nimm Kontakt mit {participant.first_name} auf.*"
-                )
+                "text": f"👉 Bitte schau Dir schnellstmöglich das <{url_matching_attempt}|➡ Matching> an und nimm Kontakt mit {participant.first_name} auf."
             }
         },
         {
