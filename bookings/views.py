@@ -32,6 +32,12 @@ def split_full_name(full_name):
     return first_name, last_name
 
 
+def extract_uuid_from_uri(uri: str) -> str:
+    if not uri:
+        return ""
+    return uri.rstrip("/").split("/")[-1]
+
+
 def build_booking_defaults(invitee_data, scheduled_event, full_payload):
     questions = invitee_data.get("questions_and_answers", [])
 
@@ -58,6 +64,7 @@ def build_booking_defaults(invitee_data, scheduled_event, full_payload):
     return {
         "calendly_event_uri": event_uri,
         "calendly_event_uuid": CalendlyBooking.extract_uuid_from_uri(event_uri),
+        "calendly_invitee_uri": (invitee_data.get("uri") or "").strip(),
         "invitee_first_name": first_name,
         "invitee_last_name": last_name,
         "invitee_name": invitee_name,
@@ -74,6 +81,39 @@ def build_booking_defaults(invitee_data, scheduled_event, full_payload):
         "status": (invitee_data.get("status") or scheduled_event.get("status") or "active").strip(),
         "questions_and_answers": questions,
         "raw_payload": full_payload,
+    }
+
+
+def build_safe_webhook_summary(payload, invitee_data, scheduled_event):
+    invitee_uri = (invitee_data.get("uri") or "").strip()
+    event_uri = (scheduled_event.get("uri") or invitee_data.get("event") or "").strip()
+
+    questions = invitee_data.get("questions_and_answers", []) or []
+    cancellation = invitee_data.get("cancellation") or {}
+    scheduled_cancellation = scheduled_event.get("cancellation") or {}
+
+    return {
+        "event": payload.get("event"),
+        "payload_created_at": payload.get("created_at"),
+        "invitee_created_at": invitee_data.get("created_at"),
+        "invitee_updated_at": invitee_data.get("updated_at"),
+        "scheduled_event_created_at": scheduled_event.get("created_at"),
+        "scheduled_event_updated_at": scheduled_event.get("updated_at"),
+        "invitee_uuid": extract_uuid_from_uri(invitee_uri),
+        "event_uuid": extract_uuid_from_uri(event_uri),
+        "status": invitee_data.get("status") or scheduled_event.get("status"),
+        "scheduled_event_status": scheduled_event.get("status"),
+        "event_name": scheduled_event.get("name"),
+        "event_type_uuid": extract_uuid_from_uri(scheduled_event.get("event_type") or ""),
+        "start_time": scheduled_event.get("start_time"),
+        "end_time": scheduled_event.get("end_time"),
+        "timezone": invitee_data.get("timezone"),
+        "question_count": len(questions),
+        "rescheduled": invitee_data.get("rescheduled"),
+        "has_cancellation": bool(cancellation or scheduled_cancellation),
+        "canceler_type": cancellation.get("canceler_type") or scheduled_cancellation.get("canceler_type"),
+        "location_type": (scheduled_event.get("location") or {}).get("type"),
+        "tracking_present": bool(invitee_data.get("tracking")),
     }
 
 
@@ -95,7 +135,6 @@ def calendly_webhook(request):
     try:
         raw_body = request.body.decode("utf-8")
         payload = json.loads(raw_body)
-        logger.info("FULL PAYLOAD:\n%s", json.dumps(payload, indent=2))
     except json.JSONDecodeError:
         logger.exception("Invalid JSON received from Calendly")
         return JsonResponse({"detail": "Invalid JSON"}, status=400)
@@ -107,15 +146,20 @@ def calendly_webhook(request):
     invitee_uri = (invitee_data.get("uri") or "").strip()
     event_uri = (scheduled_event.get("uri") or invitee_data.get("event") or "").strip()
 
-    logger.info(
-        "Webhook parsed: event=%s invitee_uri=%s event_uri=%s",
-        event,
-        invitee_uri,
-        event_uri,
+    safe_summary = build_safe_webhook_summary(
+        payload=payload,
+        invitee_data=invitee_data,
+        scheduled_event=scheduled_event,
     )
 
+    logger.info("Webhook parsed summary: %s", safe_summary)
+
     if event in {"invitee.created", "invitee.canceled"} and not invitee_uri:
-        logger.error("Missing invitee_uri for event=%s", event)
+        logger.error(
+            "Missing invitee_uri for event=%s event_uuid=%s",
+            event,
+            extract_uuid_from_uri(event_uri),
+        )
         return JsonResponse({"detail": "Missing invitee uri"}, status=400)
 
     if event == "invitee.created":
@@ -130,15 +174,21 @@ def calendly_webhook(request):
             )
 
             logger.info(
-                "Booking stored successfully: booking_id=%s created=%s email=%s start_time=%s status=%s",
+                "Booking stored successfully: booking_id=%s created=%s invitee_uuid=%s event_uuid=%s start_time=%s status=%s",
                 booking.id,
                 created,
-                booking.invitee_email,
+                extract_uuid_from_uri(invitee_uri),
+                booking.calendly_event_uuid,
                 booking.start_time,
                 booking.status,
             )
         except Exception:
-            logger.exception("Error while saving booking")
+            logger.exception(
+                "Error while saving booking for event=%s invitee_uuid=%s event_uuid=%s",
+                event,
+                extract_uuid_from_uri(invitee_uri),
+                extract_uuid_from_uri(event_uri),
+            )
             return JsonResponse({"detail": "Error saving booking"}, status=500)
 
         return HttpResponse(status=200)
@@ -155,18 +205,29 @@ def calendly_webhook(request):
             )
 
             logger.info(
-                "Booking canceled successfully: booking_id=%s created=%s email=%s start_time=%s status=%s",
+                "Booking canceled successfully: booking_id=%s created=%s invitee_uuid=%s event_uuid=%s start_time=%s status=%s",
                 booking.id,
                 created,
-                booking.invitee_email,
+                extract_uuid_from_uri(invitee_uri),
+                booking.calendly_event_uuid,
                 booking.start_time,
                 booking.status,
             )
         except Exception:
-            logger.exception("Error while updating canceled booking")
+            logger.exception(
+                "Error while updating canceled booking for event=%s invitee_uuid=%s event_uuid=%s",
+                event,
+                extract_uuid_from_uri(invitee_uri),
+                extract_uuid_from_uri(event_uri),
+            )
             return JsonResponse({"detail": "Error updating booking"}, status=500)
 
         return HttpResponse(status=200)
 
-    logger.info("Unhandled event type: %s", event)
+    logger.info(
+        "Unhandled event type: event=%s invitee_uuid=%s event_uuid=%s",
+        event,
+        extract_uuid_from_uri(invitee_uri),
+        extract_uuid_from_uri(event_uri),
+    )
     return HttpResponse(status=200)
