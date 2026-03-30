@@ -50,6 +50,9 @@ def calendly_webhook(request):
     try:
         raw_body = request.body.decode("utf-8")
         payload = json.loads(raw_body)
+        
+        # remove later - just for debugging
+        logger.info("FULL PAYLOAD:\n%s", json.dumps(payload, indent=2))
     except json.JSONDecodeError:
         logger.exception("Invalid JSON received from Calendly")
         return JsonResponse({"detail": "Invalid JSON"}, status=400)
