@@ -10,6 +10,8 @@ from .models import CalendlyBooking
 
 logger = logging.getLogger(__name__)
 
+logger.info("TEST LOG")
+
 
 def extract_answer(questions, possible_labels):
     normalized_labels = [label.strip().lower() for label in possible_labels]
