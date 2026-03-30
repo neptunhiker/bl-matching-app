@@ -32,7 +32,7 @@ def split_full_name(full_name):
     return first_name, last_name
 
 
-def build_created_booking_defaults(invitee_data, scheduled_event, full_payload):
+def build_booking_defaults(invitee_data, scheduled_event, full_payload):
     questions = invitee_data.get("questions_and_answers", [])
 
     invitee_name = (invitee_data.get("name") or "").strip()
@@ -114,15 +114,15 @@ def calendly_webhook(request):
         event_uri,
     )
 
-    if event == "invitee.created":
-        if not invitee_uri:
-            logger.error("Missing invitee_uri for invitee.created")
-            return JsonResponse({"detail": "Missing invitee uri"}, status=400)
+    if event in {"invitee.created", "invitee.canceled"} and not invitee_uri:
+        logger.error("Missing invitee_uri for event=%s", event)
+        return JsonResponse({"detail": "Missing invitee uri"}, status=400)
 
+    if event == "invitee.created":
         try:
             booking, created = CalendlyBooking.objects.update_or_create(
                 calendly_invitee_uri=invitee_uri,
-                defaults=build_created_booking_defaults(
+                defaults=build_booking_defaults(
                     invitee_data=invitee_data,
                     scheduled_event=scheduled_event,
                     full_payload=payload,
@@ -130,15 +130,41 @@ def calendly_webhook(request):
             )
 
             logger.info(
-                "Booking stored successfully: booking_id=%s created=%s email=%s start_time=%s",
+                "Booking stored successfully: booking_id=%s created=%s email=%s start_time=%s status=%s",
                 booking.id,
                 created,
                 booking.invitee_email,
                 booking.start_time,
+                booking.status,
             )
         except Exception:
             logger.exception("Error while saving booking")
             return JsonResponse({"detail": "Error saving booking"}, status=500)
+
+        return HttpResponse(status=200)
+
+    if event == "invitee.canceled":
+        try:
+            booking, created = CalendlyBooking.objects.update_or_create(
+                calendly_invitee_uri=invitee_uri,
+                defaults=build_booking_defaults(
+                    invitee_data=invitee_data,
+                    scheduled_event=scheduled_event,
+                    full_payload=payload,
+                ),
+            )
+
+            logger.info(
+                "Booking canceled successfully: booking_id=%s created=%s email=%s start_time=%s status=%s",
+                booking.id,
+                created,
+                booking.invitee_email,
+                booking.start_time,
+                booking.status,
+            )
+        except Exception:
+            logger.exception("Error while updating canceled booking")
+            return JsonResponse({"detail": "Error updating booking"}, status=500)
 
         return HttpResponse(status=200)
 
