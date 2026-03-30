@@ -24,6 +24,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("health/", healthcheck, name="healthcheck"),
     path('accounts/', include('accounts.urls')),
+    path('bookings/', include('bookings.urls')),
     path('profiles/', include('profiles.urls')),
     path('emails/', include('emails.urls')),
     path('matching/', include('matching.urls')),

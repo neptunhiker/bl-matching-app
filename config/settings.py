@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'anymail',
     # Local apps
     'accounts.apps.AccountsConfig',
+    'bookings.apps.BookingsConfig',
     'profiles.apps.ProfilesConfig',
     'emails.apps.EmailsConfig',
     'matching.apps.MatchingConfig',
@@ -187,6 +188,7 @@ ANYMAIL = {
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', '')
 # BCC address for every outgoing email — receives a copy in their inbox
 EMAIL_BCC = os.environ.get('EMAIL_BCC', '')
+
 
 # --- Matching / coach request settings ---
 # Default number of business hours (weekends skipped) used to pre-fill the
