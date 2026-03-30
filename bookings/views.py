@@ -10,8 +10,6 @@ from .models import CalendlyBooking
 
 logger = logging.getLogger(__name__)
 
-logger.info("TEST LOG")
-
 
 def extract_answer(questions, possible_labels):
     normalized_labels = [label.strip().lower() for label in possible_labels]
@@ -34,136 +32,115 @@ def split_full_name(full_name):
     return first_name, last_name
 
 
+def build_created_booking_defaults(invitee_data, scheduled_event, full_payload):
+    questions = invitee_data.get("questions_and_answers", [])
+
+    invitee_name = (invitee_data.get("name") or "").strip()
+
+    first_name = (
+        (invitee_data.get("first_name") or "").strip()
+        or extract_answer(questions, ["First name", "Vorname", "first_name"])
+    )
+
+    last_name = (
+        (invitee_data.get("last_name") or "").strip()
+        or extract_answer(questions, ["Last name", "Nachname", "last_name", "Surname"])
+    )
+
+    if not first_name and not last_name and invitee_name:
+        first_name, last_name = split_full_name(invitee_name)
+
+    if not invitee_name:
+        invitee_name = f"{first_name} {last_name}".strip()
+
+    event_uri = (scheduled_event.get("uri") or invitee_data.get("event") or "").strip()
+
+    return {
+        "calendly_event_uri": event_uri,
+        "calendly_event_uuid": CalendlyBooking.extract_uuid_from_uri(event_uri),
+        "invitee_first_name": first_name,
+        "invitee_last_name": last_name,
+        "invitee_name": invitee_name,
+        "invitee_email": (invitee_data.get("email") or "").strip(),
+        "timezone": (invitee_data.get("timezone") or "").strip(),
+        "event_name": (scheduled_event.get("name") or "").strip(),
+        "event_type": (scheduled_event.get("event_type") or "").strip(),
+        "start_time": parse_datetime(scheduled_event.get("start_time"))
+        if scheduled_event.get("start_time")
+        else None,
+        "end_time": parse_datetime(scheduled_event.get("end_time"))
+        if scheduled_event.get("end_time")
+        else None,
+        "status": (invitee_data.get("status") or scheduled_event.get("status") or "active").strip(),
+        "questions_and_answers": questions,
+        "raw_payload": full_payload,
+    }
+
+
 @csrf_exempt
 def calendly_webhook(request):
-    logger.info("Webhook received", extra={
-        "method": request.method,
-        "path": request.path,
-    })
+    logger.info("========== NEW WEBHOOK ==========")
+    logger.info(
+        "Webhook received",
+        extra={
+            "method": request.method,
+            "path": request.path,
+        },
+    )
 
     if request.method != "POST":
-        logger.warning("Invalid method for webhook", extra={
-            "method": request.method
-        })
+        logger.warning("Invalid method for webhook", extra={"method": request.method})
         return JsonResponse({"detail": "Method not allowed"}, status=405)
 
     try:
         raw_body = request.body.decode("utf-8")
         payload = json.loads(raw_body)
-        
-        # remove later - just for debugging
         logger.info("FULL PAYLOAD:\n%s", json.dumps(payload, indent=2))
     except json.JSONDecodeError:
         logger.exception("Invalid JSON received from Calendly")
         return JsonResponse({"detail": "Invalid JSON"}, status=400)
 
     event = payload.get("event")
-    data = payload.get("payload", {})
-    invitee = data.get("invitee", {})
-    scheduled_event = data.get("scheduled_event", {})
+    invitee_data = payload.get("payload", {}) or {}
+    scheduled_event = invitee_data.get("scheduled_event", {}) or {}
 
-    invitee_uri = invitee.get("uri")
-    event_uri = scheduled_event.get("uri", "")
+    invitee_uri = (invitee_data.get("uri") or "").strip()
+    event_uri = (scheduled_event.get("uri") or invitee_data.get("event") or "").strip()
 
-    logger.info("Webhook parsed", extra={
-        "event": event,
-        "invitee_uri": invitee_uri,
-    })
+    logger.info(
+        "Webhook parsed: event=%s invitee_uri=%s event_uri=%s",
+        event,
+        invitee_uri,
+        event_uri,
+    )
 
-    if event in {"invitee.created", "invitee.canceled"} and not invitee_uri:
-        logger.error("Missing invitee_uri", extra={
-            "event": event,
-        })
-        return JsonResponse({"detail": "Missing invitee uri"}, status=400)
-
-    questions = invitee.get("questions_and_answers", [])
-
-    # =========================
-    # INVITEE CREATED
-    # =========================
     if event == "invitee.created":
-        invitee_name = (invitee.get("name") or "").strip()
-
-        first_name = (
-            (invitee.get("first_name") or "").strip()
-            or extract_answer(questions, ["First name", "Vorname", "first_name"])
-        )
-
-        last_name = (
-            (invitee.get("last_name") or "").strip()
-            or extract_answer(questions, ["Last name", "Nachname", "last_name", "Surname"])
-        )
-
-        if not first_name and not last_name and invitee_name:
-            first_name, last_name = split_full_name(invitee_name)
-
-        if not invitee_name:
-            invitee_name = f"{first_name} {last_name}".strip()
+        if not invitee_uri:
+            logger.error("Missing invitee_uri for invitee.created")
+            return JsonResponse({"detail": "Missing invitee uri"}, status=400)
 
         try:
             booking, created = CalendlyBooking.objects.update_or_create(
                 calendly_invitee_uri=invitee_uri,
-                defaults={
-                    "calendly_event_uri": event_uri,
-                    "calendly_event_uuid": CalendlyBooking.extract_uuid_from_uri(event_uri),
-                    "invitee_first_name": first_name,
-                    "invitee_last_name": last_name,
-                    "invitee_name": invitee_name,
-                    "invitee_email": (invitee.get("email") or "").strip(),
-                    "timezone": (invitee.get("timezone") or "").strip(),
-                    "event_name": (scheduled_event.get("name") or "").strip(),
-                    "event_type": (scheduled_event.get("event_type") or "").strip(),
-                    "start_time": parse_datetime(scheduled_event.get("start_time"))
-                    if scheduled_event.get("start_time")
-                    else None,
-                    "end_time": parse_datetime(scheduled_event.get("end_time"))
-                    if scheduled_event.get("end_time")
-                    else None,
-                    "status": (invitee.get("status") or "active").strip(),
-                    "questions_and_answers": questions,
-                    "raw_payload": payload,
-                },
+                defaults=build_created_booking_defaults(
+                    invitee_data=invitee_data,
+                    scheduled_event=scheduled_event,
+                    full_payload=payload,
+                ),
             )
 
-            logger.info("Booking stored", extra={
-                "booking_id": str(booking.id),
-                "created": created,
-                "email": booking.invitee_email,
-                "event": booking.event_name,
-            })
-
+            logger.info(
+                "Booking stored successfully: booking_id=%s created=%s email=%s start_time=%s",
+                booking.id,
+                created,
+                booking.invitee_email,
+                booking.start_time,
+            )
         except Exception:
             logger.exception("Error while saving booking")
             return JsonResponse({"detail": "Error saving booking"}, status=500)
 
         return HttpResponse(status=200)
 
-    # =========================
-    # INVITEE CANCELED
-    # =========================
-    if event == "invitee.canceled":
-        try:
-            updated_count = CalendlyBooking.objects.filter(
-                calendly_invitee_uri=invitee_uri
-            ).update(
-                status="canceled",
-                raw_payload=payload,
-            )
-
-            logger.info("Booking canceled", extra={
-                "invitee_uri": invitee_uri,
-                "updated_count": updated_count,
-            })
-
-        except Exception:
-            logger.exception("Error while canceling booking")
-            return JsonResponse({"detail": "Error updating booking"}, status=500)
-
-        return HttpResponse(status=200)
-
-    # =========================
-    # OTHER EVENTS
-    # =========================
-    logger.info("Unhandled event type", extra={"event": event})
-
+    logger.info("Unhandled event type: %s", event)
     return HttpResponse(status=200)
