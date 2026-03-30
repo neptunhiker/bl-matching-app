@@ -232,6 +232,12 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
+        'bookings_file': {
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'bookings.log',
+            'formatter': 'verbose',
+            'level': 'INFO',
+        },
     },
     'loggers': {
         'matching': {
@@ -242,6 +248,11 @@ LOGGING = {
         'emails': {
             'handlers': ['console'],
             'level': 'DEBUG',
+            'propagate': False,
+        },
+        'bookings': {
+            'handlers': ['console', 'bookings_file'],
+            'level': 'INFO',
             'propagate': False,
         },
     },

@@ -12,6 +12,7 @@ Caddyfile
 caddy/
 docker-compose.yml
 .DS_Store
+logs/
 *.log
 .coverage
 htmlcov/
