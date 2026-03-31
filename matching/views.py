@@ -31,7 +31,7 @@ class StaffRequiredMixin(UserPassesTestMixin):
         return self.request.user.is_active and self.request.user.is_staff
 
 
-class MatchingAttemptCreateView(StaffRequiredMixin, CreateView):
+class MatchingAttemptCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateView):
     model = MatchingAttempt
     fields = ['participant', 'ue', 'bl_contact']
     template_name = 'matching/matching_attempt_form.html'
@@ -103,7 +103,7 @@ class MatchingAttemptCreateView(StaffRequiredMixin, CreateView):
         return reverse('matching_attempt_detail', kwargs={'pk': self.object.pk})
 
 
-class MatchingAttemptDetailView(LoginRequiredMixin, DetailView):
+class MatchingAttemptDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailView):
     model = MatchingAttempt
     template_name = 'matching/matching_attempt_detail.html'
     context_object_name = 'matching_attempt'
@@ -175,7 +175,7 @@ class MatchingAttemptDetailView(LoginRequiredMixin, DetailView):
 
         return context
     
-class MatchingAttemptDeleteView(UserPassesTestMixin, DeleteView):
+class MatchingAttemptDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
     model = MatchingAttempt
     template_name = "matching/matching_attempt_delete.html"
     success_url = reverse_lazy("matching_attempts")
@@ -183,7 +183,7 @@ class MatchingAttemptDeleteView(UserPassesTestMixin, DeleteView):
     def test_func(self):
         return self.request.user.is_staff
 
-class StartMatchingView(StaffRequiredMixin, View):
+class StartMatchingView(LoginRequiredMixin, StaffRequiredMixin, View):
     """Transition a MatchingAttempt from DRAFT → READY_FOR_MATCHING.
 
     POST /matching/<pk>/start/
@@ -198,7 +198,7 @@ class StartMatchingView(StaffRequiredMixin, View):
        
         return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
     
-class ResumeMatchingView(StaffRequiredMixin, View):
+class ResumeMatchingView(LoginRequiredMixin, StaffRequiredMixin, View):
     """Transition a MatchingAttempt from FAILED → READY_FOR_MATCHING.
 
     POST /matching/<pk>/resume/
@@ -214,7 +214,7 @@ class ResumeMatchingView(StaffRequiredMixin, View):
         return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
 
 
-class ToggleAutomationView(StaffRequiredMixin, View):
+class ToggleAutomationView(LoginRequiredMixin, StaffRequiredMixin, View):
     """Enable or disable automation on a MatchingAttempt.
 
     POST /matching/<pk>/automation/
@@ -234,7 +234,7 @@ class ToggleAutomationView(StaffRequiredMixin, View):
 
 
 
-class RequestToCoachCreateView(StaffRequiredMixin, View):
+class RequestToCoachCreateView(LoginRequiredMixin, StaffRequiredMixin, View):
     """Create a new RequestToCoach for a given MatchingAttempt.
 
     GET  /matching/<pk>/add-coach/   → render form
@@ -352,7 +352,7 @@ class RequestToCoachCreateView(StaffRequiredMixin, View):
         return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
 
 
-class RequestToCoachUpdateView(StaffRequiredMixin, UpdateView):
+class RequestToCoachUpdateView(LoginRequiredMixin, StaffRequiredMixin, UpdateView):
     model = RequestToCoach
     fields = ['priority', 'max_number_of_requests']
     template_name = 'matching/request_to_coach_edit.html'
@@ -392,7 +392,7 @@ class RequestToCoachUpdateView(StaffRequiredMixin, UpdateView):
         return reverse('matching_attempt_detail', kwargs={'pk': self.object.matching_attempt.pk})
 
 
-class RequestToCoachDeleteView(StaffRequiredMixin, DeleteView):
+class RequestToCoachDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
     model = RequestToCoach
     template_name = 'matching/request_to_coach_confirm_delete.html'
     
@@ -430,12 +430,12 @@ class RequestToCoachDeleteView(StaffRequiredMixin, DeleteView):
         return reverse('matching_attempt_detail', kwargs={'pk': self.object.matching_attempt.pk})
 
 
-class MatchingAttemptListView(LoginRequiredMixin, ListView):
+class MatchingAttemptListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
     model = MatchingAttempt
     template_name = 'matching/matchings.html'
     context_object_name = 'matching_attempts'
     
-class RequestToCoachDetailView(LoginRequiredMixin, DetailView):
+class RequestToCoachDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailView):
     model = RequestToCoach
     template_name = 'matching/request_to_coach_detail.html'
     context_object_name = 'request_to_coach'
@@ -729,7 +729,7 @@ class ConfirmIntroCallView(View):
             },
         )
 
-class FlowChartView(LoginRequiredMixin, TemplateView):
+class FlowChartView(LoginRequiredMixin, StaffRequiredMixin, TemplateView):
     template_name = 'matching/flow_chart.html'
     
     
@@ -776,7 +776,7 @@ class MatchingEventDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailView
         context['formatted_payload'] = formatted
         return context
     
-class CancelMatchingView(StaffRequiredMixin, View):
+class CancelMatchingView(LoginRequiredMixin, StaffRequiredMixin, View):
     """Transition a MatchingAttempt to CANCELLED.
 
     POST /matching/<pk>/cancel/
@@ -788,7 +788,7 @@ class CancelMatchingView(StaffRequiredMixin, View):
        
         return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
     
-class ManualOverrideMatchingView(StaffRequiredMixin, TemplateView):
+class ManualOverrideMatchingView(LoginRequiredMixin, StaffRequiredMixin, TemplateView):
     """Manually set a matched coach on a MatchingAttempt, bypassing the normal flow. Used for exceptional cases where automation fails or manual intervention is desired.
 
     POST /matching/<pk>/manual_matching_override/

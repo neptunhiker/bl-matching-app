@@ -1,185 +1,438 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Matching Flow{% endblock %}
+{% block title %}Matching-Prozess{% endblock %}
 
 {% block body %}
+<style>
+  :root {
+    --primary-500: #948AFC;
+    --secondary-500: #FFACE4;
+    --green-500: #22c55e;
 
-  <div class="max-w-4xl mx-auto space-y-8 py-10 px-4 sm:px-6">
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+  }
 
-    <!-- Start -->
-    <section class="text-center" aria-label="Start: Matching erstellt">
-      <div class="inline-block border border-primary-600 bg-primary-50 text-primary-800 px-8 py-3 rounded-lg shadow-none text-base font-medium flex items-center justify-center gap-2">
-        <svg class="w-5 h-5 text-primary-500 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M5 3v18l15-9L5 3z" />
-        </svg>
-        <span>Start: Matching erstellen</span>
-      </div>
-    </section>
+  .flow-page {
+    min-height: 100vh;
+    background: var(--bg);
+    padding: 32px 20px 56px;
+  }
 
-    <!-- Arrow -->
-    <div class="text-center" aria-hidden="true">
-      <svg class="mx-auto w-6 h-6 text-primary-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M19 9l-7 7-7-7" />
-      </svg>
-    </div>
+  .flow-wrapper {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
 
-    <!-- Add Coach Requests -->
-    <section class="text-center" aria-label="Coach-Anfragen hinzufügen">
-      <div class="inline-block border border-primary-200 text-primary-800 px-8 py-3 rounded-xl shadow-none font-semibold flex items-center justify-center gap-2 bg-transparent">
-        <svg class="w-5 h-5 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-        <span>Coach‑Anfragen hinzufügen (1–3, priorisiert)</span>
-      </div>
-    </section>
+  .flow-header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
 
-    <div class="text-center" aria-hidden="true">
-      <svg class="mx-auto w-6 h-6 text-primary-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M19 9l-7 7-7-7" />
-      </svg>
-    </div>
+  .flow-header h1 {
+    margin: 0 0 10px;
+    font-size: clamp(28px, 4vw, 40px);
+    line-height: 1.1;
+    color: var(--text);
+  }
 
-    <!-- Automation Enabled -->
-    <section class="text-center" aria-label="Automatisierung aktiviert">
-      <div class="inline-block border border-primary-200 text-primary-800 px-8 py-3 rounded-xl shadow-none font-semibold flex items-center justify-center gap-2 bg-transparent">
-        <svg class="w-5 h-5 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-        <span>Automatisierung aktivieren (erforderlich)</span>
-      </div>
-    </section>
+  .flow-header p {
+    margin: 0 auto;
+    max-width: 820px;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
 
-    <div class="text-center" aria-hidden="true">
-      <svg class="mx-auto w-6 h-6 text-primary-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M19 9l-7 7-7-7" />
-      </svg>
-    </div>
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 18px;
+  }
 
-    <!-- Start Matching -->
-    <section class="text-center flex justify-center" aria-label="Matching-Prozess starten">
-    <button type="button" aria-label="Matching-Prozess starten" class="inline-block cursor-pointer bg-primary-400 text-white px-10 py-3 rounded-lg shadow-sm font-medium flex items-center justify-center gap-2 text-base hover:bg-primary-500 transition-colors duration-150 ease-out motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 focus-visible:ring-offset-1">
-        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3v18l15-9L5 3z"/></svg>
-        <span>Matching‑Prozess starten</span>
-      </button>
-    </section>
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 14px;
+    color: var(--text);
+  }
 
-    <div class="text-center" aria-hidden="true">
-      <svg class="mx-auto w-6 h-6 text-primary-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M19 9l-7 7-7-7" />
-      </svg>
-    </div>
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+  }
 
-    <!-- Loop Container -->
-    <div class="border-2 border-dashed border-primary-200 p-6 rounded-2xl space-y-6" role="group" aria-label="Schleife: Für jeden Coach">
-      <div class="text-center font-bold text-lg text-primary-700 flex items-center justify-center gap-2">
-        <svg class="w-5 h-5 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 11-3-6.71"/></svg>
-        <span>Für jeden Coach (nach Priorität)</span>
-      </div>
-      <div class="text-center text-primary-300 text-2xl">↓</div>
-      <!-- Send Request -->
-      <div class="text-center flex justify-center">
-        <button type="button" class="inline-block cursor-pointer border border-primary-200 text-primary-800 px-8 py-3 rounded-xl shadow-none flex items-center justify-center gap-2 bg-transparent hover:bg-primary-50 transition-colors duration-150 ease-out motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 focus-visible:ring-offset-1">
-          <img src="{% static 'icons/envelope.svg' %}" alt="Email" class="h-4 w-4" />
-          <span>Matching‑Anfrage an Coach senden</span>
-        </button>
-      </div>
-      <div class="text-center text-primary-300 text-2xl">↓</div>
-      <!-- Waiting -->
-      <div class="text-center">
-        <div class="inline-block border border-primary-200 text-primary-800 px-8 py-3 rounded-xl shadow-none flex items-center justify-center gap-2 bg-transparent">
-          <svg class="w-5 h-5 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-          <span>Auf Antwort warten</span>
+  .flow-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .panel {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+  }
+
+  .panel h2 {
+    margin: 0 0 18px;
+    font-size: 22px;
+    color: var(--text);
+  }
+
+  .timeline {
+    display: grid;
+    gap: 14px;
+  }
+
+  .step {
+    position: relative;
+    background: #fff;
+    border: 2px solid var(--primary-500);
+    border-radius: 20px;
+    padding: 18px 18px 18px 72px;
+  }
+
+  .step.success {
+    border-color: var(--green-500);
+  }
+
+  .step.problem {
+    border-color: var(--secondary-500);
+  }
+
+  .step-number {
+    position: absolute;
+    left: 18px;
+    top: 18px;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    color: #fff;
+    background: var(--primary-500);
+  }
+
+  .step.success .step-number {
+    background: var(--green-500);
+  }
+
+  .step.problem .step-number {
+    background: var(--secondary-500);
+  }
+
+  .step h3 {
+    margin: 0 0 6px;
+    font-size: 18px;
+    line-height: 1.25;
+    color: var(--text);
+  }
+
+  .step p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .step-note {
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .branch-title {
+    margin: 0 0 12px;
+    font-size: 18px;
+    color: var(--text);
+  }
+
+  .branch-group {
+    display: grid;
+    gap: 16px;
+  }
+
+  .branch-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 18px;
+    border: 2px solid var(--line);
+  }
+
+  .branch-card.success {
+    border-color: var(--green-500);
+  }
+
+  .branch-card.problem {
+    border-color: var(--secondary-500);
+  }
+
+  .branch-card h3 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    line-height: 1.25;
+    color: var(--text);
+  }
+
+  .branch-card p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .mini-steps {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 0;
+    display: grid;
+    gap: 10px;
+  }
+
+  .mini-steps li {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    background: #fff;
+  }
+
+  .state-box {
+    margin-top: 20px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 16px;
+    background: #fff;
+  }
+
+  .state-box h3 {
+    margin: 0 0 10px;
+    font-size: 17px;
+    color: var(--text);
+  }
+
+  .state-list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .state-item {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid var(--line);
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  @media (max-width: 900px) {
+    .flow-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="flow-page">
+  <div class="flow-wrapper">
+    <div class="flow-header">
+      <h1>Matching-Prozess</h1>
+
+
+      <div class="legend">
+        <div class="legend-item">
+          <span class="legend-dot bg-primary-500"></span>
+          Regulärer Prozess
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot bg-green-500"></span>
+          Erfolgreicher Abschluss
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot bg-secondary-500"></span>
+          Abweichung / Klärungsfall
         </div>
       </div>
-      <div class="text-center text-primary-300 text-2xl">↓</div>
-      <!-- Reminder -->
-      <div class="text-center">
-        <div class="inline-block border border-secondary-200 text-primary-800 px-8 py-3 rounded-xl shadow-none flex items-center justify-center gap-2 bg-transparent">
-          <div class="flex items-center gap-2">
-            <img src="{% static 'icons/envelope.svg' %}" alt="Email" class="h-4 w-4" />
-            <span>Erinnerung senden (falls keine Antwort)</span>
+    </div>
+
+    <div class="flow-layout">
+      <section class="panel">
+        <h2>Matching-Prozess</h2>
+
+        <div class="timeline">
+          <div class="step">
+            <div class="step-number">01</div>
+            <h3>Matching anlegen</h3>
+            <p>
+              Für den/die TN wird ein neues Matching erstellt.
+            </p>
+          </div>
+
+          <div class="step">
+            <div class="step-number">02</div>
+            <h3>Coach-Anfragen hinzufügen</h3>
+            <p>
+              Es werden 1 bis 3 Coaches in Prioritätsreihenfolge hinterlegt.
+            </p>
+          </div>
+
+          <div class="step">
+            <div class="step-number">03</div>
+            <h3>Automatisierung aktivieren</h3>
+            <p>
+              Erst danach kann das Matching gestartet werden.
+            </p>
+          </div>
+
+          <div class="step">
+            <div class="step-number">04</div>
+            <h3>Matching starten</h3>
+            <p>
+              Die erste Matching-Anfrage wird an den Coach mit der höchsten Priorität versendet.
+            </p>
+          </div>
+
+          <div class="step">
+            <div class="step-number">05</div>
+            <h3>Auf Coach-Antwort warten</h3>
+            <p>
+              Solange noch keine Rückmeldung vorliegt, können Erinnerungen versendet werden.
+            </p>
+            <div class="step-note">Wenn keine Zusage erfolgt, wird der nächste Coach angefragt.</div>
+          </div>
+
+          <div class="step">
+            <div class="step-number">06</div>
+            <h3>Coach sagt rechtzeitig zu</h3>
+            <p>
+              Der Coach wird als passender Match gesetzt und der Intro-Call wird angestoßen.
+            </p>
+          </div>
+
+          <div class="step">
+            <div class="step-number">07</div>
+            <h3>Intro-Call organisieren</h3>
+            <p>
+              Coach und TN erhalten die Informationen für das Kennenlernen.
+            </p>
+          </div>
+
+          <div class="step">
+            <div class="step-number">08</div>
+            <h3>Coach bestätigt den Intro-Call</h3>
+            <p>
+              Nach der Bestätigung wird die Rückmeldung des/der TN eingeholt.
+            </p>
+          </div>
+
+          <div class="step">
+            <div class="step-number">09</div>
+            <h3>TN gibt Rückmeldung</h3>
+            <p>
+              Jetzt entscheidet sich, ob das Coaching starten kann oder ob noch Klärung nötig ist.
+            </p>
+          </div>
+
+          <div class="step success">
+            <div class="step-number">10</div>
+            <h3>Coaching startet</h3>
+            <p>
+              Wenn der/die TN bestätigt, dass das Coaching starten kann,
+              wird das Matching erfolgreich abgeschlossen.
+            </p>
           </div>
         </div>
-      </div>
-      <div class="text-center text-primary-300 text-2xl">↓</div>
-      <!-- Decision -->
-      <div class="flex justify-center">
-        <div class="bg-transparent border border-primary-200 px-8 py-3 rounded-xl font-semibold text-primary-700 flex items-center gap-2" role="status" aria-live="polite">
-          <span>Antwort vom Coach?</span>
-        </div>
-      </div>
-      <!-- Branches -->
-      <div class="flex flex-col md:flex-row justify-between mt-6 gap-6">
-        <!-- Accept Path -->
-        <div class="w-full md:w-1/2 text-center space-y-4">
-          <div class="font-semibold text-green-700">Ja (akzeptiert)</div>
-          <div class="text-center text-green-700 text-2xl">↓</div>
-          <div class="border border-white text-greent-800 px-6 py-3 rounded-xl shadow-none flex items-center justify-center gap-2">
-            <svg class="w-5 h-5 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
-            <span>Coach akzeptiert</span>
+      </section>
+
+      <section class="panel">
+        <h2>Wichtige Abzweigungen</h2>
+
+        <div class="branch-group">
+          <div class="branch-card problem">
+            <h3>Kein weiterer Coach verfügbar</h3>
+            <p>
+              Wenn ein Coach ablehnt oder nicht rechtzeitig antwortet, wird die nächste
+              hinterlegte Coach-Anfrage verwendet. Sind keine weiteren Coach-Anfragen
+              mehr in Vorbereitung vorhanden, endet das Matching mit dem Status
+              „Keinen Coach gefunden“.
+            </p>
+
+            <ul class="mini-steps">
+              <li>Coach lehnt ab oder antwortet nicht rechtzeitig</li>
+              <li>Nächsten Coach nach Priorität anfragen</li>
+              <li>Keine weiteren Coach-Anfragen mehr vorhanden</li>
+              <li>Matching endet ohne Coach</li>
+            </ul>
+          </div>
+
+          <div class="branch-card problem">
+            <h3>Klärung mit TN nötig</h3>
+            <p>
+              Wenn nach dem Intro-Call nicht bestätigt wird, dass das Coaching starten
+              kann, wechselt das Matching in den Klärungsstatus.
+            </p>
+
+            <ul class="mini-steps">
+              <li>Intro-Call wurde durchgeführt</li>
+              <li>TN bestätigt den Start nicht</li>
+              <li>Matching wechselt in „Klärung mit TN nötig“</li>
+              <li>BeginnerLuft wird informiert und der Coach erhält eine Info zur Klärung</li>
+            </ul>
+          </div>
+
+          <div class="branch-card success">
+            <h3>Erfolgreicher Abschluss</h3>
+            <p>
+              Wenn der/die TN nach dem Intro-Call bestätigt, dass das
+              Coaching starten kann, werden die Startinformationen versendet und das
+              Matching abgeschlossen.
+            </p>
+
+            <ul class="mini-steps">
+              <li>Intro-Call wurde bestätigt</li>
+              <li>TN stimmt dem Start zu</li>
+              <li>Startinformationen werden versendet</li>
+              <li>Matching abgeschlossen</li>
+            </ul>
           </div>
         </div>
-        <!-- Reject Path -->
-        <div class="w-full md:w-1/2 text-center space-y-4">
-          <div class="font-semibold text-red-700">Nein / abgelehnt / Timeout</div>
-          <div class="text-center text-red-700 text-2xl">↓</div>
-          <div class="border border-white px-6 py-3 rounded-xl shadow-none flex items-center justify-center gap-2">
-            <svg class="w-5 h-5 text-red-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18L18 6M6 6l12 12"/></svg>
-            <span>Weiter zum nächsten Coach</span>
+
+        <div class="state-box">
+          <h3>Status im Verlauf</h3>
+          <div class="state-list">
+            <div class="state-item">In Vorbereitung</div>
+            <div class="state-item">Warten auf Coach-Antwort zu Matching-Anfrage</div>
+            <div class="state-item">Warten auf Coach-Antwort zu Intro-Call Anfrage</div>
+            <div class="state-item">Warten auf TN-Antwort zu Intro-Call</div>
+            <div class="state-item">Klärung mit TN nötig</div>
+            <div class="state-item">Matching abgeschlossen</div>
+            <div class="state-item">Keinen Coach gefunden</div>
+            <div class="state-item">Matching abgebrochen</div>
           </div>
         </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- After Loop Success -->
-    <div class="max-w-4xl mx-auto text-center text-primary-300 text-2xl mb-4">↓</div>
-
-    <div class="text-center max-w-4xl mx-auto">
-      <div class="border border-primary-200 text-primary-800 px-8 py-3 rounded-xl shadow-none font-semibold flex items-center justify-center gap-2 bg-transparent">
-        <span>Intro‑Call‑E‑Mails versenden</span>
-      </div>
-    </div>
-
-    <div class="text-center text-sm text-primary-700 mt-2 my-5 flex flex-col items-center gap-2">
-      <div class="flex items-center gap-2">
-        <img src="{% static 'icons/envelope.svg' %}" alt="Email" class="h-4 w-4" />
-        <span>Coach: Intro-Call organisieren + Feedback-Link</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <img src="{% static 'icons/envelope.svg' %}" alt="Email" class="h-4 w-4" />
-        <span>Teilnehmer: Coach gefunden, meldet sich</span>
-      </div>
-    </div>
-
-
-    <div class="text-center text-primary-300 text-2xl mb-4">↓</div>
-
-    <!-- Feedback -->
-    <div class="text-center max-w-4xl mx-auto">
-      <div class="border border-primary-200 text-primary-800 px-8 py-3 rounded-xl shadow-none flex items-center justify-center gap-2 bg-transparent">
-        <svg class="w-5 h-5 text-primary-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        <span>Auf Coach‑Feedback warten</span>
-      </div>
-    </div>
-
-    <div class="text-center text-primary-300 text-2xl mb-4">↓</div>
-
-    <!-- Final Emails -->
-    <div class="text-center max-w-4xl mx-auto">
-      <div class="border border-green-500 text-green-900 bg-green-200 px-8 py-3 rounded-xl shadow-none font-bold flex items-center justify-center gap-2 text-lg ">
-        <svg class="w-5 h-5 text-green-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2 5 5 .5-4 3 1 5-4-3-4 3 1-5-4-3 5-.5L12 2z"/></svg>
-        <span>Matching abgeschlossen</span>
-      </div>
-    </div>
-
-    <div class="text-center text-sm text-primary-700 mt-2 my-5 flex flex-col items-center gap-2">
-      <div class="flex items-center gap-2">
-        <img src="{% static 'icons/envelope.svg' %}" alt="Email" class="h-4 w-4" />
-        <span>Coach: Coaching kann starten</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <img src="{% static 'icons/envelope.svg' %}" alt="Email" class="h-4 w-4" />
-        <span>Teilnehmer: Coaching bestätigt</span>
-      </div>
+      </section>
     </div>
   </div>
-
+</div>
 {% endblock %}
