@@ -19,7 +19,7 @@ def test_matching_attempts_access_user(client, coach_user):
     client.force_login(coach_user)
     url = reverse('matching_attempts')
     r = client.get(url)
-    assert r.status_code == 200
+    assert r.status_code == 403
 
 
 @pytest.mark.django_db
@@ -85,7 +85,7 @@ def test_matching_attempt_detail_access_user(client, coach_user, matching_attemp
     client.force_login(coach_user)
     url = reverse('matching_attempt_detail', kwargs={'pk': matching_attempt.pk})
     r = client.get(url)
-    assert r.status_code == 200
+    assert r.status_code == 403
 
 
 @pytest.mark.django_db
@@ -224,7 +224,7 @@ def test_request_to_coach_detail_access_user(client, coach_user, rtc):
     client.force_login(coach_user)
     url = reverse('request_to_coach_detail', kwargs={'pk': rtc.pk})
     r = client.get(url)
-    assert r.status_code == 200
+    assert r.status_code == 403
 
 
 @pytest.mark.django_db
