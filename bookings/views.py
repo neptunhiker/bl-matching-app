@@ -2,6 +2,9 @@
 import json
 import logging
 
+from django.contrib.auth.mixins import UserPassesTestMixin
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import ListView
 from django.http import HttpResponse, JsonResponse
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.csrf import csrf_exempt
@@ -10,7 +13,11 @@ from .models import CalendlyBooking
 
 logger = logging.getLogger(__name__)
 
-
+class StaffRequiredMixin(UserPassesTestMixin):
+    """Restricts the view to staff users only."""
+    def test_func(self):
+        return self.request.user.is_active and self.request.user.is_staff
+    
 def extract_answer(questions, possible_labels):
     normalized_labels = [label.strip().lower() for label in possible_labels]
 
@@ -231,3 +238,15 @@ def calendly_webhook(request):
         extract_uuid_from_uri(event_uri),
     )
     return HttpResponse(status=200)
+
+
+class CalendlyBookingsListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
+    model = CalendlyBooking
+    template_name = "bookings/calendly_bookings_list.html"
+    context_object_name = "bookings"
+
+    def get_queryset(self):
+        return (
+            CalendlyBooking.objects
+            .order_by("-start_time", "-created_at")
+        )
