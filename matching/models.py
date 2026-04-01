@@ -326,7 +326,7 @@ class RequestToCoach(models.Model):
         AWAITING_REPLY = "awaiting_reply", "Warten auf Antwort"
         ACCEPTED = "accepted", "Akzeptiert"
         REJECTED = "rejected", "Abgelehnt"
-        NO_RESPONSE_UNTIL_DEADLINE = "no_response_until_deadline", "Keine Rückmeldung bis zur Deadline"
+        NO_RESPONSE_UNTIL_DEADLINE = "no_response_until_deadline", "Keine Antwort bis Deadline"
         CANCELLED = "cancelled", "Anfrage abgebrochen"
         
 
@@ -454,19 +454,8 @@ class RequestToCoach(models.Model):
 
 
     @transition(field=state, source=State.AWAITING_REPLY, target=State.NO_RESPONSE_UNTIL_DEADLINE)
-    def mark_deadline_passed(self):
-        from matching import services
-
-        services.create_matching_event(
-            matching_attempt=self.matching_attempt,
-            event_type=MatchingEvent.EventType.RTC_TIMED_OUT,
-            triggered_by=TriggeredByOptions.SYSTEM,
-            payload={
-                "rtc_id": str(self.id),
-                "coach_id": str(self.coach_id) if self.coach_id is not None else None,
-                "deadline_at": self.deadline_at.isoformat() if self.deadline_at else None,
-            }
-        )
+    def mark_deadline_as_passed(self):
+        pass
         
 
     @transition(field=state, source=State.AWAITING_REPLY, target=State.ACCEPTED)

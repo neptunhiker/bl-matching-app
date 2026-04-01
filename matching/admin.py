@@ -43,6 +43,7 @@ class RequestToCoachAdmin(admin.ModelAdmin):
     list_filter = ['state', 'priority']
     search_fields = ['matching_attempt__participant__first_name', 'matching_attempt__participant__last_name', 'matching_attempt__participant__email', 'coach__user__email']
     ordering = ['-first_sent_at']
+    exclude = ['state']
     
       
 @admin.register(MatchingEvent)

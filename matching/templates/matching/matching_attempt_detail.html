@@ -238,12 +238,12 @@
         <div class="flex">
           <div class="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-200 flex flex-col overflow-hidden flex-1">
 
-          {# Coloured top stripe based on status #}
+          {# Coloured top stripe based on state #}
           <div class="h-1
-            {% if req.status == 'accepted_on_time' or req.status == 'accepted_late' %}bg-green-400
-            {% elif req.status == 'rejected_on_time' or req.status == 'rejected_late' %}bg-red-400
-            {% elif req.status == 'awaiting_reply' %}bg-primary-400
-            {% elif req.status == 'cancelled' %}bg-neutral-300
+            {% if req.state == 'accepted' %}bg-green-400
+            {% elif req.state == 'rejected' or req.state == 'no_response_until_deadline' %}bg-secondary-500
+            {% elif req.state == 'awaiting_reply' %}bg-primary-400
+            {% elif req.state == 'cancelled' %}bg-neutral-300
             {% else %}bg-secondary-300
             {% endif %}"></div>
 
@@ -256,7 +256,7 @@
               
               <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
                 {% if req.state == 'accepted' %}bg-green-100 text-green-700
-                {% elif req.state == 'rejected' or req.state == 'cancelled' %}bg-secondary-200 text-secondary-700
+                {% elif req.state == 'rejected' or req.state == 'cancelled' or req.state == 'no_response_until_deadline' %}bg-secondary-200 text-secondary-700
                 {% else %}bg-neutral-100 text-neutral-600
                 {% endif %}">
                 {{ req.get_state_display }}
@@ -283,7 +283,7 @@
               </div>
               <div>
                 <dt class="text-neutral-400 font-jakarta mb-0.5">Deadline</dt>
-                <dd class="font-semibold {% if req.deadline_at %}text-amber-600{% else %}text-neutral-400{% endif %}">
+                <dd class="font-semibold">
                   {% if req.deadline_at %}
                     {{ req.deadline_at|date:"d.m.Y" }}
                     <span class="block text-xs text-neutral-500">{{ req.deadline_at|time:"H:i" }} Uhr</span>

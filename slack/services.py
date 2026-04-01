@@ -639,14 +639,14 @@ def send_all_rtcs_declined_info_slack(matching_attempt):
     dm_channel = response["channel"]["id"]
 
     # 🚨 ESCALATION MESSAGE
-    subject = f"⚠️ Alle Matching-Anfragen für ein Coaching mit {participant.first_name} abgelehnt"
+    subject = f"⚠️ Alle Matching-Anfragen für ein Coaching mit {participant.first_name} abgelehnt oder abgelaufen"
 
     blocks = [
         {
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": f"⚠️ Alle Matching-Anfragen für ein Coaching mit {participant.first_name} abgelehnt"
+                "text": f"⚠️ Alle Matching-Anfragen für ein Coaching mit {participant.first_name} abgelehnt oder abgelaufen"
             }
         },
         {
@@ -654,7 +654,7 @@ def send_all_rtcs_declined_info_slack(matching_attempt):
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"Alle angefragten Coaches haben ein Coaching mit *{participant.first_name}* abgelehnt. "
+                    f"Alle angefragten Coaches haben ein Coaching mit *{participant.first_name}* abgelehnt oder die Anfragen sind abgelaufen. "
                     f"Das Matching ist damit (vorerst) gescheitert."
                 )
             }

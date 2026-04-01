@@ -344,3 +344,44 @@ def handle_all_rtcs_declined_event(event):
     
     # inform bl_contact via Slack
     send_all_rtcs_declined_info_slack(matching_attempt)
+    
+@transaction.atomic
+def handle_rtc_timed_out_event(event):
+    from matching import services
+    from matching.models import MatchingEvent, TriggeredByOptions
+    
+    logger.debug(f"Handling RTC_TIMED_OUT event: {event.id}")
+    
+    if event.event_type != MatchingEvent.EventType.RTC_TIMED_OUT:
+        return
+
+    matching_attempt = event.matching_attempt
+    
+    next_rtc = matching_attempt.get_next_request()
+    if next_rtc:
+        logger.debug(f"Triggering send_request for RTC {next_rtc.id}")
+        next_rtc.send_first_request() # Transitions state to AWAITING_REPLY and sets deadline for coach response
+        next_rtc.save()  # Ensure state change is saved
+        
+        services.create_matching_event(
+            matching_attempt=matching_attempt,
+            event_type=MatchingEvent.EventType.RTC_SENT_TO_COACH,
+            triggered_by=TriggeredByOptions.SYSTEM,
+            payload={
+                "rtc_id": str(next_rtc.id),
+            }
+         )
+        
+    else:
+        
+        logger.debug(f"No more coaches to approach for MatchingAttempt {matching_attempt.id} after RTC declined event")
+        services.create_matching_event(
+            matching_attempt=matching_attempt,
+            triggered_by=TriggeredByOptions.SYSTEM,
+            triggered_by_user=None,
+            event_type=MatchingEvent.EventType.ALL_RTCS_DECLINED,
+            payload={
+                "reason": "No more coaches to approach",
+            }
+        )
+        return

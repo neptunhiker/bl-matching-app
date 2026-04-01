@@ -9,7 +9,7 @@ from profiles.models import Coach
 from emails.services import send_first_coach_request_email, send_reminder_coach_request_email, send_intro_call_request_email, send_intro_call_info_email_to_participant, send_coaching_start_info_email_to_coach, send_coaching_start_info_email_to_participant
 from slack.services import send_first_coach_request_slack, send_reminder_coach_request_slack, send_intro_call_request_slack, send_coaching_starting_info_slack
 
-from .models import RequestToCoach, RequestToCoachEvent, MatchingAttempt
+from .models import RequestToCoach, MatchingAttempt
 
 
 logger = logging.getLogger(__name__)

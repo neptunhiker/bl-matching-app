@@ -49,6 +49,9 @@ def dispatch_event(event: MatchingEvent):
         MatchingEvent.EventType.INFORMATION_ABOUT_CLARIFICATION_SENT_TO_COACH: [
             notification_handlers.handle_clarification_need_info_to_coach_event,
         ],
+        MatchingEvent.EventType.RTC_TIMED_OUT: [
+            notification_handlers.handle_rtc_timed_out_event,
+        ],
         
         # State handlers
         MatchingEvent.EventType.ALL_RTCS_DECLINED: [
