@@ -1,15 +1,35 @@
 /** @type {import('tailwindcss').Config} */
 
-// BeginnerLuft design system (single source of truth: Tailwind tokens)
-// Color usage guidance:
-// - primary: core actions, links, highlights, and active states
-// - secondary: decorative accents, soft emphasis, and background tints
-// - tertiary: headings, high-contrast text, and structural UI surfaces
-// Brand anchors:
-// - primary-500   #948AFC
-// - secondary-400 #FFACE4
-// - tertiary-700  #1A1B41
-// - tertiary-600  #4B0082 (dark purple accent)
+// ─────────────────────────────────────────────────────────────────────────────
+// BeginnerLuft design system — single source of truth for all design tokens.
+//
+// Color family usage:
+//   primary   — core CTAs, focus rings, active states, interactive highlights
+//   secondary — decorative accents, soft section tints, secondary badges
+//   tertiary  — headings, high-contrast body text, dark button variant
+//   neutral   — borders, dividers, placeholder text, generic UI scaffolding
+//
+// Brand anchor values:
+//   primary-500   #948AFC  ← gradient start, badge background base
+//   secondary-400 #FFACE4  ← gradient end, secondary button background
+//   tertiary-700  #1A1B41  ← headings, body text, tertiary button background
+//   tertiary-600  #4B0082  (dark purple accent, use sparingly)
+//
+// Gradients (see backgroundImage section below):
+//   bg-bl-gradient     — 90° horizontal: primary → secondary (navbar, accents)
+//   bg-bl-gradient-br  — 135° diagonal:  primary → secondary (hero, cards)
+//   Text clip usage:   bg-bl-gradient bg-clip-text text-transparent
+//
+// Components (HTML partials included via {% include %}):
+//   templates/components/_button.html    — buttons and link buttons
+//   templates/components/_badge.html     — status pill badges
+//   templates/components/_card.html      — content cards
+//   templates/components/_navbar.html    — sticky top navigation
+//   templates/components/_layout.html    — page section wrapper with header
+//   profiles/templates/profiles/_form_field.html — styled Django form fields
+//
+// Full reference: docs/design_system_guide.md
+// ─────────────────────────────────────────────────────────────────────────────
 
 module.exports = {
 
@@ -87,9 +107,12 @@ module.exports = {
       },
 
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
-        serif: ['Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
-        jakarta: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        sans: ['"Source Serif 4"', 'Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
+        serif: ['"Source Serif 4"', 'Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
+        jakarta: ['"Source Serif 4"', 'serif'],
+        dm_sans: ['"Source Serif 4"', 'serif'],
+        manrope: ['"Source Serif 4"', 'serif'],
+        source_serif: ['"Source Serif 4"', 'serif'],
         inter: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
       },
     },

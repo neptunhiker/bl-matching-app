@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% if IS_STAGING %}[STAGING] {% endif %}{% block title %}BeginnerLuft Matching{% endblock %}</title>
     <link rel="icon" type="image/png" href="{% static 'img/bl_logo_schwarz.png' %}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="{% static 'css/tailwind.css' %}?v={% now 'U' %}" />
     {% block extra_head %}{% endblock %}
   </head>
