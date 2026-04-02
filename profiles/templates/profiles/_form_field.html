@@ -5,21 +5,27 @@
     {{ field.label }}{% if field.field.required %} <span class="text-secondary-500">*</span>{% endif %}
   </label>
   {% endif %}
-  <div class="[&_input]:w-full [&_textarea]:w-full
-              [&_input]:rounded-lg [&_textarea]:rounded-lg
-              [&_input]:border [&_textarea]:border
-              [&_input]:border-neutral-200 [&_textarea]:border-neutral-200
-              [&_input]:px-3 [&_input]:py-2 [&_textarea]:px-3 [&_textarea]:py-2
-              [&_input]:text-sm [&_textarea]:text-sm
-              [&_input]:text-neutral-800 [&_textarea]:text-neutral-800
-              [&_input:focus]:outline-none [&_textarea:focus]:outline-none
-              [&_input:focus]:ring-2 [&_textarea:focus]:ring-2
-              [&_input:focus]:ring-primary-300 [&_textarea:focus]:ring-primary-300
-              [&_input:focus]:border-primary-400 [&_textarea:focus]:border-primary-400
-              [&_input]:bg-white/80 [&_textarea]:bg-white/80">
+  <div class="[&_input]:w-full [&_textarea]:w-full [&_select]:w-full
+              [&_input]:rounded-lg [&_textarea]:rounded-lg [&_select]:rounded-lg
+              [&_input]:border [&_textarea]:border [&_select]:border
+              {% if field.errors %}[&_input]:border-red-300 [&_textarea]:border-red-300 [&_select]:border-red-300{% elif field_state == 'success' %}[&_input]:border-green-300 [&_textarea]:border-green-300 [&_select]:border-green-300{% elif field_state == 'warning' %}[&_input]:border-amber-300 [&_textarea]:border-amber-300 [&_select]:border-amber-300{% else %}[&_input]:border-neutral-200 [&_textarea]:border-neutral-200 [&_select]:border-neutral-200{% endif %}
+              [&_input]:px-3 [&_input]:py-2 [&_textarea]:px-3 [&_textarea]:py-2 [&_select]:px-3 [&_select]:py-2
+              [&_input]:text-sm [&_textarea]:text-sm [&_select]:text-sm
+              [&_input]:text-neutral-800 [&_textarea]:text-neutral-800 [&_select]:text-neutral-800
+              [&_input:focus]:outline-none [&_textarea:focus]:outline-none [&_select:focus]:outline-none
+              [&_input:focus]:ring-2 [&_textarea:focus]:ring-2 [&_select:focus]:ring-2
+              {% if field.errors %}[&_input:focus]:ring-red-200 [&_textarea:focus]:ring-red-200 [&_select:focus]:ring-red-200 [&_input:focus]:border-red-400 [&_textarea:focus]:border-red-400 [&_select:focus]:border-red-400{% elif field_state == 'success' %}[&_input:focus]:ring-green-200 [&_textarea:focus]:ring-green-200 [&_select:focus]:ring-green-200 [&_input:focus]:border-green-400 [&_textarea:focus]:border-green-400 [&_select:focus]:border-green-400{% elif field_state == 'warning' %}[&_input:focus]:ring-amber-200 [&_textarea:focus]:ring-amber-200 [&_select:focus]:ring-amber-200 [&_input:focus]:border-amber-400 [&_textarea:focus]:border-amber-400 [&_select:focus]:border-amber-400{% else %}[&_input:focus]:ring-primary-300 [&_textarea:focus]:ring-primary-300 [&_select:focus]:ring-primary-300 [&_input:focus]:border-primary-400 [&_textarea:focus]:border-primary-400 [&_select:focus]:border-primary-400{% endif %}
+              [&_input]:bg-white/80 [&_textarea]:bg-white/80 [&_select]:bg-white/80">
     {{ field }}
   </div>
+  {% if field.help_text %}
+  <p class="text-neutral-400 text-xs mt-1">{{ field.help_text }}</p>
+  {% endif %}
   {% if field.errors %}
-  <p class="text-secondary-600 text-xs mt-1">{{ field.errors|join:", " }}</p>
+  <p class="text-red-600 text-xs mt-1">{{ field.errors|join:", " }}</p>
+  {% elif field_state == 'success' and success_text %}
+  <p class="text-green-700 text-xs mt-1">{{ success_text }}</p>
+  {% elif field_state == 'warning' and warning_text %}
+  <p class="text-amber-700 text-xs mt-1">{{ warning_text }}</p>
   {% endif %}
 </div>

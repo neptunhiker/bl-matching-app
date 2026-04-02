@@ -28,27 +28,8 @@
       <form method="post" novalidate class="flex flex-col gap-4">
         {% csrf_token %}
 
-        <div>
-          <label for="{{ form.username.id_for_label }}"
-                 class="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
-            {{ form.username.label }}
-          </label>
-          {{ form.username }}
-          {% if form.username.errors %}
-            <p class="mt-1 text-xs text-red-600">{{ form.username.errors|join:', ' }}</p>
-          {% endif %}
-        </div>
-
-        <div>
-          <label for="{{ form.password.id_for_label }}"
-                 class="block text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
-            {{ form.password.label }}
-          </label>
-          {{ form.password }}
-          {% if form.password.errors %}
-            <p class="mt-1 text-xs text-red-600">{{ form.password.errors|join:', ' }}</p>
-          {% endif %}
-        </div>
+        {% include "profiles/_form_field.html" with field=form.username %}
+        {% include "profiles/_form_field.html" with field=form.password %}
 
         <div class="mt-2">
           {% include "components/_button.html" with button_type="submit" button_text="Anmelden" button_variant="tertiary" button_size="md" button_full_width=True %}
