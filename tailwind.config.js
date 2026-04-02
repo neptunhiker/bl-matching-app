@@ -78,7 +78,7 @@ module.exports = {
       },
 
       fontFamily: {
-        sans:  ['Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
+        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
         serif: ['Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
         jakarta: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
         inter: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
