@@ -22,16 +22,12 @@
         </span>
 
         <h1 class="text-4xl sm:text-5xl font-bold text-tertiary-700 leading-tight tracking-tight mb-4">
-          Coaching-Matching<br>
-          <span class="bg-bl-gradient bg-clip-text text-transparent">einfach gemacht.</span>
+          BeginnerLuft<br>
+          <span class="bg-bl-gradient bg-clip-text text-transparent">Matching</span>
         </h1>
 
-        <p class="text-lg text-neutral-600 leading-relaxed mb-8 max-w-lg">
-          Verbinde Teilnehmer:innen mit den passenden Coaches –
-          schnell, übersichtlich und nachvollziehbar.
-        </p>
 
-        <div class="flex flex-wrap gap-3">
+        <div class="flex flex-wrap gap-3 mt-8">
           {% url 'matching_attempts' as matching_attempts_url %}
           {% include "components/_button.html" with button_href=matching_attempts_url button_text="Zu den Matchings" button_variant="tertiary" button_size="lg" %}
           {% url 'participant_list' as participant_list_url %}
@@ -39,30 +35,7 @@
         </div>
       </div>
 
-      {# Right: decorative status card (desktop only) #}
-      <div class="hidden lg:flex justify-center">
-        <div class="relative">
-          <div class="absolute -inset-6 bg-bl-gradient rounded-3xl opacity-10 blur-2xl"></div>
-          <div class="relative bg-white rounded-3xl shadow-2xl border border-white/80 p-10
-                      flex flex-col items-center gap-6">
-            <img src="{% static 'img/bl_logo_schwarz.png' %}" alt="BeginnerLuft" class="h-16 w-auto opacity-70">
-            <div class="w-full border-t border-neutral-100 pt-4 space-y-3">
-              <div class="flex items-center gap-3">
-                <span class="w-2 h-2 rounded-full bg-green-400 shrink-0"></span>
-                <span class="text-sm text-neutral-600">Matching aktiv</span>
-              </div>
-              <div class="flex items-center gap-3">
-                <span class="w-2 h-2 rounded-full bg-primary-400 shrink-0"></span>
-                <span class="text-sm text-neutral-600">Coaches verfügbar</span>
-              </div>
-              <div class="flex items-center gap-3">
-                <span class="w-2 h-2 rounded-full bg-secondary-400 shrink-0"></span>
-                <span class="text-sm text-neutral-600">Benachrichtigungen aktiv</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+
 
     </div>
   </div>
