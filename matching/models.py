@@ -701,6 +701,8 @@ class MatchingEvent(models.Model):
         RTC_DECLINED = "rtc_declined", "Matching-Anfrage abgelehnt"
         RTC_TIMED_OUT = "rtc_timed_out", "Keine Antwort (Timeout)"
         RTC_CANCELLED = "rtc_cancelled", "Matching-Anfrage abgebrochen"
+        
+        RESPONDED_LATE_TO_RTC = "responded_late_to_rtc", "Antwort nach Deadline"
 
         RTC_DELETED = "rtc_deleted", "Matching-Anfrage gelöscht"
         

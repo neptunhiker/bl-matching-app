@@ -214,21 +214,38 @@ def accept_or_decline_request_to_coach(rtc, accept: bool, response_time: datetim
         on_time = False
     else:
         on_time = True
+        
+    if on_time:
     
-    with transaction.atomic():
-            
-        if accept:
-            event_type = MatchingEvent.EventType.RTC_ACCEPTED
-            rtc.accept(on_time=on_time)
-        else:
-            event_type = MatchingEvent.EventType.RTC_DECLINED
-            rtc.reject()
-            
-        rtc.save()  # Ensure state change is saved before event is created
+        with transaction.atomic():
+                
+            if accept:
+                event_type = MatchingEvent.EventType.RTC_ACCEPTED
+                rtc.accept(on_time=on_time)
+            else:
+                event_type = MatchingEvent.EventType.RTC_DECLINED
+                rtc.reject()
+                
+            rtc.save()  # Ensure state change is saved before event is created
 
+            create_matching_event(
+                matching_attempt=rtc.matching_attempt,
+                event_type=event_type,
+                triggered_by=TriggeredByOptions.COACH,
+                triggered_by_user=responded_by_user,
+                payload={
+                    "rtc_id": str(rtc.id),
+                    "coach_id": str(rtc.coach_id) if rtc.coach_id is not None else None,
+                    "response_time": response_time.isoformat(),
+                    "on_time": on_time,
+                    "deadline_at": rtc.deadline_at.isoformat(),
+                    "accept": accept,
+                }
+            )
+    else:
         create_matching_event(
             matching_attempt=rtc.matching_attempt,
-            event_type=event_type,
+            event_type=MatchingEvent.EventType.RESPONDED_LATE_TO_RTC,
             triggered_by=TriggeredByOptions.COACH,
             triggered_by_user=responded_by_user,
             payload={
@@ -240,7 +257,7 @@ def accept_or_decline_request_to_coach(rtc, accept: bool, response_time: datetim
                 "accept": accept,
             }
         )
-        
+
 def continue_matching_after_rtc_accepted(matching_attempt):
     from matching.models import MatchingEvent, TriggeredByOptions
 
