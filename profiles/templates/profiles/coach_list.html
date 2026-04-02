@@ -72,15 +72,17 @@
             <a href="{% url 'coach_detail' coach.pk %}" class="hover:text-primary-600 transition-colors">{{ coach.full_name }}</a>
           </td>
           <td class="px-5 py-3 text-neutral-600">{{ coach.city }}</td>
-          {% if coach.status == Status.AVAILABLE %}
-          <td class="px-5 py-3 text-green-600 font-medium">{{ coach.get_status_display }}</td>
-          {% elif coach.status == Status.PAUSED %}
-          <td class="px-5 py-3 text-neutral-500 font-medium">{{ coach.get_status_display }}</td>
-          {% elif coach.status == Status.ONBOARDING %}
-          <td class="px-5 py-3 text-yellow-500 font-medium">{{ coach.get_status_display }}</td>
-          {% else %}
-          <td class="px-5 py-3 text-red-500 font-medium">{{ coach.get_status_display }}</td>
-          {% endif %}
+          <td class="px-5 py-3">
+            {% if coach.status == Status.AVAILABLE %}
+              {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="success" %}
+            {% elif coach.status == Status.PAUSED %}
+              {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="neutral" %}
+            {% elif coach.status == Status.ONBOARDING %}
+              {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="warning" %}
+            {% else %}
+              {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="danger" %}
+            {% endif %}
+          </td>
 
           <td class="px-5 py-3 text-neutral-600">
             {% for lang in coach.languages.all %}
