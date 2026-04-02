@@ -18,10 +18,7 @@
 
     {% if card_cta_url and card_cta_text %}
     <div class="mt-8">
-      <a href="{{ card_cta_url }}"
-         class="inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-colors shadow-sm {{ card_cta_class|default:'' }}">
-        {{ card_cta_text }}
-      </a>
+      {% include "components/_button.html" with button_href=card_cta_url button_text=card_cta_text button_class=card_cta_class %}
     </div>
     {% endif %}
 
