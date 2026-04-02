@@ -1,3 +1,26 @@
+{% comment %}
+─────────────────────────────────────────────────────────────────────────────
+   _form_field.html — Styled Django form field with label, input, and feedback
+
+   Usage:
+     {% include "profiles/_form_field.html" with field=form.email %}
+
+   Parameters:
+     field         (BoundField)  — Required. A Django form field (e.g. form.email)
+     hide_label    (bool)        — Hides the label element              [default: false]
+     field_state   (string)      — Manual state override: "success" | "warning"
+     success_text  (string)      — Message shown when field_state="success"
+     warning_text  (string)      — Message shown when field_state="warning"
+
+   Validation states (automatically applied):
+     error   — from field.errors: red border, ring, and message text
+     success — via field_state="success": green border, ring, and success_text
+     warning — via field_state="warning": amber border, ring, and warning_text
+     default — neutral-200 border, primary-300 focus ring
+
+   Touch target: inputs and selects enforce min-h-[44px] for WCAG AA compliance.
+────────────────────────────────────────────────────────────────────────────────
+{% endcomment %}
 <div>
   {% if not hide_label %}
   <label for="{{ field.id_for_label }}"

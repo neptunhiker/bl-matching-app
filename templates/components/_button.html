@@ -1,3 +1,26 @@
+{% comment %}
+─────────────────────────────────────────────────────────────────────────────
+   _button.html — Reusable button / link component
+
+   Usage:
+     {% include "components/_button.html" with button_text="Label" %}
+
+   Parameters:
+     button_href        (string)  — If set, renders an <a> tag instead of <button>
+     button_text        (string)  — Label text                          [default: "Button"]
+     button_variant     (string)  — Visual style:                       [default: "primary"]
+                                    primary | secondary | tertiary | danger | ghost
+     button_size        (string)  — Size: sm | md | lg                  [default: md]
+     button_type        (string)  — HTML type for <button>              [default: "button"]
+     button_full_width  (bool)    — Adds w-full to fill container       [default: false]
+     button_disabled    (bool)    — Adds disabled attribute             [default: false]
+     button_name        (string)  — HTML name attribute (form use)
+     button_value       (string)  — HTML value attribute (form use)
+     button_class       (string)  — Extra Tailwind classes to append
+
+   All variants enforce min-h-11 (44px) for WCAG AA touch targets.
+──────────────────────────────────────────────────────────────────────────────
+{% endcomment %}
 {% if button_href %}
 <a href="{{ button_href }}"
   class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg font-semibold transition duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2

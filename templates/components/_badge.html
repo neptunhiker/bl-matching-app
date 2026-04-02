@@ -1,3 +1,18 @@
+{% comment %}
+─────────────────────────────────────────────────────────────────────────────
+   _badge.html — Inline status / tag badge
+
+   Usage:
+     {% include "components/_badge.html" with badge_text="Aktiv" badge_variant="success" %}
+
+   Parameters:
+     badge_text     (string)  — Label text                            [default: "Badge"]
+     badge_variant  (string)  — Color style:                         [default: "primary"]
+                                primary | secondary | success | warning | danger | neutral
+     badge_size     (string)  — Size: sm | (default) | lg
+     badge_class    (string)  — Extra Tailwind classes to append
+──────────────────────────────────────────────────────────────────────────────
+{% endcomment %}
 <span class="inline-flex items-center rounded-full font-medium
              {% if badge_size == 'sm' %}px-2 py-0.5 text-xs{% elif badge_size == 'lg' %}px-3 py-1 text-sm{% else %}px-2.5 py-1 text-xs{% endif %}
              {% if badge_variant == 'success' %}bg-green-100 text-green-700{% elif badge_variant == 'warning' %}bg-amber-100 text-amber-700{% elif badge_variant == 'danger' %}bg-red-100 text-red-700{% elif badge_variant == 'secondary' %}bg-secondary-100 text-secondary-700{% elif badge_variant == 'neutral' %}bg-neutral-100 text-neutral-700{% else %}bg-primary-100 text-primary-700{% endif %}

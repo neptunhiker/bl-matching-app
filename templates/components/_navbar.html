@@ -1,3 +1,21 @@
+{% comment %}
+─────────────────────────────────────────────────────────────────────────────
+   _navbar.html — Sticky top navigation bar
+
+   Usage:
+     {% include "components/_navbar.html" %}
+     (Include once in your base/root template — no parameters required)
+
+   Context variables read:
+     user.is_authenticated  — Shows nav links (authenticated) or Login link (anonymous)
+     IS_STAGING             — Set by context_processors.py; shows orange staging banner
+
+   Behavior:
+     - Desktop (sm:+): horizontal link list inside the gradient bar
+     - Mobile (<sm):  hamburger icon toggles a full-width dropdown (vanilla JS, no deps)
+     - Stays fixed while scrolling via sticky top-0 z-50
+──────────────────────────────────────────────────────────────────────────────
+{% endcomment %}
 {% load static %}
 
 <nav class="{% if IS_STAGING %}bg-orange-600{% else %}bg-bl-gradient border-b border-white/30 shadow-sm sticky top-0 z-50{% endif %}">

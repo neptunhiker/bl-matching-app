@@ -1,3 +1,26 @@
+{% comment %}
+─────────────────────────────────────────────────────────────────────────────
+   _card.html — Content card with optional header, CTA, and footer slots
+
+   Usage:
+     {% include "components/_card.html" with card_title="Title" card_text="Body" %}
+
+   Parameters:
+     card_wrapper_class  (string)  — Override card container classes
+     card_body_class     (string)  — Override inner body padding
+     card_top_accent     (bool)    — Adds a 1.5px branded gradient bar at top
+     card_eyebrow        (string)  — Small uppercase label above the title
+     card_title          (string)  — Card heading (H2)
+     card_title_class    (string)  — Extra classes on the title element
+     card_text           (string)  — Body paragraph text
+     card_text_class     (string)  — Extra classes on the text element
+     card_cta_url        (string)  — CTA button href (requires card_cta_text)
+     card_cta_text       (string)  — CTA button label
+     card_cta_class      (string)  — Extra classes passed to _button.html
+     card_footer         (string)  — Small footer text below the CTA
+     card_footer_class   (string)  — Extra classes on the footer text
+──────────────────────────────────────────────────────────────────────────────
+{% endcomment %}
 <section class="{{ card_wrapper_class|default:'bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-white/70 overflow-hidden' }}">
   {% if card_top_accent %}
   <div class="h-1.5 bg-bl-gradient"></div>
