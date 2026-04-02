@@ -12,11 +12,8 @@
       <h1 class="text-2xl font-semibold text-tertiary-700">Teilnehmer:innen</h1>
       <p class="text-sm text-neutral-500 mt-1">{{ paginator.count }} Einträge insgesamt</p>
     </div>
-    <a href="{% url 'participant_create' %}"
-       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
-              text-white bg-primary-500 hover:bg-primary-600 transition-colors shadow-sm">
-      + Neu anlegen
-    </a>
+    {% url 'participant_create' as participant_create_url %}
+    {% include "components/_button.html" with button_href=participant_create_url button_text="+ Neu anlegen" %}
   </div>
 
   <!-- Table -->
@@ -25,9 +22,9 @@
     <table class="w-full text-sm">
       <thead>
         <tr class="bg-primary-50 text-tertiary-700">
-          <th class="px-5 py-3 font-semibold" style="text-align:left">Name</th>
-          <th class="px-5 py-3 font-semibold" style="text-align:left">Gewünschtes Startdatum</th>
-          <th class="px-5 py-3 font-semibold" style="text-align:left">AVGS-Daten verfügbar</th>
+          <th class="px-5 py-3 font-semibold text-left">Name</th>
+          <th class="px-5 py-3 font-semibold text-left">Gewünschtes Startdatum</th>
+          <th class="px-5 py-3 font-semibold text-left">AVGS-Daten verfügbar</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-neutral-100">
@@ -86,11 +83,8 @@
   {% else %}
   <div class="bg-white/70 rounded-2xl shadow-sm border border-white/60 px-8 py-16 text-center">
     <p class="text-neutral-500 text-sm mb-4">Noch keine Teilnehmer:innen angelegt.</p>
-    <a href="{% url 'participant_create' %}"
-       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
-              text-white bg-primary-500 hover:bg-primary-600 transition-colors">
-      + Ersten Eintrag anlegen
-    </a>
+    {% url 'participant_create' as participant_create_url %}
+    {% include "components/_button.html" with button_href=participant_create_url button_text="+ Ersten Eintrag anlegen" %}
   </div>
   {% endif %}
 

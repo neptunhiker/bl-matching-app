@@ -10,6 +10,7 @@
               [&_input]:border [&_textarea]:border [&_select]:border
               {% if field.errors %}[&_input]:border-red-300 [&_textarea]:border-red-300 [&_select]:border-red-300{% elif field_state == 'success' %}[&_input]:border-green-300 [&_textarea]:border-green-300 [&_select]:border-green-300{% elif field_state == 'warning' %}[&_input]:border-amber-300 [&_textarea]:border-amber-300 [&_select]:border-amber-300{% else %}[&_input]:border-neutral-200 [&_textarea]:border-neutral-200 [&_select]:border-neutral-200{% endif %}
               [&_input]:px-3 [&_input]:py-2 [&_textarea]:px-3 [&_textarea]:py-2 [&_select]:px-3 [&_select]:py-2
+              [&_input]:min-h-[44px] [&_select]:min-h-[44px]
               [&_input]:text-sm [&_textarea]:text-sm [&_select]:text-sm
               [&_input]:text-neutral-800 [&_textarea]:text-neutral-800 [&_select]:text-neutral-800
               [&_input:focus]:outline-none [&_textarea:focus]:outline-none [&_select:focus]:outline-none

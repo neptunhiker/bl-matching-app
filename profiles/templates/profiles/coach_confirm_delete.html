@@ -26,7 +26,7 @@
     <div class="px-6 py-4 bg-neutral-50/60 flex items-center justify-between">
       <a href="{% url 'coach_detail' coach.pk %}" class="text-sm text-neutral-500 hover:text-neutral-700 transition-colors">Abbrechen</a>
       <form method="post">{% csrf_token %}
-        <button type="submit" class="px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors shadow-sm" style="background-color:#dc2626" onmouseover="this.style.backgroundColor='#b91c1c'" onmouseout="this.style.backgroundColor='#dc2626'">Endgültig löschen</button>
+        {% include "components/_button.html" with button_type="submit" button_text="Endgültig löschen" button_variant="danger" %}
       </form>
     </div>
   </div>
