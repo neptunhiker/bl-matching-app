@@ -50,11 +50,9 @@
           {% endif %}
         </div>
 
-        <button type="submit"
-                style="background:#171717; color:#ffffff;"
-                class="mt-2 w-full py-2.5 rounded-lg font-semibold text-sm transition-opacity hover:opacity-80">
-          Anmelden
-        </button>
+        <div class="mt-2">
+          {% include "components/_button.html" with button_type="submit" button_text="Anmelden" button_variant="tertiary" button_size="md" button_full_width=True %}
+        </div>
 
         {% if next %}<input type="hidden" name="next" value="{{ next }}" />{% endif %}
       </form>
