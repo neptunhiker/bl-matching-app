@@ -1,11 +1,15 @@
 /** @type {import('tailwindcss').Config} */
 
-// BeginnerLuft design system
-// --bl-primary-color   : #948afc  → primary-500
-// --bl-secondary-color : #FFACE4  → secondary-400
-// --bl-tertiary-color  : #1A1B41  → tertiary-700
-// --bl-dark-purple     : #4B0082  → tertiary-600
-// --bl-exciting-bg-img : linear-gradient(90deg, primary → secondary)
+// BeginnerLuft design system (single source of truth: Tailwind tokens)
+// Color usage guidance:
+// - primary: core actions, links, highlights, and active states
+// - secondary: decorative accents, soft emphasis, and background tints
+// - tertiary: headings, high-contrast text, and structural UI surfaces
+// Brand anchors:
+// - primary-500   #948AFC
+// - secondary-400 #FFACE4
+// - tertiary-700  #1A1B41
+// - tertiary-600  #4B0082 (dark purple accent)
 
 module.exports = {
 
@@ -19,6 +23,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Primary brand family: use for main CTA and interaction emphasis.
         primary: {
           50:  '#F4F3FF',
           100: '#E9E6FF',
@@ -32,6 +37,7 @@ module.exports = {
           900: '#37327A',
         },
 
+        // Secondary accent family: use sparingly for supportive highlights.
         secondary: {
           50:  '#FFF5FD',
           100: '#FFE6F9',
@@ -45,6 +51,7 @@ module.exports = {
           900: '#6F2B5D',
         },
 
+        // Tertiary family: use for strong text, headers, and dark surfaces.
         tertiary: {
           50:  '#EEEFF8',
           100: '#D5D5EF',
@@ -58,6 +65,7 @@ module.exports = {
           900: '#0C0D22',
         },
 
+        // Neutral family: use for base text, borders, and general UI scaffolding.
         neutral: {
           50:  '#F8F7FF',
           100: '#F1F0F7',
@@ -73,6 +81,7 @@ module.exports = {
       },
 
       backgroundImage: {
+        // Branded gradients for nav bars, section headers, and visual separators.
         'bl-gradient': 'linear-gradient(90deg, #948AFC, #FFACE4)',
         'bl-gradient-br': 'linear-gradient(135deg, #948AFC, #FFACE4)',
       },
