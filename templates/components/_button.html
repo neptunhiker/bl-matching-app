@@ -1,3 +1,13 @@
+{% if button_href %}
+<a href="{{ button_href }}"
+   class="inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2
+          {% if button_size == 'sm' %}px-3 py-2 text-sm{% elif button_size == 'lg' %}px-5 py-3 text-base{% else %}px-4 py-2.5 text-sm{% endif %}
+          {% if button_full_width %}w-full{% endif %}
+          {% if button_variant == 'secondary' %}bg-secondary-400 text-tertiary-800 hover:bg-secondary-500 focus:ring-secondary-300{% elif button_variant == 'tertiary' %}bg-tertiary-700 text-white hover:bg-tertiary-800 focus:ring-tertiary-400{% elif button_variant == 'danger' %}bg-red-600 text-white hover:bg-red-700 focus:ring-red-300{% elif button_variant == 'ghost' %}border border-tertiary-200 bg-transparent text-tertiary-700 hover:bg-tertiary-50 focus:ring-tertiary-300{% else %}bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-300{% endif %}
+          {{ button_class|default:'' }}">
+  {{ button_text|default:'Button' }}
+</a>
+{% else %}
 <button
   type="{{ button_type|default:'button' }}"
   {% if button_name %}name="{{ button_name }}"{% endif %}
@@ -11,3 +21,4 @@
 >
   {{ button_text|default:'Button' }}
 </button>
+{% endif %}

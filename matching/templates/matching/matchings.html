@@ -4,96 +4,87 @@
 {% block title %}Alle Matchings{% endblock %}
 
 {% block body %}
-<div class="max-w-5xl mx-auto px-4 py-10">
-  {# ── Header ── #}
-  <div class="flex items-center justify-between mb-8">
+{% url 'matching_attempt_create' as matching_attempt_create_url %}
+{% include "components/_layout.html" with layout_mode="start" layout_outer_class="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10" %}
+
+  {# Header #}
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-8">
     <div>
-      <h1 class="text-3xl font-bold text-purple-950">Alle Matchings <a href="{% url 'matching_flow_chart' %}"
-           class="inline-flex align-middle ml-2 text-purple-400 hover:text-primary-500 transition"
+      <div class="flex items-center gap-2">
+        <h1 class="text-2xl sm:text-3xl font-semibold text-tertiary-700">Alle Matchings</h1>
+        <a href="{% url 'matching_flow_chart' %}"
+           class="inline-flex text-tertiary-300 hover:text-primary-500 transition"
            title="Ablaufdiagramm anzeigen">
-          <span class="h-5 w-5 block">
-            {% include "components/icons/info.html" %}
-          </span>
-        </a></h1>
-        
-      <p class="text-sm text-purple-700/70 mt-1">{{ matching_attempts|length }} Eintrag{{ matching_attempts|length|pluralize:",e" }}</p>
+          <span class="h-5 w-5 block">{% include "components/icons/info.html" %}</span>
+        </a>
+      </div>
+      <p class="text-sm text-neutral-500 mt-2">
+        {{ matching_attempts|length }} Eintrag{{ matching_attempts|length|pluralize:",e" }}
+      </p>
     </div>
-    {% if request.user.is_staff and matching_attempts %}
-     <a href="{% url 'matching_attempt_create' %}"
-       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
-            bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm">
-          <span class="h-4 w-4">
-              {% include "components/icons/plus.html" %}
-          </span>
-      Neues Matching
-    </a>
+
+    {% if request.user.is_staff %}
+      <div class="w-full sm:w-auto">
+        {% include "components/_button.html" with button_text="Neues Matching" button_variant="primary" button_size="md" button_full_width=True button_class="sm:w-auto" button_href=matching_attempt_create_url %}
+      </div>
     {% endif %}
   </div>
 
-  {# ── List ── #}
+  {# Desktop/tablet/mobile responsive card grid #}
   {% if matching_attempts %}
-    <div class="space-y-3">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
       {% for matching in matching_attempts %}
         <a href="{% url 'matching_attempt_detail' matching.pk %}"
-           class="flex items-center justify-between gap-4
-                  bg-white/70 backdrop-blur-sm rounded-xl shadow-sm
-                  px-6 py-4 hover:shadow-md hover:bg-white/90 transition group">
+           class="group block rounded-2xl border border-white/70 bg-white/80 shadow-sm hover:shadow-md hover:bg-white/95 transition">
+          <div class="h-1.5 bg-bl-gradient rounded-t-2xl"></div>
 
-          {# Participant #}
-          <div class="min-w-0 flex-1">
-            <p class="font-semibold text-purple-950 truncate">{{ matching.participant }}</p>
-            <p class="text-sm text-purple-700/70 truncate">{{ matching.participant.city }}</p>
-          </div>
+          <div class="p-5 space-y-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-xs uppercase tracking-wide text-neutral-400 font-semibold">Teilnehmer:in</p>
+                <p class="font-semibold text-tertiary-700 truncate">{{ matching.participant }}</p>
+                <p class="text-sm text-neutral-500 truncate">{{ matching.participant.city }}</p>
+              </div>
 
-          {# Coach #}
-          <div class="hidden sm:block min-w-0 flex-1 text-sm">
-            {% if matching.matched_coach %}
-              <p class="text-purple-950 font-medium truncate">{{ matching.matched_coach }}</p>
-              <p class="text-purple-700/70 truncate">{{ matching.matched_coach.city }}</p>
-            {% else %}
-              <p class="text-purple-400 italic">Noch nicht gematcht</p>
-            {% endif %}
-          </div>
-
-          {# Status badge #}
-          <div class="shrink-0">
-            <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold
               {% if matching.state == 'matching_completed' %}
-                bg-green-100 text-green-800
+                {% include "components/_badge.html" with badge_text=matching.get_state_display badge_variant="success" %}
               {% elif matching.state == 'cancelled' or matching.state == 'failed' or matching.state == 'clarification_with_participant_needed' %}
-                bg-secondary-100 text-secondary-700
+                {% include "components/_badge.html" with badge_text=matching.get_state_display badge_variant="danger" %}
+              {% elif matching.state == 'matching_confirmed' %}
+                {% include "components/_badge.html" with badge_text=matching.get_state_display badge_variant="secondary" %}
               {% else %}
-                bg-neutral-100 text-neutral-600
-              {% endif %}">
-              {{ matching.get_state_display }}
-            </span>
+                {% include "components/_badge.html" with badge_text=matching.get_state_display badge_variant="neutral" %}
+              {% endif %}
+            </div>
+
+            <div>
+              <p class="text-xs uppercase tracking-wide text-neutral-400 font-semibold">Coach</p>
+              {% if matching.matched_coach %}
+                <p class="text-tertiary-700 font-medium truncate">{{ matching.matched_coach }}</p>
+                <p class="text-sm text-neutral-500 truncate">{{ matching.matched_coach.city }}</p>
+              {% else %}
+                <p class="text-sm text-neutral-400 italic">Noch nicht gematcht</p>
+              {% endif %}
+            </div>
+
+            <div class="pt-1 flex items-center justify-between">
+              <p class="text-xs text-neutral-400">Erstellt: {{ matching.created_at|localtime|date:"d.m.Y" }}</p>
+              <span class="h-4 w-4 text-neutral-300 group-hover:text-primary-500 transition">{% include "components/icons/forward_arrow.html" %}</span>
+            </div>
           </div>
-
-          {# Date #}
-          <div class="hidden md:block shrink-0 text-sm text-purple-700/60 text-right">
-            {{ matching.created_at|localtime|date:"d.m.Y" }}
-          </div>
-
-          <span class="h-4 w-4 text-purple-300 group-hover:text-purple-600 transition shrink-0">
-              {% include "components/icons/forward_arrow.html" %}
-          </span>
-
         </a>
       {% endfor %}
     </div>
-
   {% else %}
-    <div class="bg-white/60 rounded-2xl shadow-sm px-8 py-16 text-center">
-      <p class="text-purple-700/60 text-lg mb-4">Noch keine Matchings vorhanden.</p>
+    <div class="rounded-2xl border border-white/70 bg-white/80 shadow-sm px-6 sm:px-8 py-14 text-center">
+      <p class="text-neutral-500 text-base mb-5">Noch keine Matchings vorhanden.</p>
       {% if request.user.is_staff %}
-      <a href="{% url 'matching_attempt_create' %}"
-        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
-             bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm">
-        Erstes Matching erstellen
-      </a>
+        <div class="mx-auto max-w-xs">
+          {% include "components/_button.html" with button_text="Erstes Matching erstellen" button_variant="primary" button_size="md" button_full_width=True button_href=matching_attempt_create_url %}
+        </div>
       {% endif %}
     </div>
   {% endif %}
 
-</div>
+{% include "components/_layout.html" with layout_mode="end" %}
 {% endblock %}
