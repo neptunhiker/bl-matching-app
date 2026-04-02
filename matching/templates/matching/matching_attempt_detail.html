@@ -55,19 +55,13 @@
           </h1>
         </div>
         {# State badge #}
-        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold
-          {% if matching_attempt.state == 'matching_completed' %}bg-green-100 text-green-700
-          {% elif matching_attempt.state == 'cancelled' or matching_attempt.state == 'failed' or matching_attempt.state == 'clarification_with_participant_needed'%}bg-secondary-100 text-secondary-700
-          {% else %}bg-neutral-100 text-neutral-600
-          {% endif %}">
-          <span class="w-2 h-2 rounded-full
-          {% if matching_attempt.state == 'matching_completed' %}bg-green-500 text-green-700
-          {% elif matching_attempt.state == 'cancelled' or matching_attempt.state == 'failed' or matching_attempt.state == 'clarification_with_participant_needed' %}bg-secondary-500 text-secondary-700
-          {% else %}bg-neutral-500 text-neutral-600
-          {% endif %}">
-          </span>
-          {{ matching_attempt.get_state_display }}
-        </span>
+        {% if matching_attempt.state == 'matching_completed' %}
+          {% include "components/_badge.html" with badge_text=matching_attempt.get_state_display badge_variant="success" %}
+        {% elif matching_attempt.state == 'cancelled' or matching_attempt.state == 'failed' or matching_attempt.state == 'clarification_with_participant_needed' %}
+          {% include "components/_badge.html" with badge_text=matching_attempt.get_state_display badge_variant="secondary" %}
+        {% else %}
+          {% include "components/_badge.html" with badge_text=matching_attempt.get_state_display badge_variant="neutral" %}
+        {% endif %}
       </div>
 
       {# Meta grid #}
@@ -254,31 +248,29 @@
             <div class="flex items-start justify-between gap-2">
               <p class="font-bold text-tertiary-700 text-base leading-snug hover:text-primary-600 transition-colors"><a href="{{ req.coach.get_absolute_url }}">{{ req.coach.first_name }}<br>{{ req.coach.last_name }}</a></p>
               
-              <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
-                {% if req.state == 'accepted' %}bg-green-100 text-green-700
-                {% elif req.state == 'rejected' or req.state == 'cancelled' or req.state == 'no_response_until_deadline' %}bg-secondary-200 text-secondary-700
-                {% else %}bg-neutral-100 text-neutral-600
-                {% endif %}">
-                {{ req.get_state_display }}
-              </span>
+              {% if req.state == 'accepted' %}
+                {% include "components/_badge.html" with badge_text=req.get_state_display badge_variant="success" badge_size="sm" badge_class="shrink-0" %}
+              {% elif req.state == 'rejected' or req.state == 'cancelled' or req.state == 'no_response_until_deadline' %}
+                {% include "components/_badge.html" with badge_text=req.get_state_display badge_variant="secondary" badge_size="sm" badge_class="shrink-0" %}
+              {% else %}
+                {% include "components/_badge.html" with badge_text=req.get_state_display badge_variant="neutral" badge_size="sm" badge_class="shrink-0" %}
+              {% endif %}
             </div>
 
             {# Date grid #}
             <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
               <div>
                 <dt class="text-neutral-400 font-jakarta mb-0.5">Status</dt>
-                {% if req.coach.status == "available" %}
-                  <dd class="font-semibold text-green-600">{{ req.coach.get_status_display }}</dd>
-                {% elif req.coach.status == "paused" %}
-                  <dd class="font-semibold text-neutral-600">{{ req.coach.get_status_display }}</dd>
-                {% elif req.coach.status == "onboarding" %}
-                  <dd class="font-semibold text-amber-500">{{ req.coach.get_status_display }}</dd>
-                {% elif req.coach.status == "inactive" %}
-                  <dd class="font-semibold text-red-500">{{ req.coach.get_status_display }}</dd>
-                {% else %}
-                  <dd class="font-semibold text-neutral-600">{{ req.coach.get_status_display }}</dd>
-                 {% endif %}
-
+                <dd>
+                  {% if req.coach.status == "available" %}
+                    {% include "components/_badge.html" with badge_text=req.coach.get_status_display badge_variant="success" badge_size="sm" %}
+                  {% elif req.coach.status == "onboarding" %}
+                    {% include "components/_badge.html" with badge_text=req.coach.get_status_display badge_variant="warning" badge_size="sm" %}
+                  {% elif req.coach.status == "inactive" %}
+                    {% include "components/_badge.html" with badge_text=req.coach.get_status_display badge_variant="danger" badge_size="sm" %}
+                  {% else %}
+                    {% include "components/_badge.html" with badge_text=req.coach.get_status_display badge_variant="neutral" badge_size="sm" %}
+                  {% endif %}
                 </dd>
               </div>
               <div>

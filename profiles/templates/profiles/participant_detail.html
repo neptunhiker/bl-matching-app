@@ -65,10 +65,7 @@
         {% if participant.languages.all %}
         <div class="flex flex-wrap gap-2">
           {% for lang in participant.languages.all %}
-          <span class="px-3 py-1 rounded-full text-xs font-medium
-                       bg-primary-100 text-primary-700">
-            {{ lang.name }}
-          </span>
+          {% include "components/_badge.html" with badge_text=lang.name badge_variant="primary" badge_size="sm" %}
           {% endfor %}
         </div>
         {% else %}
@@ -81,13 +78,13 @@
         <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Coaching-Formate</p>
         <div class="flex flex-wrap gap-2">
           {% if participant.coaching_format_online %}
-          <span class="px-3 py-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Online</span>
+          {% include "components/_badge.html" with badge_text="Online" badge_variant="secondary" badge_size="sm" %}
           {% endif %}
           {% if participant.coaching_format_presence %}
-          <span class="px-3 py-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Präsenz</span>
+          {% include "components/_badge.html" with badge_text="Präsenz" badge_variant="secondary" badge_size="sm" %}
           {% endif %}
           {% if participant.coaching_format_hybrid %}
-          <span class="px-3 py-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Hybrid</span>
+          {% include "components/_badge.html" with badge_text="Hybrid" badge_variant="secondary" badge_size="sm" %}
           {% endif %}
           {% if not participant.coaching_format_online and not participant.coaching_format_presence and not participant.coaching_format_hybrid %}
           <p class="text-sm text-neutral-400 italic">–</p>

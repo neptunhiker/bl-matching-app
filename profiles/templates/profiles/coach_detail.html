@@ -72,9 +72,7 @@
           {% if coach.languages.all %}
           <div class="flex flex-wrap gap-2">
             {% for lang in coach.languages.all %}
-            <span class="px-4 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-700 shadow">
-              {{ lang.name }}
-            </span>
+            {% include "components/_badge.html" with badge_text=lang.name badge_variant="primary" badge_size="sm" %}
             {% endfor %}
           </div>
           {% else %}
@@ -87,13 +85,13 @@
           <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Coaching-Formate</p>
           <div class="flex flex-wrap gap-2">
             {% if coach.coaching_format_online %}
-            <span class="px-4 py-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700 shadow">Online</span>
+            {% include "components/_badge.html" with badge_text="Online" badge_variant="secondary" badge_size="sm" %}
             {% endif %}
             {% if coach.coaching_format_presence %}
-            <span class="px-4 py-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700 shadow">Präsenz</span>
+            {% include "components/_badge.html" with badge_text="Präsenz" badge_variant="secondary" badge_size="sm" %}
             {% endif %}
             {% if coach.coaching_format_hybrid %}
-            <span class="px-4 py-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700 shadow">Hybrid</span>
+            {% include "components/_badge.html" with badge_text="Hybrid" badge_variant="secondary" badge_size="sm" %}
             {% endif %}
           </div>
         </div>
@@ -152,21 +150,13 @@
           <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Status</p>
           {% if coach.status %}
             {% if coach.status == 'available' %}
-              <p class="text-base text-green-700 font-semibold">
-                {{ coach.get_status_display }}
-              </p>
+              {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="success" %}
             {% elif coach.status == 'inactive' %}
-              <p class="text-base text-red-500 font-semibold">
-                {{ coach.get_status_display }}
-              </p>
+              {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="danger" %}
             {% elif coach.status == 'onboarding' %}
-              <p class="text-base text-yellow-500 font-semibold">
-                {{ coach.get_status_display }}
-              </p>
+              {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="warning" %}
             {% else %}
-              <p class="text-base text-neutral-400 font-semibold">
-                {{ coach.get_status_display }}
-              </p>
+              {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="neutral" %}
             {% endif %}
           {% endif %}
           {% if coach.status_notes %}
