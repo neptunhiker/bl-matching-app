@@ -13,41 +13,34 @@
 <div class="flex justify-center mb-8">
   <div class="relative">
     <div class="absolute inset-0 rounded-full bg-red-50 blur-xl"></div>
-    <div class="relative flex items-center justify-center w-16 h-16 rounded-full bg-white border border-gray-200 shadow-sm">
+    <div class="relative flex items-center justify-center w-16 h-16 rounded-full bg-white border border-neutral-200 shadow-sm">
       <img src="{% static 'icons/server.svg' %}" alt="Server error" class="h-8 w-8" />
     </div>
   </div>
 </div>
 
 <!-- Code -->
-<p class="text-sm font-semibold tracking-widest text-gray-400 mb-3">
+<p class="text-sm font-semibold tracking-widest text-neutral-400 mb-3">
   FEHLER 500
 </p>
 
 <!-- Heading -->
-<h1 class="text-3xl font-semibold text-gray-900 mb-4">
+<h1 class="text-3xl font-semibold text-tertiary-700 mb-4">
   Interner Serverfehler
 </h1>
 
 <!-- Main message -->
-<p class="text-gray-600 leading-relaxed mb-4">
+<p class="text-neutral-600 leading-relaxed mb-4">
   Beim Laden der Seite ist ein unerwarteter Fehler aufgetreten.
 </p>
 
 <!-- Secondary explanation -->
-<p class="text-sm text-gray-500 mb-10">
+<p class="text-sm text-neutral-500 mb-10">
   Unser System konnte deine Anfrage momentan nicht verarbeiten.
   Bitte versuche es in wenigen Minuten erneut.
 </p>
 
-<!-- Home button -->
-<a href="/"
-   class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium
-          text-white bg-primary-500 rounded-xl shadow-sm
-          hover:bg-primary-600 transition
-          focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2">
-  Zur Startseite
-</a>
+{% include "components/_button.html" with button_href="/" button_text="Zur Startseite" button_variant="primary" %}
 
 
   </div>
