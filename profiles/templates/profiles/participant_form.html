@@ -122,11 +122,11 @@
         Abbrechen
       </a>
       {% endif %}
-      <button type="submit"
-              class="px-6 py-2.5 rounded-xl text-sm font-semibold text-white
-                     bg-primary-500 hover:bg-primary-600 transition-colors shadow-sm">
-        {% if object %}Änderungen speichern{% else %}Anlegen{% endif %}
-      </button>
+      {% if object %}
+        {% include "components/_button.html" with button_type="submit" button_text="Änderungen speichern" %}
+      {% else %}
+        {% include "components/_button.html" with button_type="submit" button_text="Anlegen" %}
+      {% endif %}
     </div>
 
   </form>
