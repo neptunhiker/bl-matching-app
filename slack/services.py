@@ -273,7 +273,7 @@ def send_reminder_coach_request_slack(rtc):
         }
     ]
 
-    subject = f"Matching-Anfrage für {rtc.matching_attempt.participant}"
+    subject = f"Erinnerung - Matching-Anfrage für {rtc.matching_attempt.participant.first_name}"
 
 
     
