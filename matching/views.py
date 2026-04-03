@@ -28,7 +28,7 @@ import json
 class StaffRequiredMixin(UserPassesTestMixin):
     """Restricts the view to staff users only."""
     def test_func(self):
-        return self.request.user.is_active and self.request.user.is_staff
+        return (self.request.user.is_active and self.request.user.is_staff) or self.request.user.is_superuser
 
 
 class MatchingAttemptCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateView):

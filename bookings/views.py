@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class StaffRequiredMixin(UserPassesTestMixin):
     """Restricts the view to staff users only."""
     def test_func(self):
-        return self.request.user.is_active and self.request.user.is_staff
+        return (self.request.user.is_active and self.request.user.is_staff) or self.request.user.is_superuser
     
 def extract_answer(questions, possible_labels):
     normalized_labels = [label.strip().lower() for label in possible_labels]

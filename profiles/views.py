@@ -9,9 +9,9 @@ from matching.models import RequestToCoach, MatchingAttempt
 
 
 class StaffRequiredMixin(UserPassesTestMixin):
-    """Restricts access to active staff users only."""
+    """Restricts access to active staff and superusers only."""
     def test_func(self):
-        return self.request.user.is_active and self.request.user.is_staff
+        return (self.request.user.is_active and self.request.user.is_staff) or self.request.user.is_superuser
 
 
 class HomeView(LoginRequiredMixin, TemplateView):
@@ -22,7 +22,7 @@ class HomeView(LoginRequiredMixin, TemplateView):
 # Participant CRUD
 # ---------------------------------------------------------------------------
 
-class ParticipantListView(StaffRequiredMixin, ListView):
+class ParticipantListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
     model = Participant
     template_name = 'profiles/participant_list.html'
     context_object_name = 'participants'
@@ -59,13 +59,12 @@ class ParticipantDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView)
     
     def get_template_names(self):
         user = self.request.user
-        print(f"DEBUG: User {user} is_staff={user.is_staff} is_superuser={user.is_superuser}")
         if user.is_staff or user.is_superuser:
             return ["profiles/participant_detail.html"]
         return ["profiles/participant_detail_for_coach.html"]
 
 
-class ParticipantCreateView(StaffRequiredMixin, CreateView):
+class ParticipantCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateView):
     model = Participant
     form_class = ParticipantForm
     template_name = 'profiles/participant_form.html'
@@ -74,7 +73,7 @@ class ParticipantCreateView(StaffRequiredMixin, CreateView):
         return reverse_lazy('participant_detail', kwargs={'pk': self.object.pk})
 
 
-class ParticipantUpdateView(StaffRequiredMixin, UpdateView):
+class ParticipantUpdateView(LoginRequiredMixin, StaffRequiredMixin, UpdateView):
     model = Participant
     form_class = ParticipantForm
     template_name = 'profiles/participant_form.html'
@@ -83,7 +82,7 @@ class ParticipantUpdateView(StaffRequiredMixin, UpdateView):
         return reverse_lazy('participant_detail', kwargs={'pk': self.object.pk})
 
 
-class ParticipantDeleteView(StaffRequiredMixin, DeleteView):
+class ParticipantDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
     model = Participant
     template_name = 'profiles/participant_confirm_delete.html'
     context_object_name = 'participant'
@@ -95,7 +94,7 @@ class ParticipantDeleteView(StaffRequiredMixin, DeleteView):
 # ---------------------------------------------------------------------------
 
 
-class CoachListView(StaffRequiredMixin, ListView):
+class CoachListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
     model = Coach
     template_name = 'profiles/coach_list.html'
     context_object_name = 'coaches'
@@ -153,10 +152,17 @@ class CoachListView(StaffRequiredMixin, ListView):
         return context
 
 
-class CoachDetailView(StaffRequiredMixin, DetailView):
+class CoachDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     model = Coach
     template_name = 'profiles/coach_detail.html'
     context_object_name = 'coach'
+
+    def test_func(self):
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return True
+        coach = getattr(user, 'coach_profile', None)
+        return coach is not None and coach == self.get_object()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -164,7 +170,7 @@ class CoachDetailView(StaffRequiredMixin, DetailView):
         return context
 
 
-class CoachCreateView(StaffRequiredMixin, CreateView):
+class CoachCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateView):
     model = Coach
     form_class = CoachForm
     template_name = 'profiles/coach_form.html'
@@ -180,7 +186,7 @@ class CoachCreateView(StaffRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class CoachUpdateView(StaffRequiredMixin, UpdateView):
+class CoachUpdateView(LoginRequiredMixin, StaffRequiredMixin, UpdateView):
     model = Coach
     form_class = CoachUpdateForm
     template_name = 'profiles/coach_form.html'
@@ -196,8 +202,8 @@ class CoachUpdateView(StaffRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-class CoachDeleteView(StaffRequiredMixin, DeleteView):
+class CoachDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
     model = Coach
     template_name = 'profiles/coach_confirm_delete.html'
     context_object_name = 'coach'
-    success_url = reverse_lazy('coach_list')
+    success_url = reverse_lazy('coach_list') 

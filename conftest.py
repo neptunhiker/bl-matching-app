@@ -43,6 +43,18 @@ def superuser():
         last_name="User",
         is_superuser=True,
     )
+
+
+@pytest.fixture
+def plain_user(db):
+    """A plain authenticated user — not staff, not superuser, no coach profile."""
+    return User.objects.create_user(
+        email="plain_user@example.com",
+        password="testpass123",
+        first_name="Plain",
+        last_name="User",
+    )
+
     
 @pytest.fixture()
 def coach_user_1():
