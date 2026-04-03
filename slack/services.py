@@ -171,7 +171,7 @@ def send_first_coach_request_slack(rtc):
     )    
     
 
-def send_reminder_coach_request_slack(rtc, triggered_by: str="system", triggered_by_user: User = None):
+def send_reminder_coach_request_slack(rtc):
   
     client = WebClient(token=settings.SLACK_BOT_TOKEN)
     coach = rtc.coach
@@ -180,17 +180,16 @@ def send_reminder_coach_request_slack(rtc, triggered_by: str="system", triggered
     user_id = coach.slack_user_id
     start_date = rtc.matching_attempt.participant.start_date
     
+    rtc = _get_locked_request_to_coach(rtc)  # acquire lock first
+    coach = rtc.coach
+    user_id = coach.slack_user_id
+
     if not user_id:
-        raise ValueError(f"Coach {rtc.coach} does not have a Slack user ID")
-    
-    # Open a DM channel
+        raise ValueError(...)
+
     response = client.conversations_open(users=[user_id])
     dm_channel = response["channel"]["id"]
-    
-    rtc = _get_locked_request_to_coach(rtc)
-    
-    coach = rtc.coach
-    
+
     accept_url, decline_url = generate_accept_and_decline_token(rtc)
     
     blocks = [

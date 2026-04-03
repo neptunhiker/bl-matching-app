@@ -8,7 +8,9 @@ import uuid
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
-from django.db.models import Q
+from datetime import timedelta
+
+from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
@@ -306,17 +308,23 @@ class MatchingAttempt(models.Model):
 class RequestToCoachQuerySet(models.QuerySet):
         
     def eligible_for_reminder(self):
+        already_reminded = MatchingEvent.objects.filter(
+            request_to_coach=OuterRef('pk'),
+            event_type=MatchingEvent.EventType.RTC_REMINDER_SENT_TO_COACH,
+        )
         return self.filter(
             state=RequestToCoach.State.AWAITING_REPLY,
-            requests_sent__gt=0,
-            requests_sent__lt=models.F("max_number_of_requests"),
             matching_attempt__automation_enabled=True,
             matching_attempt__state__in=[
                 MatchingAttempt.State.AWAITING_RTC_REPLY,
             ],
             coach__status__in=[
                 Coach.Status.AVAILABLE,
-            ]
+            ],
+            deadline_at__lte=timezone.now() + timedelta(hours=2),
+            deadline_at__gt=timezone.now(),
+        ).exclude(
+            Exists(already_reminded)
         )
         
 class RequestToCoach(models.Model):
@@ -433,10 +441,6 @@ class RequestToCoach(models.Model):
             )
         
         
-        
-        
-
-    
     def send_reminder(self, triggered_by: TriggeredByOptions=TriggeredByOptions.SYSTEM, triggered_by_user: User=None):
         from matching import services
 
@@ -445,6 +449,7 @@ class RequestToCoach(models.Model):
             event_type=MatchingEvent.EventType.RTC_REMINDER_SENT_TO_COACH,
             triggered_by=triggered_by,
             triggered_by_user=triggered_by_user,
+            request_to_coach=self,
             payload={
                 "rtc_id": str(self.id),
                 "coach_id": str(self.coach_id) if self.coach_id is not None else None,

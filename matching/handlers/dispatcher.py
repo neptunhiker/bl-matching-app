@@ -52,6 +52,9 @@ def dispatch_event(event: MatchingEvent):
         MatchingEvent.EventType.RTC_TIMED_OUT: [
             notification_handlers.handle_rtc_timed_out_event,
         ],
+        MatchingEvent.EventType.RTC_REMINDER_SENT_TO_COACH: [
+            notification_handlers.handle_rtc_reminder_sent_to_coach_event,
+        ],
         
         # State handlers
         MatchingEvent.EventType.ALL_RTCS_DECLINED: [

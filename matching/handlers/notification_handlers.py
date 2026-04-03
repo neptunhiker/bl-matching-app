@@ -65,7 +65,6 @@ def handle_rtq_sent_event(event):
         raise ValueError(f"Unsupported communication channel for coach {coach}: {coach.preferred_communication_channel}")
     
 def handle_rtc_reminder_sent_to_coach_event(event):
-    from matching.models import RequestToCoach
     from matching.models import MatchingEvent
     
     if event.event_type != MatchingEvent.EventType.RTC_REMINDER_SENT_TO_COACH:
@@ -73,25 +72,15 @@ def handle_rtc_reminder_sent_to_coach_event(event):
     
     logger.debug(f"Handling RTC_REMINDER_SENT event: {event.id}")
     
-    rtc_id = event.payload["rtc_id"]
-    rtc = RequestToCoach.objects.get(id=rtc_id)
-    
-    triggered_by = event.triggered_by
-    triggered_by_user = event.triggered_by_user
-    
+    rtc = event.request_to_coach
     coach = rtc.coach
 
     if coach.preferred_communication_channel == Coach.CommunicationChannel.SLACK:
         logger.debug(f"Sending reminder coach request notification via Slack for RequestToCoach to coach {coach} (user: {coach.user})")
-        
-        send_reminder_coach_request_slack(
-            rtc, 
-            triggered_by=triggered_by, triggered_by_user=triggered_by_user
-        )
-    
+        send_reminder_coach_request_slack(rtc)
         
     elif coach.preferred_communication_channel == Coach.CommunicationChannel.EMAIL:
-        send_reminder_coach_request_email(rtc, triggered_by=triggered_by, triggered_by_user=triggered_by_user)
+        send_reminder_coach_request_email(rtc)
     else:
         raise ValueError(f"Unsupported communication channel for coach {coach}: {coach.preferred_communication_channel}")
     

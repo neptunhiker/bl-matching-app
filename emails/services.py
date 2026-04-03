@@ -171,7 +171,7 @@ def send_first_coach_request_email(rtc):
     return rtc
     
 @transaction.atomic
-def send_reminder_coach_request_email(rtc, triggered_by: str="system", triggered_by_user: User = None):
+def send_reminder_coach_request_email(rtc):
     """Send a reminder email to the coach and update status accordingly."""
 
     
@@ -180,7 +180,6 @@ def send_reminder_coach_request_email(rtc, triggered_by: str="system", triggered
     _send_request_email(rtc, 
                         subject=f"Reminder: Matching-Anfrage für {rtc.matching_attempt.participant.first_name} {rtc.matching_attempt.participant.last_name}", 
                         template_name='emails/reminder_match_request_to_coach.html',
-                        triggered_by=triggered_by,
     )
         
     return rtc

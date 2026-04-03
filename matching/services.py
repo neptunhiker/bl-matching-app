@@ -91,6 +91,7 @@ def create_matching_event(
     triggered_by,
     triggered_by_user=None,
     payload=None,
+    request_to_coach=None,
 ):
     """
     Create a MatchingEvent with strict domain validation.
@@ -143,6 +144,7 @@ def create_matching_event(
         triggered_by=triggered_by,
         triggered_by_user=triggered_by_user,
         payload=payload,
+        request_to_coach=request_to_coach,
     )
     
     logger.info(f"Created MatchingEvent: {event_type}, triggered by {triggered_by}, (user: {triggered_by_user}) with payload: {payload}")
