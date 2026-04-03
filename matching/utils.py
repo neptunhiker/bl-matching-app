@@ -13,44 +13,27 @@ def get_deadline(
     hours: int=24,
 ) -> datetime:
     """Advance a datetime by a given number of business hours, skipping weekends and dark hours (22:00–08:00)."""
-    def round_up_to_next_hour(dt):
-        if dt.minute == 0 and dt.second == 0 and dt.microsecond == 0:
-            return dt
-        return dt.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
-
-    def next_business_day(dt):
-        days = 1
-        if dt.weekday() == 4:  # Friday
-            days = 3
-        elif dt.weekday() == 5:  # Saturday
-            days = 2
-        elif dt.weekday() == 6:  # Sunday
-            days = 1
-        return dt + timedelta(days=days)
     
-    # 0. Friday evenings after 18:00 should be treated like the weekend
-    if start.weekday() == 4 and start.hour >= 18:
-        monday = start + timedelta(days=(7 - start.weekday()))
-        return monday.replace(hour=20, minute=0, second=0, microsecond=0)
-
-    # 1. Weekend → Monday 20:00
-    if start.weekday() >= 5:
-        monday = start + timedelta(days=(7 - start.weekday()))
-        return monday.replace(hour=20, minute=0, second=0, microsecond=0)
-
-    # 2. Business hours
-    if 8 <= start.hour < 18:
-        next_hour = round_up_to_next_hour(start)
-        return next_business_day(next_hour)
-        
-
-    # 3. Off-hours (weekday)
-    if start.hour < 8:
-        return start.replace(hour=20, minute=0, second=0, microsecond=0)
-
-    # after 18:00
-    next_day = next_business_day(start)
-    return next_day.replace(hour=20, minute=0, second=0, microsecond=0)
+    # if monday, tuesday, wednesday → add 2 days and set time to 09:00
+    if start.weekday() in [0, 1, 2]:  # Monday, Tuesday, Wednesday
+        return start.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=2)
+    
+    # if thursday → add 1 days and set time to 18:00
+    if start.weekday() == 3:  # Thursday
+        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    
+    # if friday → add 3 days and set time to 18:00
+    if start.weekday() == 4:  # Friday
+        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=3)
+    
+    # if saturday → add 2 days and set time to 18:00
+    if start.weekday() == 5:  # Saturday
+        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=2)
+    
+    # if sunday → add 1 day and set time to 18:00
+    if start.weekday() == 6:  # Sunday
+        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    
 
 def get_urgency_message(participant: Participant, current_date: datetime.date = timezone.now().date(), start_date: datetime.date = None):
     """Generate an urgency message for the coach based on how soon the coaching should start."""
