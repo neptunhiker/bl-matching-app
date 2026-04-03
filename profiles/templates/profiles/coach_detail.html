@@ -5,203 +5,178 @@
 {% block title %}{{ coach.full_name }} – Coach{% endblock %}
 
 {% block body %}
-<div class="max-w-5xl mx-auto px-4 sm:px-8 py-12">
-  <nav class="text-xs text-neutral-400 mb-8 flex items-center">
-    <a href="{% url 'coach_list' %}" class="hover:text-primary-500 transition-colors font-medium">Coaches</a>
-    <span class="mx-2">/</span>
-    <span class="text-tertiary-700 font-semibold">{{ coach.full_name }}</span>
-  </nav>
+{% include "components/_layout.html" with layout_mode="start" layout_outer_class="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14" %}
 
-  <div class="bg-white rounded-3xl shadow-lg border border-neutral-200 overflow-hidden">
-    <!-- HEADER -->
-    <div class="bg-bl-gradient px-6 py-6 flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-semibold text-tertiary-700">{{ coach.full_name }}</h1>
-        <p class="text-sm text-tertiary-600 mt-1">{{ coach.email }}</p>
+  {# Breadcrumb #}
+  <nav class="text-xs text-neutral-400 mb-6">
+    <a href="{% url 'coach_list' %}" class="hover:text-primary-500 transition-colors">Coaches</a>
+    <span class="mx-2">/</span>
+    <span class="text-tertiary-700">{{ coach.full_name }}</span>
+  </nav>
+<div class="bg-white p-5 rounded-xl">
+
+  {# Page header #}
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-8 border-b border-neutral-100 ">
+    <div>
+      <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-2">Coach</p>
+      <h1 class="text-3xl font-semibold tracking-tight text-neutral-900 leading-tight">
+        {{ coach.full_name }} 
+      </h1>
+      <p class="mt-1.5 text-sm text-neutral-500">{{ coach.email }}</p>
+      <div class="mt-3 flex flex-wrap items-center gap-2">
+      {% if coach.preferred_communication_channel == 'slack' %}
+          <span class="inline-flex h-5 w-5 items-center justify-center rounded " aria-label="Slack" title="Bevorzugt Slack">
+            <img src="{% static 'icons/slack.svg' %}" alt="Slack" class="h-3 w-3" />
+          </span>
+        {% else %}
+          <span class="inline-flex h-5 w-5 items-center justify-center rounded " aria-label="E-Mail" title="Bevorzugt E-Mail">
+            <img src="{% static 'icons/envelope.svg' %}" alt="E-Mail" class="h-3 w-3" />
+          </span>
+        {% endif %}
+        {% if coach.status == 'available' %}
+          {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="success" %}
+        {% elif coach.status == 'inactive' %}
+          {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="danger" %}
+        {% elif coach.status == 'onboarding' %}
+          {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="warning" %}
+        {% else %}
+          {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="neutral" %}
+        {% endif %}
+        {% if coach.maximum_capacity %}
+          <span class="text-xs bg-neutral-100 border rounded-xl p-1">max. {{ coach.maximum_capacity }} Coachings</span>
+        {% endif %}
+        
       </div>
-      {% if request.user.is_staff %}
-      <div class="flex gap-2">
-        <a href="{% url 'coach_update' coach.pk %}?next={{ request.GET.next|default:request.path }}"
-           class="inline-flex items-center justify-center w-8 h-8 rounded-md text-neutral-700 hover:bg-neutral-100 transition-colors"
-           aria-label="Bearbeiten">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
-               viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 00.707-.293l9.414-9.414a1 1 0 000-1.414L16.121 6.12a1 1 0 00-1.414 0L5.293 15.535A1 1 0 005 16.243V20z"/>
-          </svg>
-        </a>
-        <a href="{% url 'coach_delete' coach.pk %}?next={{ request.GET.next|default:request.path }}"
-           class="inline-flex items-center justify-center w-8 h-8 rounded-md text-red-600 hover:bg-red-50 transition-colors"
-           aria-label="Löschen">
-          <img src="{% static 'icons/delete.svg' %}" alt="Löschen" class="h-4 w-4"/>
-        </a>
-      </div>
-      {% endif %}
     </div>
 
-    <!-- MAIN GRID -->
-    <div class="px-8 py-8 grid grid-cols-1 md:grid-cols-4 gap-8">
-      <!-- MAIN CONTENT -->
-      <div class="md:col-span-3 space-y-6">
-        <!-- CITY -->
-        <div class="rounded-2xl p-5 shadow">
-          <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Stadt</p>
-          <p class="text-base text-neutral-700">
-            {% if coach.city %}{{ coach.city }}{% else %}<span class="italic text-neutral-400">–</span>{% endif %}
-          </p>
-        </div>
-
-        <!-- COMMUNICATION -->
-        <div class="rounded-2xl p-5 shadow">
-          <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Kommunikation über</p>
-          <div class="flex items-center gap-3">
-            {% if coach.preferred_communication_channel == 'slack' %}
-              <img src="{% static 'icons/slack.svg' %}" alt="Slack" class="h-7 w-7"/>
-            {% else %}
-              <img src="{% static 'icons/envelope.svg' %}" alt="Email" class="h-7 w-7"/>
-            {% endif %}
-            <p class="text-base text-neutral-700">
-              {{ coach.get_preferred_communication_channel_display }}
-            </p>
-          </div>
-        </div>
-
-        <!-- LANGUAGES -->
-        <div class="rounded-2xl p-5 shadow">
-          <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Sprachen</p>
-          {% if coach.languages.all %}
-          <div class="flex flex-wrap gap-2">
-            {% for lang in coach.languages.all %}
-            {% include "components/_badge.html" with badge_text=lang.name badge_variant="primary" badge_size="sm" %}
-            {% endfor %}
-          </div>
-          {% else %}
-          <p class="text-base text-neutral-400 italic">–</p>
-          {% endif %}
-        </div>
-
-        <!-- COACHING FORMATS -->
-        <div class="rounded-2xl p-5 shadow">
-          <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Coaching-Formate</p>
-          <div class="flex flex-wrap gap-2">
-            {% if coach.coaching_format_online %}
-            {% include "components/_badge.html" with badge_text="Online" badge_variant="secondary" badge_size="sm" %}
-            {% endif %}
-            {% if coach.coaching_format_presence %}
-            {% include "components/_badge.html" with badge_text="Präsenz" badge_variant="secondary" badge_size="sm" %}
-            {% endif %}
-            {% if coach.coaching_format_hybrid %}
-            {% include "components/_badge.html" with badge_text="Hybrid" badge_variant="secondary" badge_size="sm" %}
-            {% endif %}
-          </div>
-        </div>
-
-        <!-- BIO -->
-        {% if coach.bio %}
-        <details class="bg-neutral-50 rounded-2xl p-5 shadow group">
-          <summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-neutral-400 flex justify-between items-center">
-            Biografie
-            <span class="text-xs text-neutral-400 group-open:rotate-180 transition">⌄</span>
-          </summary>
-          <p class="mt-3 text-base text-neutral-700 leading-relaxed whitespace-pre-line">
-            {{ coach.bio }}
-          </p>
-        </details>
-        {% endif %}
-
-        <!-- COACHING STYLE -->
-        {% if coach.coaching_style %}
-        <details class="bg-neutral-50 rounded-2xl p-5 shadow group">
-          <summary class="cursor-pointer text-xs font-semibold uppercase tracking-wide text-neutral-400 flex justify-between items-center">
-            Coaching-Stil
-            <span class="text-xs text-neutral-400 group-open:rotate-180 transition">⌄</span>
-          </summary>
-          <p class="mt-3 text-base text-neutral-700 leading-relaxed whitespace-pre-line">
-            {{ coach.coaching_style }}
-          </p>
-        </details>
-        {% endif %}
-      </div>
-
-      <!-- SIDEBAR -->
-      <div class="space-y-6">
-        <!-- PROFILE PHOTO -->
-        <div class="rounded-2xl p-5 text-center shadow-sm">
-          {% if coach.profile_photo %}
-            <img src="{{ coach.profile_photo.url }}"
-                 alt="{{ coach.full_name }}"
-                 class="mx-auto w-36 h-36 rounded-full object-cover shadow-md border-4 border-white">
-          {% else %}
-            <div class="mx-auto w-36 h-36 rounded-full bg-neutral-200 flex items-center justify-center shadow-md border-4 border-white">
-              <svg xmlns="http://www.w3.org/2000/svg"
-                   viewBox="0 0 24 24"
-                   fill="currentColor"
-                   class="w-16 h-16 text-neutral-400">
-                <path fill-rule="evenodd"
-                  d="M12 2a5 5 0 100 10 5 5 0 000-10zm-7 18a7 7 0 1114 0H5z"
-                  clip-rule="evenodd"/>
-              </svg>
-            </div>
-          {% endif %}
-        </div>
-
-        <!-- STATUS -->
-        <div class="rounded-2xl p-5 shadow">
-          <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Status</p>
-          {% if coach.status %}
-            {% if coach.status == 'available' %}
-              {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="success" %}
-            {% elif coach.status == 'inactive' %}
-              {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="danger" %}
-            {% elif coach.status == 'onboarding' %}
-              {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="warning" %}
-            {% else %}
-              {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="neutral" %}
-            {% endif %}
-          {% endif %}
-          {% if coach.status_notes %}
-          <p class="mt-2 text-xs text-neutral-500">
-            {{ coach.status_notes }}
-          </p>
-          {% endif %}
-        </div>
-
-        <!-- CAPACITY -->
-        <div class="rounded-2xl p-5 shadow">
-          <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Max. Kapazität</p>
-          <p class="text-base text-neutral-700">
-            {% if coach.maximum_capacity %}
-              {{ coach.maximum_capacity }} Teilnehmer:innen
-            {% else %}
-              <span class="italic text-neutral-400">–</span>
-            {% endif %}
-          </p>
-        </div>
-
-        <!-- LINKEDIN -->
-        {% if coach.linkedin_url %}
-        <div class="rounded-2xl p-5 shadow text-center">
-          <a href="{{ coach.linkedin_url }}"
-             target="_blank"
-             class="inline-flex items-center gap-2 px-5 py-2 text-base font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition shadow">
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 class="h-5 w-9 fill-white"
-                 viewBox="0 0 24 24">
-              <path d="M4.98 3.5C4.98 4.88 3.86 6 2.49 6S0 4.88 0 3.5 1.12 1 2.49 1s2.49 1.12 2.49 2.5zM.22 8h4.54v13H.22V8zM8.09 8h4.35v1.77h.06c.61-1.15 2.1-2.36 4.32-2.36 4.62 0 5.47 3.04 5.47 6.99V21h-4.54v-6.17c0-1.47-.03-3.36-2.05-3.36-2.06 0-2.37 1.61-2.37 3.26V21H8.09V8z"/>
-            </svg>
-            LinkedIn
+    {% if request.user.is_staff %}
+      {% with next_url=request.GET.next|default:request.path %}
+        <div class="flex items-center gap-1 shrink-0 pt-1">
+          {% url 'coach_update' coach.pk as coach_update_url %}
+          <a href="{{ coach_update_url }}?next={{ next_url }}"
+             class="inline-flex items-center justify-center w-8 h-8 rounded-md text-neutral-700 hover:bg-neutral-100 transition-colors"
+             aria-label="Bearbeiten">
+            <img src="{% static 'icons/edit.svg' %}" alt="Bearbeiten" class="h-4 w-4" />
+          </a>
+          {% url 'coach_delete' coach.pk as coach_delete_url %}
+          <a href="{{ coach_delete_url }}?next={{ next_url }}"
+             class="inline-flex items-center justify-center w-8 h-8 rounded-md text-red-600 hover:bg-red-50 transition-colors"
+             aria-label="Löschen">
+            <img src="{% static 'icons/delete.svg' %}" alt="Löschen" class="h-4 w-4" />
           </a>
         </div>
-        {% endif %}
-      </div>
-    </div>
+      {% endwith %}
+    {% endif %}
   </div>
 
-  <div class="mt-8">
+  {# Body #}
+  <div class="mt-8 space-y-8">
+
+    {# Key fields #}
+    <dl class="grid grid-cols-1 sm:grid-cols-3 gap-y-6 gap-x-8">
+      <div>
+        <dt class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-1.5">Stadt</dt>
+        <dd class="text-sm text-neutral-700">{{ coach.city|default:"—" }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-1.5">LinkedIn</dt>
+        <dd class="text-sm">
+          {% if coach.linkedin_url %}
+            <a href="{{ coach.linkedin_url }}" target="_blank" rel="noopener noreferrer"
+               class="text-primary-600 hover:underline underline-offset-2 break-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
+              {{ coach.linkedin_url }}
+            </a>
+          {% else %}
+            <span class="text-neutral-400">—</span>
+          {% endif %}
+        </dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-1.5">Website</dt>
+        <dd class="text-sm">
+          {% if coach.website_url %}
+            <a href="{{ coach.website_url }}" target="_blank" rel="noopener noreferrer"
+               class="text-primary-600 hover:underline underline-offset-2 break-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
+              {{ coach.website_url }}
+            </a>
+          {% else %}
+            <span class="text-neutral-400">—</span>
+          {% endif %}
+        </dd>
+      </div>
+    </dl>
+
+    {# Languages + Formats #}
+    <div class="border-t border-neutral-100 pt-8 grid grid-cols-1 sm:grid-cols-2 gap-8 ">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Sprachen</p>
+        <div class="flex flex-wrap gap-1.5">
+          {% for lang in coach.languages.all %}
+            <span class="inline-flex items-center rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700">{{ lang.name }}</span>
+          {% empty %}
+            <span class="text-sm text-neutral-400">Keine Sprachen hinterlegt.</span>
+          {% endfor %}
+        </div>
+      </div>
+      <div>
+        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Formate</p>
+        <div class="flex flex-wrap gap-1.5">
+          {% if coach.coaching_format_online %}
+            <span class="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-600">Online</span>
+          {% endif %}
+          {% if coach.coaching_format_presence %}
+            <span class="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-600">Präsenz</span>
+          {% endif %}
+          {% if coach.coaching_format_hybrid %}
+            <span class="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-600">Hybrid</span>
+          {% endif %}
+          {% if not coach.coaching_format_online and not coach.coaching_format_presence and not coach.coaching_format_hybrid %}
+            <span class="text-sm text-neutral-400">Keine Formate hinterlegt.</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# Expandable sections #}
+    <div class="border-t border-neutral-100 pt-2">
+      <details class="group border-b border-neutral-100 py-4">
+        <summary class="cursor-pointer list-none flex items-center justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
+          <span class="text-sm font-semibold text-neutral-700">Coaching-Stil</span>
+          <span class="text-neutral-300 group-open:rotate-180 transition-transform motion-reduce:transition-none shrink-0 select-none">⌄</span>
+        </summary>
+        <p class="mt-3 pb-1 text-sm leading-7 text-neutral-600 whitespace-pre-wrap max-w-[68ch]">{{ coach.coaching_style|default:"—" }}</p>
+      </details>
+
+      <details class="group border-b border-neutral-100 py-4">
+        <summary class="cursor-pointer list-none flex items-center justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
+          <span class="text-sm font-semibold text-neutral-700">Biografie</span>
+          <span class="text-neutral-300 group-open:rotate-180 transition-transform motion-reduce:transition-none shrink-0 select-none">⌄</span>
+        </summary>
+        <p class="mt-3 pb-1 text-sm leading-7 text-neutral-600 whitespace-pre-wrap max-w-[68ch]">{{ coach.bio|default:"—" }}</p>
+      </details>
+
+      <details class="group py-4">
+        <summary class="cursor-pointer list-none flex items-center justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
+          <span class="text-sm font-semibold text-neutral-700">Status-Kommentar</span>
+          <span class="text-neutral-300 group-open:rotate-180 transition-transform motion-reduce:transition-none shrink-0 select-none">⌄</span>
+        </summary>
+        <p class="mt-3 pb-1 text-sm leading-7 text-neutral-600 whitespace-pre-wrap max-w-[68ch]">{{ coach.status_notes|default:"Kein Status-Kommentar hinterlegt." }}</p>
+      </details>
+    </div>
+
+  </div>
+
+
+  {# Footer #}
+  <div class="mt-10 pt-8 border-t border-neutral-100">
     <a href="{% url 'coach_list' %}"
-       class="text-base text-primary-600 hover:text-primary-700 transition-colors font-medium">
+       class="text-sm text-neutral-400 hover:text-neutral-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300 rounded-sm">
       ← Zurück zur Liste
     </a>
   </div>
+
+{% include "components/_layout.html" with layout_mode="end" %}
+
 </div>
+
 {% endblock %}

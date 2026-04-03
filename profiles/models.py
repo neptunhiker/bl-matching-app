@@ -48,6 +48,7 @@ class Coach(models.Model):
     bio = models.TextField(blank=True, verbose_name='Biografie')
     coaching_style = models.TextField(blank=True, verbose_name='Coaching-Stil', help_text='Coaching-Stil')
     linkedin_url = models.URLField(blank=True, verbose_name='LinkedIn Profil')
+    website_url = models.URLField(blank=True, verbose_name='BeginnerLuft Website Profil')
     profile_photo = models.ImageField(upload_to='coach_photos/', blank=True, null=True, verbose_name='Profilfoto')
     
     coaching_format_online = models.BooleanField(default=False, verbose_name='Online')

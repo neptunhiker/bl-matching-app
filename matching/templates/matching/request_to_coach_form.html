@@ -124,15 +124,9 @@
 
         {# ── Actions ───────────────────────────────────────────────── #}
         <div class="flex items-center gap-3">
-          <button type="submit"
-                  class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
-                         bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm">
-            Erstellen
-          </button>
-          <a href="{% url 'matching_attempt_detail' matching_attempt.pk %}"
-             class="text-sm text-neutral-500 hover:text-neutral-700 transition-colors">
-            Abbrechen
-          </a>
+          {% include "components/_button.html" with button_text="Erstellen" button_variant="primary" button_size="md" button_type="submit" %}
+          {% url 'matching_attempt_detail' matching_attempt.pk as cancel_url %}
+          {% include "components/_button.html" with button_text="Abbrechen" button_variant="ghost" button_size="md" button_href=cancel_url %}
         </div>
 
       </form>

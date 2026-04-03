@@ -315,14 +315,10 @@ class RequestToCoachCreateView(LoginRequiredMixin, StaffRequiredMixin, View):
                 ue = int(ue)
                 if ue < 1:
                     raise ValueError
+                if ue > matching_attempt.ue:
+                    errors["ue"] = f"Der Coach darf keinen Coaching-Auftrag erhalten, der mehr UE ({ue}) als die insgesamt genehmigten UE ({matching_attempt.ue}) hat."
             except (ValueError, TypeError):
                 errors["ue"] = "Muss eine positive Zahl sein."
-            
-            try:
-                if ue > matching_attempt.ue:
-                    raise ValueError
-            except (ValueError):
-                errors["ue"] = f"Der Coach darf keinen Coaching-Auftrag erhalten, der mehr UE ({ue}) als die insgesamt genehmigten UE ({matching_attempt.ue}) hat."
 
         if errors:
             available_coaches = Coach.objects.available().select_related('user').order_by('user__last_name', 'user__first_name')

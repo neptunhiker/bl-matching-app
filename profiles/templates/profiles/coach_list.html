@@ -8,14 +8,13 @@
 
   <div class="flex items-center justify-between mb-8">
     <div>
-      <h1 class="text-2xl font-semibold text-tertiary-700">Coaches</h1>
+      <h1 class="text-2xl font-semibold sm:text-3xl ">Coaches</h1>
       <p class="text-sm text-neutral-500 mt-1">{{ paginator.count }} Einträge insgesamt</p>
     </div>
-    <a href="{% url 'coach_create' %}"
-       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
-              text-white bg-primary-500 hover:bg-primary-600 transition-colors shadow-sm">
-      + Neu anlegen
-    </a>
+    <div class="w-full sm:w-auto">
+      {% url 'coach_create' as coach_create_url %}
+      {% include "components/_button.html" with button_text="+ Neu anlegen" button_size="md" button_full_width=True button_class="sm:w-auto" button_href=coach_create_url %}
+    </div>
   </div>
 
   {% if coaches %}

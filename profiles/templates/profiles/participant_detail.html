@@ -4,124 +4,123 @@
 {% block title %}{{ participant }} – Teilnehmer:in{% endblock %}
 
 {% block body %}
-<div class="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+{% include "components/_layout.html" with layout_mode="start" layout_outer_class="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14" %}
 
-  <!-- Breadcrumb -->
+  {# Breadcrumb #}
   <nav class="text-xs text-neutral-400 mb-6">
-    <a href="{% url 'participant_list' %}" class="hover:text-primary-500 transition-colors">
-      Teilnehmer:innen
-    </a>
+    <a href="{% url 'participant_list' %}" class="hover:text-primary-500 transition-colors">Teilnehmer:innen</a>
     <span class="mx-2">/</span>
     <span class="text-tertiary-700">{{ participant }}</span>
   </nav>
 
-  <!-- Profile card -->
-  <div class="bg-white/70 rounded-2xl shadow-sm border border-white/60 overflow-hidden">
+  <div class="bg-white p-5 rounded-xl">
 
-    <!-- Card header -->
-    <div class="bg-bl-gradient px-6 py-5 flex items-center justify-between">
+    {# Page header #}
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-8 border-b border-neutral-100">
       <div>
-        <h1 class="text-xl font-semibold text-tertiary-700">
+        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-2">Teilnehmer:in</p>
+        <h1 class="text-3xl font-semibold tracking-tight text-neutral-900 leading-tight">
           {{ participant.first_name }} {{ participant.last_name }}
         </h1>
-        <p class="text-sm text-tertiary-600 mt-0.5">{{ participant.email }}</p>
+        <p class="mt-1.5 text-sm text-neutral-500">{{ participant.email }}</p>
       </div>
-      <div class="flex items-center gap-2">
-        {% if request.user.is_staff %}
-          <div class="flex mb-1 w-full">
-            <a href="{% url 'participant_update' participant.pk %}?next={{ request.GET.next|default:request.path }}"
-              class="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-md text-neutral-700 hover:bg-neutral-100 transition-colors"
-              aria-label="Bearbeiten">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
-                  viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                      d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 00.707-.293l9.414-9.414a1 1 0 000-1.414L16.121 6.12a1 1 0 00-1.414 0L5.293 15.535A1 1 0 005 16.243V20z"/>
-              </svg>
-            </a>
 
-            <a href="{% url 'participant_delete' participant.pk %}?next={{ request.GET.next|default:request.path }}"
-              class="inline-flex items-center justify-center w-8 h-8 rounded-md text-red-600 hover:bg-red-50 transition-colors"
-              aria-label="Löschen">
-              <img src="{% static 'icons/delete.svg' %}" alt="Löschen" class="h-4 w-4" />
-            </a>
+      {% if request.user.is_staff %}
+        <div class="flex items-center gap-1 shrink-0 pt-1">
+          <a href="{% url 'participant_update' participant.pk %}?next={{ request.GET.next|default:request.path }}"
+             class="inline-flex items-center justify-center w-8 h-8 rounded-md text-neutral-700 hover:bg-neutral-100 transition-colors"
+             aria-label="Bearbeiten">
+            <img src="{% static 'icons/edit.svg' %}" alt="Bearbeiten" class="h-4 w-4" />
+          </a>
+          <a href="{% url 'participant_delete' participant.pk %}?next={{ request.GET.next|default:request.path }}"
+             class="inline-flex items-center justify-center w-8 h-8 rounded-md text-red-600 hover:bg-red-50 transition-colors"
+             aria-label="Löschen">
+            <img src="{% static 'icons/delete.svg' %}" alt="Löschen" class="h-4 w-4" />
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+    {# Body #}
+    <div class="mt-8 space-y-8">
+
+      {# Key fields #}
+      <dl class="grid grid-cols-1 sm:grid-cols-3 gap-y-6 gap-x-8">
+        <div>
+          <dt class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-1.5">Stadt</dt>
+          <dd class="text-sm text-neutral-700">{{ participant.city|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-1.5">Gewünschtes Startdatum</dt>
+          <dd class="text-sm text-neutral-700">{{ participant.start_date|date:"d.m.Y"|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-1.5">AVGS-Daten verfügbar?</dt>
+          <dd class="text-sm text-neutral-700">{{ participant.avgs_data_docs_available|yesno:"Ja,Nein" }}</dd>
+        </div>
+      </dl>
+
+      {# Languages + Formats #}
+      <div class="border-t border-neutral-100 pt-8 grid grid-cols-1 sm:grid-cols-2 gap-8">
+        <div>
+          <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Sprachen</p>
+          <div class="flex flex-wrap gap-1.5">
+            {% for lang in participant.languages.all %}
+              <span class="inline-flex items-center rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700">{{ lang.name }}</span>
+            {% empty %}
+              <span class="text-sm text-neutral-400">Keine Sprachen hinterlegt.</span>
+            {% endfor %}
           </div>
-        {% endif %}
-      </div>
-    </div>
-
-    <!-- Fields -->
-    <div class="divide-y divide-neutral-100/60">
-
-      <!-- Basic info -->
-      <div class="px-6 py-5 grid grid-cols-2 gap-x-6 gap-y-4">
-        {% include "profiles/_detail_field.html" with label="Gewünschtes Startdatum" value=participant.start_date|date:"d.m.Y" %}
-        {% include "profiles/_detail_field.html" with label="AVGS-Daten verfügbar?" value=participant.avgs_data_docs_available|yesno:"Ja,Nein" %}
-        {% include "profiles/_detail_field.html" with label="Stadt" value=participant.city %}
-      </div>
-
-      <!-- Languages -->
-      <div class="px-6 py-5">
-        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Sprachen</p>
-        {% if participant.languages.all %}
-        <div class="flex flex-wrap gap-2">
-          {% for lang in participant.languages.all %}
-          {% include "components/_badge.html" with badge_text=lang.name badge_variant="primary" badge_size="sm" %}
-          {% endfor %}
         </div>
-        {% else %}
-        <p class="text-sm text-neutral-400 italic">–</p>
-        {% endif %}
-      </div>
-
-      <!-- Coaching formats -->
-      <div class="px-6 py-5">
-        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Coaching-Formate</p>
-        <div class="flex flex-wrap gap-2">
-          {% if participant.coaching_format_online %}
-          {% include "components/_badge.html" with badge_text="Online" badge_variant="secondary" badge_size="sm" %}
-          {% endif %}
-          {% if participant.coaching_format_presence %}
-          {% include "components/_badge.html" with badge_text="Präsenz" badge_variant="secondary" badge_size="sm" %}
-          {% endif %}
-          {% if participant.coaching_format_hybrid %}
-          {% include "components/_badge.html" with badge_text="Hybrid" badge_variant="secondary" badge_size="sm" %}
-          {% endif %}
-          {% if not participant.coaching_format_online and not participant.coaching_format_presence and not participant.coaching_format_hybrid %}
-          <p class="text-sm text-neutral-400 italic">–</p>
-          {% endif %}
+        <div>
+          <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Formate</p>
+          <div class="flex flex-wrap gap-1.5">
+            {% if participant.coaching_format_online %}
+              <span class="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-600">Online</span>
+            {% endif %}
+            {% if participant.coaching_format_presence %}
+              <span class="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-600">Präsenz</span>
+            {% endif %}
+            {% if participant.coaching_format_hybrid %}
+              <span class="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-600">Hybrid</span>
+            {% endif %}
+            {% if not participant.coaching_format_online and not participant.coaching_format_presence and not participant.coaching_format_hybrid %}
+              <span class="text-sm text-neutral-400">Keine Formate hinterlegt.</span>
+            {% endif %}
+          </div>
         </div>
       </div>
 
-      <!-- Coaching target -->
-      <div class="px-6 py-5">
-        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Coaching-Ziel</p>
-        {% if participant.coaching_target %}
-        <p class="text-sm text-neutral-700 whitespace-pre-line">{{ participant.coaching_target }}</p>
-        {% else %}
-        <p class="text-sm text-neutral-400 italic">–</p>
-        {% endif %}
-      </div>
+      {# Expandable sections #}
+      <div class="border-t border-neutral-100 pt-2">
+        <details class="group border-b border-neutral-100 py-4">
+          <summary class="cursor-pointer list-none flex items-center justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
+            <span class="text-sm font-semibold text-neutral-700">Coaching-Ziel</span>
+            <span class="text-neutral-300 group-open:rotate-180 transition-transform motion-reduce:transition-none shrink-0 select-none">⌄</span>
+          </summary>
+          <p class="mt-3 pb-1 text-sm leading-7 text-neutral-600 whitespace-pre-wrap max-w-[68ch]">{{ participant.coaching_target|default:"—" }}</p>
+        </details>
 
-      <!-- Background information -->
-      <div class="px-6 py-5">
-        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-2">Hintergrundinformationen</p>
-        {% if participant.background_information %}
-        <p class="text-sm text-neutral-700 whitespace-pre-line">{{ participant.background_information }}</p>
-        {% else %}
-        <p class="text-sm text-neutral-400 italic">–</p>
-        {% endif %}
+        <details class="group py-4">
+          <summary class="cursor-pointer list-none flex items-center justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
+            <span class="text-sm font-semibold text-neutral-700">Hintergrundinformationen</span>
+            <span class="text-neutral-300 group-open:rotate-180 transition-transform motion-reduce:transition-none shrink-0 select-none">⌄</span>
+          </summary>
+          <p class="mt-3 pb-1 text-sm leading-7 text-neutral-600 whitespace-pre-wrap max-w-[68ch]">{{ participant.background_information|default:"—" }}</p>
+        </details>
       </div>
 
     </div>
+
+    {# Footer #}
+    <div class="mt-10 pt-8 border-t border-neutral-100">
+      <a href="{% url 'participant_list' %}"
+         class="text-sm text-neutral-400 hover:text-neutral-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300 rounded-sm">
+        ← Zurück zur Liste
+      </a>
+    </div>
+
   </div>
 
-  <!-- Back link -->
-  <div class="mt-6">
-    <a href="{% url 'participant_list' %}"
-       class="text-sm text-primary-600 hover:text-primary-700 transition-colors">
-      ← Zurück zur Liste
-    </a>
-  </div>
-
-</div>
+{% include "components/_layout.html" with layout_mode="end" %}
 {% endblock %}

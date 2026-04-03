@@ -9,11 +9,12 @@
      button_href        (string)  — If set, renders an <a> tag instead of <button>
      button_text        (string)  — Label text                          [default: "Button"]
      button_variant     (string)  — Visual style:                       [default: "primary"]
-                                    primary | secondary | tertiary | danger | ghost
-     button_size        (string)  — Size: sm | md | lg                  [default: md]
+                                    primary | secondary | tertiary | danger | ghost | green
+     button_size        (string)  — Size: xs | sm | md | lg                  [default: md]
      button_type        (string)  — HTML type for <button>              [default: "button"]
      button_full_width  (bool)    — Adds w-full to fill container       [default: false]
      button_disabled    (bool)    — Adds disabled attribute             [default: false]
+     button_id         (string)  — HTML id attribute
      button_name        (string)  — HTML name attribute (form use)
      button_value       (string)  — HTML value attribute (form use)
      button_class       (string)  — Extra Tailwind classes to append
@@ -23,22 +24,24 @@
 {% endcomment %}
 {% if button_href %}
 <a href="{{ button_href }}"
-  class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg font-semibold transition duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2
-          {% if button_size == 'sm' %}px-3 py-2 text-sm{% elif button_size == 'lg' %}px-5 py-3 text-base{% else %}px-4 py-2.5 text-sm{% endif %}
+  {% if button_id %}id="{{ button_id }}"{% endif %}
+  class="inline-flex {% if button_size != 'xs' %}min-h-11{% endif %} items-center justify-center gap-2 rounded-lg font-semibold transition duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2
+          {% if button_size == 'xs' %}px-2 py-1 text-xs{% elif button_size == 'sm' %}px-3 py-2 text-sm{% elif button_size == 'lg' %}px-5 py-3 text-base{% else %}px-4 py-2.5 text-sm{% endif %}
           {% if button_full_width %}w-full{% endif %}
-          {% if button_variant == 'secondary' %}bg-secondary-400 text-tertiary-800 hover:bg-secondary-500 focus:ring-secondary-300{% elif button_variant == 'tertiary' %}bg-tertiary-700 text-white hover:bg-tertiary-800 focus:ring-tertiary-400{% elif button_variant == 'danger' %}bg-red-600 text-white hover:bg-red-700 focus:ring-red-300{% elif button_variant == 'ghost' %}border border-tertiary-200 bg-transparent text-tertiary-700 hover:bg-tertiary-50 focus:ring-tertiary-300{% else %}bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-300{% endif %}
+          {% if button_variant == 'secondary' %}bg-secondary-400 text-tertiary-800 hover:bg-secondary-500 focus:ring-secondary-300{% elif button_variant == 'tertiary' %}bg-tertiary-700 text-white hover:bg-tertiary-800 focus:ring-tertiary-400{% elif button_variant == 'danger' %}bg-neutral-50 border border-red-500 focus:ring-red-300{% elif button_variant == 'ghost' %}border border-tertiary-200 bg-transparent text-tertiary-700 hover:bg-tertiary-50 focus:ring-tertiary-300{% elif button_variant == 'green' %}bg-neutral-50 border border-green-500 hover:bg-green-700 focus:ring-green-300{% else %}bg-neutral-50 border border-primary-500 hover:bg-primary-500 hover:text-white focus:ring-primary-300{% endif %}
           {{ button_class|default:'' }}">
   {{ button_text|default:'Button' }}
 </a>
 {% else %}
 <button
   type="{{ button_type|default:'button' }}"
+  {% if button_id %}id="{{ button_id }}"{% endif %}
   {% if button_name %}name="{{ button_name }}"{% endif %}
   {% if button_value %}value="{{ button_value }}"{% endif %}
-  class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg font-semibold transition duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50
-         {% if button_size == 'sm' %}px-3 py-2 text-sm{% elif button_size == 'lg' %}px-5 py-3 text-base{% else %}px-4 py-2.5 text-sm{% endif %}
+  class="inline-flex {% if button_size != 'xs' %}min-h-11{% endif %} items-center justify-center gap-2 rounded-lg font-semibold transition duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50
+         {% if button_size == 'xs' %}px-2 py-1 text-xs{% elif button_size == 'sm' %}px-3 py-2 text-sm{% elif button_size == 'lg' %}px-5 py-3 text-base{% else %}px-4 py-2.5 text-sm{% endif %}
          {% if button_full_width %}w-full{% endif %}
-         {% if button_variant == 'secondary' %}bg-secondary-400 text-tertiary-800 hover:bg-secondary-500 focus:ring-secondary-300{% elif button_variant == 'tertiary' %}bg-tertiary-700 text-white hover:bg-tertiary-800 focus:ring-tertiary-400{% elif button_variant == 'danger' %}bg-red-600 text-white hover:bg-red-700 focus:ring-red-300{% elif button_variant == 'ghost' %}border border-tertiary-200 bg-transparent text-tertiary-700 hover:bg-tertiary-50 focus:ring-tertiary-300{% else %}bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-300{% endif %}
+         {% if button_variant == 'secondary' %}bg-secondary-400 text-tertiary-800 hover:bg-secondary-500 focus:ring-secondary-300{% elif button_variant == 'tertiary' %}bg-tertiary-700 text-white hover:bg-tertiary-800 focus:ring-tertiary-400{% elif button_variant == 'danger' %}bg-neutral-50 border border-red-500 focus:ring-red-300{% elif button_variant == 'ghost' %}border border-tertiary-200 bg-transparent text-tertiary-700 hover:bg-tertiary-50 focus:ring-tertiary-300{% elif button_variant == 'green' %}bg-neutral-50 border border-green-500 focus:ring-green-300{% else %}bg-neutral-50 border border-primary-500 hover:bg-primary-500 hover:text-white focus:ring-primary-300{% endif %}
          {{ button_class|default:'' }}"
   {% if button_disabled %}disabled{% endif %}
 >

@@ -6,7 +6,7 @@
 <div class="min-h-screen flex items-center justify-center p-4">
   <div class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-10 w-full max-w-lg">
 
-    <h1 class="text-2xl font-bold text-purple-950 mb-6">Neues Matching erstellen</h1>
+    <h1 class="text-2xl font-semibold mb-6">Neues Matching erstellen</h1>
 
     <form method="post" novalidate>
       {% csrf_token %}
@@ -19,10 +19,15 @@
           </label>
 
           <div class="[&>select]:w-full [&>select]:rounded-lg [&>select]:border
-                      [&>select]:border-purple-200 [&>select]:px-3 [&>select]:py-2
+                      [&>select]:border-purple-200 [&>select]:px-4 [&>select]:py-3
                       [&>select]:text-purple-950 [&>select]:bg-white
                       [&>select]:focus:outline-none [&>select]:focus:ring-2
-                      [&>select]:focus:ring-purple-400">
+                      [&>select]:focus:ring-purple-400
+                      [&>input]:w-full [&>input]:rounded-lg [&>input]:border
+                      [&>input]:border-purple-200 [&>input]:px-4 [&>input]:py-3
+                      [&>input]:text-purple-950 [&>input]:bg-white
+                      [&>input]:focus:outline-none [&>input]:focus:ring-2
+                      [&>input]:focus:ring-purple-400">
             {{ field }}
           </div>
 
@@ -43,11 +48,7 @@
            class="text-sm text-purple-700 hover:underline">
           Abbrechen
         </a>
-        <button type="submit"
-                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
-                       bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm">
-          Matching erstellen
-        </button>
+        {% include "components/_button.html" with button_text="Matching erstellen" button_variant="primary" button_size="md" button_type="submit" %}
       </div>
 
     </form>

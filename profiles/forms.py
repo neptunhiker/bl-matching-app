@@ -51,6 +51,7 @@ class CoachForm(forms.ModelForm):
             'bio',
             'coaching_style',
             'linkedin_url',
+            'website_url',
             'profile_photo',
             'coaching_format_online',
             'coaching_format_presence',
