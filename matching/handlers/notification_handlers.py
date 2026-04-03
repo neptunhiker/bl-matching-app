@@ -2,7 +2,7 @@ import logging
 
 from django.db import transaction
 
-from emails.services import send_first_coach_request_email, send_reminder_coach_request_email, send_intro_call_request_email, send_intro_call_info_email_to_participant, send_feedback_request_email_after_intro_call_to_participant, send_coaching_start_info_email_to_coach, send_coaching_start_info_email_to_participant, send_clarification_need_info_to_coach_email
+from emails.services import send_first_coach_request_email, send_reminder_coach_request_email, send_intro_call_request_email, send_intro_call_info_email_to_participant, send_feedback_request_email_after_intro_call_to_participant, send_coaching_start_info_email_to_coach, send_coaching_start_info_email_to_participant, send_clarification_need_info_to_coach_email, send_escalation_info_email_to_staff
 from profiles.models import Coach
 from slack.services import send_first_coach_request_slack, send_reminder_coach_request_slack, send_intro_call_request_slack, send_coaching_starting_info_slack, send_escalation_info_slack,send_all_rtcs_declined_info_slack,send_clarification_need_info_to_coach_slack
 
@@ -291,10 +291,12 @@ def handle_escalation_notification_sent_to_staff_event(event):
     
     try:
         send_escalation_info_slack(event.matching_attempt)
-    except ValueError as e:
-        logger.error(f"Failed to send escalation info Slack message for MatchingAttempt {event.matching_attempt.id}: {e}")
-        
-        # to do: we need a fallback notification mechanism here, e.g. sending an email to staff, to ensure that escalation notifications are reliably delivered even if Slack integration is not working for some reason. For now we just log the error.
+    except Exception as e:
+        logger.warning(
+            f"Failed to send escalation info Slack message for MatchingAttempt "
+            f"{event.matching_attempt.id}: {e}. Falling back to email."
+        )
+        send_escalation_info_email_to_staff(event.matching_attempt)
     
     
 def handle_clarification_need_info_to_coach_event(event):

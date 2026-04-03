@@ -1,0 +1,30 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+
+<h2 style="margin-bottom:20px;">
+⚠️ {{ participant }} benötigt Klärung
+</h2>
+
+<p>
+<strong>{{ participant.first_name }}</strong> hat sich nach dem Kennenlerngespräch
+mit <strong>{{ coach }}</strong> gegen einen direkten Coaching-Start entschieden
+und stattdessen <strong>Klärungsbedarf angemeldet.</strong>
+</p>
+
+<p style="margin-top:16px;">
+👉 <strong>Bitte kontaktiere {{ participant.first_name }} proaktiv so schnell wie möglich</strong>,
+um die offenen Fragen zu klären.
+</p>
+
+<p style="margin-top:16px;">
+🔎 <strong>Teilnehmerdetails</strong><br>
+<a href="{{ url_participant }}" style="color:#8b5cf6;">➡ Zum Profil von {{ participant.first_name }}</a>
+</p>
+
+<p style="margin-top:24px;">
+Viele Grüße<br>
+{{ author }}
+</p>
+
+{% endblock %}

@@ -427,3 +427,39 @@ def send_clarification_need_info_to_coach_email(matching_attempt, triggered_by: 
     )
         
     return matching_attempt
+
+
+@transaction.atomic
+def send_escalation_info_email_to_staff(matching_attempt, triggered_by: str = "system"):
+    """Fallback email to the BL contact when the escalation Slack notification could not be delivered."""
+
+    matching_attempt = _get_locked_matching_attempt(matching_attempt)
+
+    participant = matching_attempt.participant
+    coach = matching_attempt.matched_coach
+    bl_contact = matching_attempt.bl_contact
+
+    url_participant = settings.SITE_URL.rstrip("/") + reverse(
+        "participant_detail", kwargs={"pk": participant.pk}
+    )
+
+    context = {
+        "participant": participant,
+        "coach": coach,
+        "url_participant": url_participant,
+        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
+    }
+
+    transaction.on_commit(
+        lambda: send_email(
+            to=bl_contact.user.email,
+            subject=f"⚠️ Klärungsbedarf bei {participant.first_name}",
+            template_name="emails/escalation_notification_to_staff.html",
+            context=context,
+            matching_attempt=matching_attempt,
+            sent_by=context["author"],
+            triggered_by=triggered_by,
+        )
+    )
+
+    return matching_attempt
