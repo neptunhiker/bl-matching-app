@@ -25,6 +25,7 @@ docs/
 # Test coverage
 .coverage
 htmlcov/
+.vscode/
 
 # Generated Tailwind CSS (built by CLI — not committed)
 static/css/tailwind.css

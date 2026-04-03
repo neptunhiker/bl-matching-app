@@ -4,7 +4,7 @@ import logging
 import secrets
 from datetime import datetime, timezone as dt_timezone
 
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.utils import timezone
@@ -18,7 +18,15 @@ from .models import EmailLog
 
 logger = logging.getLogger(__name__)
 
-class EmailLogDetailView(LoginRequiredMixin, DetailView):
+class StaffRequiredMixin(UserPassesTestMixin):
+    """Restricts access to active staff and superusers only."""
+    def test_func(self):
+        return (self.request.user.is_active and self.request.user.is_staff) or self.request.user.is_superuser
+    
+
+class EmailLogDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailView):
+    """Staff-only detail view for a single EmailLog entry."""
+
     model = EmailLog
     template_name = 'emails/email_log_detail.html'
     context_object_name = 'email_log'
@@ -93,7 +101,8 @@ class BrevoWebhookView(View):
     """
 
     def post(self, request, *args, **kwargs):
-        
+        """Validate the incoming webhook and update the matching EmailLog status."""
+
         if request.content_type != "application/json":
             return HttpResponseBadRequest("Expected JSON.")
         
@@ -124,8 +133,6 @@ class BrevoWebhookView(View):
         # --- Parse body ---
         try:
             payload = json.loads(request.body)
-            if len(request.body) > 100_000:
-                return HttpResponseBadRequest("Payload too large.")
         except (json.JSONDecodeError, ValueError):
             logger.warning("Brevo webhook: could not parse JSON body.")
             return HttpResponseBadRequest("Invalid JSON.")
@@ -165,7 +172,10 @@ class BrevoWebhookView(View):
                 log.delivered_at = timezone.now()
             update_fields.append('delivered_at')
 
-        # Only genuine human opens set opened_at — proxy opens (Apple MPP, security gateways) are excluded because they fire regardless of whether the person actually read the email and would inflate the metric. Only record it once: first event wins; don't overwrite with later re-opens.
+        # Only genuine human opens set opened_at.
+        # Proxy opens (Apple MPP, security gateways) are excluded — they fire
+        # regardless of whether the recipient actually read the email.
+        # First event wins; don't overwrite with later re-opens.
         HUMAN_OPEN_STATUSES = {
             EmailLog.Status.OPENED,
             EmailLog.Status.FIRST_OPENING,
