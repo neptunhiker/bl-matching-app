@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}502 – Dienst nicht erreichbar{% endblock %}
+
+{% block body %}
+<section class="flex items-center justify-center py-20 px-6">
+  <div class="max-w-xl w-full text-center">
+
+    <!-- Icon -->
+    <div class="flex justify-center mb-8">
+      <div class="relative">
+        <div class="absolute inset-0 rounded-full bg-red-50 blur-xl"></div>
+        <div class="relative flex items-center justify-center w-16 h-16 rounded-full bg-white border border-neutral-200 shadow-sm">
+          <img src="{% static 'icons/server.svg' %}" alt="Service unavailable" class="h-8 w-8" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Code -->
+    <p class="text-sm font-semibold tracking-widest text-neutral-400 mb-3">
+      FEHLER 502
+    </p>
+
+    <!-- Heading -->
+    <h1 class="text-3xl font-semibold text-tertiary-700 mb-4">
+      Dienst vorübergehend nicht erreichbar
+    </h1>
+
+    <!-- Main message -->
+    <p class="text-neutral-600 leading-relaxed mb-4">
+      Der Server hat keine gültige Antwort erhalten.
+    </p>
+
+    <!-- Secondary explanation -->
+    <p class="text-sm text-neutral-500 mb-10">
+      Möglicherweise wird der Dienst gerade neu gestartet oder ist kurzzeitig
+      überlastet. Bitte versuche es in wenigen Minuten erneut.
+    </p>
+
+    {% include "components/_button.html" with button_href="/" button_text="Zur Startseite" button_variant="primary" %}
+
+  </div>
+</section>
+{% endblock %}
