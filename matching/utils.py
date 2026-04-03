@@ -13,26 +13,32 @@ def get_deadline(
     hours: int=24,
 ) -> datetime:
     """Advance a datetime by a given number of business hours, skipping weekends and dark hours (22:00–08:00)."""
-    
+
+    # Convert to local time so that weekday checks and hour replacements
+    # operate in Europe/Berlin time, not UTC. Without this, .replace(hour=18)
+    # would set 18:00 UTC which displays as 20:00 in CEST (UTC+2).
+    # Naive datetimes (e.g. in tests) are left as-is since localtime() rejects them.
+    local_start = timezone.localtime(start) if timezone.is_aware(start) else start
+
     # if monday, tuesday, wednesday → add 2 days and set time to 09:00
-    if start.weekday() in [0, 1, 2]:  # Monday, Tuesday, Wednesday
-        return start.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=2)
+    if local_start.weekday() in [0, 1, 2]:  # Monday, Tuesday, Wednesday
+        return local_start.replace(hour=9, minute=0, second=0, microsecond=0) + timedelta(days=2)
     
     # if thursday → add 1 days and set time to 18:00
-    if start.weekday() == 3:  # Thursday
-        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    if local_start.weekday() == 3:  # Thursday
+        return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
     
     # if friday → add 3 days and set time to 18:00
-    if start.weekday() == 4:  # Friday
-        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=3)
+    if local_start.weekday() == 4:  # Friday
+        return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=3)
     
     # if saturday → add 2 days and set time to 18:00
-    if start.weekday() == 5:  # Saturday
-        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=2)
+    if local_start.weekday() == 5:  # Saturday
+        return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=2)
     
     # if sunday → add 1 day and set time to 18:00
-    if start.weekday() == 6:  # Sunday
-        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    if local_start.weekday() == 6:  # Sunday
+        return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
     
 
 def get_urgency_message(participant: Participant, current_date: datetime.date = timezone.now().date(), start_date: datetime.date = None):
