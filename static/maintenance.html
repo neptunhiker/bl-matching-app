@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kurze Wartung – BeginnerLuft</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #f8f8ff 0%, #f3f3f8 100%);
+      color: #1A1B41;
+      padding: 2rem 1.5rem;
+    }
+    .card {
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+    }
+    .icon-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 2rem;
+    }
+    .icon-glow {
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      background: #ede9fe;
+      filter: blur(16px);
+      opacity: 0.8;
+    }
+    .icon-circle {
+      position: relative;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon-circle svg {
+      width: 28px;
+      height: 28px;
+      color: #948afc;
+    }
+    .label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: #9ca3af;
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: #1A1B41;
+      margin-bottom: 1rem;
+    }
+    .lead {
+      font-size: 1rem;
+      color: #4b5563;
+      line-height: 1.6;
+      margin-bottom: 0.75rem;
+    }
+    .sub {
+      font-size: 0.875rem;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+    footer {
+      margin-top: 3rem;
+      font-size: 0.75rem;
+      color: #948afc99;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+
+    <div class="icon-wrap">
+      <div class="icon-glow"></div>
+      <div class="icon-circle">
+        <!-- wrench/settings icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l5.654-4.654m5.546-4.502 1.497-1.498a5.621 5.621 0 0 0-3.192-9.583 5.619 5.619 0 0 0-5.865 5.865 5.62 5.62 0 0 0 9.584 3.192l-1.498 1.497Z" />
+        </svg>
+      </div>
+    </div>
+
+    <p class="label">Kurze Pause</p>
+    <h1>Wir sind gleich wieder da</h1>
+    <p class="lead">
+      Die Anwendung wird gerade aktualisiert.
+    </p>
+    <p class="sub">
+      Das dauert nur einen kurzen Moment. Bitte lade die Seite in
+      wenigen Sekunden neu.
+    </p>
+  </div>
+
+  <footer>&copy; BeginnerLuft</footer>
+</body>
+</html>
