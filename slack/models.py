@@ -30,7 +30,7 @@ class SlackLog(models.Model):
     )
 
     subject = models.CharField(max_length=255, verbose_name='Betreff')
-    message = models.TextField(verbose_name='Nachricht')
+    message = models.TextField(blank=True, verbose_name='Nachricht')
 
     status = models.CharField(
         max_length=20,

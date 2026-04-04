@@ -3,6 +3,7 @@ import logging
 from django.conf import settings
 from django.urls import reverse
 from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 from django.utils import timezone
 
 from accounts.models import User
@@ -16,15 +17,15 @@ from slack.models import SlackLog
 
 logger = logging.getLogger(__name__)
 
-def create_slack_log(to: User, subject: str, message: str, request_to_coach=None, matching_attempt=None, sent_by=SlackLog.SentBy.SYSTEM):
-    
+def create_slack_log(to: User, subject: str, message: str, request_to_coach=None, matching_attempt=None, sent_by=SlackLog.SentBy.SYSTEM, status=SlackLog.Status.SENT, error_message=""):
+
     # Only request_to_coach or matching_attempt can be set, not both
     if request_to_coach and matching_attempt:
         raise ValueError("Only request_to_coach or matching_attempt can be set, not both.")
-    
+
     if not request_to_coach and not matching_attempt:
         raise ValueError("Either request_to_coach or matching_attempt must be set.")
-    
+
     if request_to_coach:
         slack_log = SlackLog.objects.create(
             to=to,
@@ -32,6 +33,8 @@ def create_slack_log(to: User, subject: str, message: str, request_to_coach=None
             message=message,
             request_to_coach=request_to_coach,
             sent_by=sent_by,
+            status=status,
+            error_message=error_message,
         )
     else:
         slack_log = SlackLog.objects.create(
@@ -40,9 +43,34 @@ def create_slack_log(to: User, subject: str, message: str, request_to_coach=None
             message=message,
             matching_attempt=matching_attempt,
             sent_by=sent_by,
+            status=status,
+            error_message=error_message,
         )
-    
+
     return slack_log
+
+
+def _open_dm_channel(client: WebClient, user_id: str) -> str:
+    """Open a Slack DM channel with a user and return the channel ID."""
+    response = client.conversations_open(users=[user_id])
+    return response["channel"]["id"]
+
+
+def _blocks_to_text(blocks: list) -> str:
+    """Convert Slack blocks to a plain-text string for logging.
+
+    Handles section blocks (block["text"]["text"]) and context blocks
+    (block["elements"][n]["text"]) so context elements are not silently dropped.
+    """
+    parts = []
+    for block in blocks:
+        if "text" in block and isinstance(block["text"], dict) and "text" in block["text"]:
+            parts.append(block["text"]["text"])
+        elif block.get("type") == "context":
+            for element in block.get("elements", []):
+                if isinstance(element, dict) and "text" in element:
+                    parts.append(element["text"])
+    return "\n".join(parts)
 
 
 def send_first_coach_request_slack(rtc):
@@ -58,15 +86,13 @@ def send_first_coach_request_slack(rtc):
     
     if not user_id:
         raise ValueError(f"Coach {coach} does not have a Slack user ID")
-    
-    # Open a DM channel
-    response = client.conversations_open(users=[user_id])
-    dm_channel = response["channel"]["id"]
-    
+
     rtc = _get_locked_request_to_coach(rtc)
-    
     accept_url, decline_url = generate_accept_and_decline_token(rtc)
-    
+
+    logger.info(f"Sending first coach request Slack to coach {coach} (rtc: {rtc.id})")
+    subject = f"Matching-Anfrage für {participant.first_name}"
+
     blocks = [
         {
             "type": "header",
@@ -149,26 +175,42 @@ def send_first_coach_request_slack(rtc):
         }
     ]
 
-    subject = f"Matching-Anfrage für {participant.first_name}"
+    message = _blocks_to_text(blocks)
 
-    # Send the message
-    client.chat_postMessage(
-        channel=dm_channel,
-        text=subject,
-        blocks=blocks
-    )
-    
-    # turnblocks into a string for logging
-    message = "\n".join([block["text"]["text"] for block in blocks if "text" in block and "text" in block["text"]])
-    
-    # Log the message in the database
-    create_slack_log(
-        to=coach.user,
-        subject=subject,
-        message=message,
-        request_to_coach=rtc,
-        sent_by=SlackLog.SentBy.SYSTEM,
-    )    
+    try:
+        dm_channel = _open_dm_channel(client, user_id)
+        client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
+        logger.info(f"Successfully sent first coach request Slack to coach {coach}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message=message,
+            request_to_coach=rtc,
+            sent_by=SlackLog.SentBy.SYSTEM,
+        )
+    except SlackApiError as e:
+        logger.error(f"Slack API error sending first coach request to {coach}: {e}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message="",
+            request_to_coach=rtc,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error sending first coach request to {coach}: {e}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message="",
+            request_to_coach=rtc,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+
     
 
 def send_reminder_coach_request_slack(rtc):
@@ -185,13 +227,13 @@ def send_reminder_coach_request_slack(rtc):
     user_id = coach.slack_user_id
 
     if not user_id:
-        raise ValueError(...)
-
-    response = client.conversations_open(users=[user_id])
-    dm_channel = response["channel"]["id"]
+        raise ValueError(f"Coach {coach} does not have a Slack user ID")
 
     accept_url, decline_url = generate_accept_and_decline_token(rtc)
-    
+
+    logger.info(f"Sending reminder coach request Slack to coach {coach} (rtc: {rtc.id})")
+    subject = f"Erinnerung - Matching-Anfrage für {rtc.matching_attempt.participant.first_name}"
+
     blocks = [
         {
             "type": "header",
@@ -273,28 +315,41 @@ def send_reminder_coach_request_slack(rtc):
         }
     ]
 
-    subject = f"Erinnerung - Matching-Anfrage für {rtc.matching_attempt.participant.first_name}"
+    message = _blocks_to_text(blocks)
 
-
-    
-    # Send the message
-    client.chat_postMessage(
-        channel=dm_channel,
-        text=subject,
-        blocks=blocks
-    )
-    
-    # turnblocks into a string for logging
-    message = "\n".join([block["text"]["text"] for block in blocks if "text" in block and "text" in block["text"]])
-    
-    # Log the message in the database
-    create_slack_log(
-        to=coach.user,
-        subject=subject,
-        message=message,
-        request_to_coach=rtc,
-        sent_by=SlackLog.SentBy.SYSTEM,
-    )
+    try:
+        dm_channel = _open_dm_channel(client, user_id)
+        client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
+        logger.info(f"Successfully sent reminder coach request Slack to coach {coach}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message=message,
+            request_to_coach=rtc,
+            sent_by=SlackLog.SentBy.SYSTEM,
+        )
+    except SlackApiError as e:
+        logger.error(f"Slack API error sending reminder to coach {coach}: {e}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message="",
+            request_to_coach=rtc,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error sending reminder to coach {coach}: {e}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message="",
+            request_to_coach=rtc,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
     
 def send_intro_call_request_slack(matching_attempt):
   
@@ -311,13 +366,12 @@ def send_intro_call_request_slack(matching_attempt):
     
     if not user_id:
         raise ValueError(f"Coach {coach} does not have a Slack user ID")
-    
-    # Open a DM channel
-    response = client.conversations_open(users=[user_id])
-    dm_channel = response["channel"]["id"]
-    
+
     intro_call_feedback_url = generate_intro_call_feedback_url(matching_attempt)
-    
+
+    logger.info(f"Sending intro call request Slack to coach {coach} (matching_attempt: {matching_attempt.id})")
+    subject = f"Vereinbare ein Kennenlerngespräch mit {participant.first_name}"
+
     blocks = [
         {
             "type": "header",
@@ -414,26 +468,41 @@ def send_intro_call_request_slack(matching_attempt):
         }
     ]
 
-    subject = f"Vereinbare ein Kennenlerngespräch mit {participant.first_name}"
-    
-    # Send the message
-    client.chat_postMessage(
-        channel=dm_channel,
-        text=subject,
-        blocks=blocks
-    )
-    
-    # turnblocks into a string for logging
-    message = "\n".join([block["text"]["text"] for block in blocks if "text" in block and "text" in block["text"]])
-    
-    # Log the message in the database
-    create_slack_log(
-        to=coach.user,
-        subject=subject,
-        message=message,
-        matching_attempt=matching_attempt,
-        sent_by=SlackLog.SentBy.SYSTEM,
-    )
+    message = _blocks_to_text(blocks)
+
+    try:
+        dm_channel = _open_dm_channel(client, user_id)
+        client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
+        logger.info(f"Successfully sent intro call request Slack to coach {coach}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message=message,
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+        )
+    except SlackApiError as e:
+        logger.error(f"Slack API error sending intro call request to coach {coach}: {e}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error sending intro call request to coach {coach}: {e}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
     
 def send_coaching_starting_info_slack(matching_attempt):
   
@@ -447,11 +516,10 @@ def send_coaching_starting_info_slack(matching_attempt):
     
     if not user_id:
         raise ValueError(f"Coach {coach} does not have a Slack user ID")
-    
-    # Open a DM channel
-    response = client.conversations_open(users=[user_id])
-    dm_channel = response["channel"]["id"]
-    
+
+    logger.info(f"Sending coaching starting info Slack to coach {coach} (matching_attempt: {matching_attempt.id})")
+    subject = f"🤩 Coaching mit {participant.first_name} kann starten"
+
     blocks = [
         {
             "type": "header",
@@ -501,26 +569,41 @@ def send_coaching_starting_info_slack(matching_attempt):
         },
     ]
 
-    subject = f"🤩 Coaching mit {participant.first_name} kann starten"
-    
-    # Send the message
-    client.chat_postMessage(
-        channel=dm_channel,
-        text=subject,
-        blocks=blocks
-    )
-    
-    # turnblocks into a string for logging
-    message = "\n".join([block["text"]["text"] for block in blocks if "text" in block and "text" in block["text"]])
-    
-    # Log the message in the database
-    create_slack_log(
-        to=coach.user,
-        subject=subject,
-        message=message,
-        matching_attempt=matching_attempt,
-        sent_by=SlackLog.SentBy.SYSTEM,
-    )
+    message = _blocks_to_text(blocks)
+
+    try:
+        dm_channel = _open_dm_channel(client, user_id)
+        client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
+        logger.info(f"Successfully sent coaching starting info Slack to coach {coach}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message=message,
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+        )
+    except SlackApiError as e:
+        logger.error(f"Slack API error sending coaching starting info to coach {coach}: {e}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error sending coaching starting info to coach {coach}: {e}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
     
 def send_escalation_info_slack(matching_attempt):
     """Send a Slack message to the BL contact when the participant has indicated that there are still open questions after the intro call and an escalation is needed."""
@@ -539,11 +622,7 @@ def send_escalation_info_slack(matching_attempt):
     if not user_id:
         raise ValueError(f"BL contact {bl_contact} does not have a Slack user ID")
 
-    # Open DM channel
-    response = client.conversations_open(users=[user_id])
-    dm_channel = response["channel"]["id"]
-
-    # 🚨 ESCALATION MESSAGE
+    logger.info(f"Sending escalation info Slack to BL contact {bl_contact} (matching_attempt: {matching_attempt.id})")
     subject = f"⚠️ Klärungsbedarf bei {participant.first_name}"
 
     blocks = [
@@ -587,32 +666,41 @@ def send_escalation_info_slack(matching_attempt):
         },
     ]
 
-    # Send Slack message
-    client.chat_postMessage(
-        channel=dm_channel,
-        text=subject,
-        blocks=blocks
-    )
+    message = _blocks_to_text(blocks)
 
-    # Convert blocks to plain text for logging
-    message = "\n".join(
-        [
-            block["text"]["text"]
-            for block in blocks
-            if "text" in block and "text" in block["text"]
-        ]
-    )
-
-    logger.info(f"Sent escalation info Slack message to BL contact {bl_contact} for participant {participant} (matching_attempt: {matching_attempt})")
-    # Log message
-    SlackLog.objects.create(
-        to=bl_contact.user,  
-        subject=subject,
-        message=message,
-        status=SlackLog.Status.SENT,
-        matching_attempt=matching_attempt,
-        sent_by=SlackLog.SentBy.SYSTEM,
-    )
+    try:
+        dm_channel = _open_dm_channel(client, user_id)
+        client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
+        logger.info(f"Successfully sent escalation info Slack to BL contact {bl_contact}")
+        create_slack_log(
+            to=bl_contact.user,
+            subject=subject,
+            message=message,
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+        )
+    except SlackApiError as e:
+        logger.error(f"Slack API error sending escalation info to BL contact {bl_contact}: {e}")
+        create_slack_log(
+            to=bl_contact.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error sending escalation info to BL contact {bl_contact}: {e}")
+        create_slack_log(
+            to=bl_contact.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
     
 def send_all_rtcs_declined_info_slack(matching_attempt):
     """Send a Slack message to the BL contact when all RTCs have been declined and the matching attempt has failed."""
@@ -633,11 +721,7 @@ def send_all_rtcs_declined_info_slack(matching_attempt):
     if not user_id:
         raise ValueError(f"BL contact {bl_contact} does not have a Slack user ID")
 
-    # Open DM channel
-    response = client.conversations_open(users=[user_id])
-    dm_channel = response["channel"]["id"]
-
-    # 🚨 ESCALATION MESSAGE
+    logger.info(f"Sending all-RTCs-declined Slack to BL contact {bl_contact} (matching_attempt: {matching_attempt.id})")
     subject = f"⚠️ Alle Matching-Anfragen für ein Coaching mit {participant.first_name} abgelehnt oder abgelaufen"
 
     blocks = [
@@ -677,31 +761,41 @@ def send_all_rtcs_declined_info_slack(matching_attempt):
         },
     ]
 
-    # Send Slack message
-    client.chat_postMessage(
-        channel=dm_channel,
-        text=subject,
-        blocks=blocks
-    )
+    message = _blocks_to_text(blocks)
 
-    # Convert blocks to plain text for logging
-    message = "\n".join(
-        [
-            block["text"]["text"]
-            for block in blocks
-            if "text" in block and "text" in block["text"]
-        ]
-    )
-
-    logger.info(f"Sent all RTCs declined info Slack message to BL contact {bl_contact} for participant {participant} (matching_attempt: {matching_attempt})")
-    # Log message
-    create_slack_log(
-        to=bl_contact.user,  
-        subject=subject,
-        message=message,
-        matching_attempt=matching_attempt,
-        sent_by=SlackLog.SentBy.SYSTEM,
-    )
+    try:
+        dm_channel = _open_dm_channel(client, user_id)
+        client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
+        logger.info(f"Successfully sent all-RTCs-declined Slack to BL contact {bl_contact}")
+        create_slack_log(
+            to=bl_contact.user,
+            subject=subject,
+            message=message,
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+        )
+    except SlackApiError as e:
+        logger.error(f"Slack API error sending all-RTCs-declined info to BL contact {bl_contact}: {e}")
+        create_slack_log(
+            to=bl_contact.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error sending all-RTCs-declined info to BL contact {bl_contact}: {e}")
+        create_slack_log(
+            to=bl_contact.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
     
 def send_clarification_need_info_to_coach_slack(matching_attempt):
     client = WebClient(token=settings.SLACK_BOT_TOKEN)
@@ -714,11 +808,7 @@ def send_clarification_need_info_to_coach_slack(matching_attempt):
     if not user_id:
         raise ValueError(f"Coach {coach} does not have a Slack user ID")
 
-    # Open DM channel
-    response = client.conversations_open(users=[user_id])
-    dm_channel = response["channel"]["id"]
-
-    # ℹ️ INFORMATION MESSAGE (NO ACTION REQUIRED)
+    logger.info(f"Sending clarification need info Slack to coach {coach} (matching_attempt: {matching_attempt.id})")
     subject = f"ℹ️ Update zu {participant.first_name}"
 
     blocks = [
@@ -760,27 +850,38 @@ def send_clarification_need_info_to_coach_slack(matching_attempt):
         },
     ]
 
-    # Send Slack message
-    client.chat_postMessage(
-        channel=dm_channel,
-        text=subject,
-        blocks=blocks
-    )
+    message = _blocks_to_text(blocks)
 
-    # Convert blocks to plain text for logging
-    message = "\n".join(
-        [
-            block["text"]["text"]
-            for block in blocks
-            if "text" in block and "text" in block["text"]
-        ]
-    )
-
-    # Log message
-    create_slack_log(
-        to=coach.user,  
-        subject=subject,
-        message=message,
-        matching_attempt=matching_attempt,
-        sent_by=SlackLog.SentBy.SYSTEM,
-    )
+    try:
+        dm_channel = _open_dm_channel(client, user_id)
+        client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
+        logger.info(f"Successfully sent clarification need info Slack to coach {coach}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message=message,
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+        )
+    except SlackApiError as e:
+        logger.error(f"Slack API error sending clarification info to coach {coach}: {e}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error sending clarification info to coach {coach}: {e}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
