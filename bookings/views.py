@@ -26,6 +26,17 @@ class StaffRequiredMixin(UserPassesTestMixin):
 
 @csrf_exempt
 def calendly_webhook(request):
+    """
+    Receives Calendly webhook events and persists them as CalendlyBooking records.
+
+    Handles:
+      - invitee.created  → upsert a new booking
+      - invitee.canceled → upsert with canceled status
+      - anything else    → acknowledge silently (200)
+
+    No authentication is applied; Calendly does not support shared-secret
+    verification on its webhook delivery.
+    """
     logger.info("========== NEW WEBHOOK ==========")
     logger.info(
         "Webhook received",
@@ -70,6 +81,7 @@ def calendly_webhook(request):
         return JsonResponse({"detail": "Missing invitee uri"}, status=400)
 
     if event == "invitee.created":
+        # New booking — create or update by invitee URI (idempotent on re-delivery).
         try:
             booking, created = CalendlyBooking.objects.update_or_create(
                 calendly_invitee_uri=invitee_uri,
@@ -101,6 +113,8 @@ def calendly_webhook(request):
         return HttpResponse(status=200)
 
     if event == "invitee.canceled":
+        # Cancellation — upsert so the status and cancellation fields are persisted
+        # even if the booking record was not created by an earlier invitee.created event.
         try:
             booking, created = CalendlyBooking.objects.update_or_create(
                 calendly_invitee_uri=invitee_uri,
@@ -141,6 +155,8 @@ def calendly_webhook(request):
 
 
 class CalendlyBookingsListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
+    """Staff-only list of all Calendly bookings, ordered by most recent first."""
+
     model = CalendlyBooking
     template_name = "bookings/calendly_bookings_list.html"
     context_object_name = "bookings"
