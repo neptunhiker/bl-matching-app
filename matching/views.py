@@ -1,5 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.db.models import Max, Q
+from django.db.models import Max, Q, Prefetch
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
@@ -105,7 +105,16 @@ class MatchingAttemptDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailVi
     def get_object(self, queryset=None):
         return (
             MatchingAttempt.objects
+            .select_related(
+                'participant',
+                'bl_contact__user',
+                'matched_coach__user',
+            )
             .prefetch_related(
+                Prefetch(
+                    'coach_requests',
+                    queryset=RequestToCoach.objects.select_related('coach__user'),
+                ),
                 'coach_requests__email_logs',
                 'coach_requests__slack_logs',
                 'email_logs',
@@ -137,7 +146,7 @@ class MatchingAttemptDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailVi
         # Build unified notifications list with type markers so template can render both
         context['notifications'] = build_notifications(all_emails, all_slack)
 
-        context['events'] = matching_attempt.matching_events.order_by('-created_at')
+        context['events'] = matching_attempt.matching_events.select_related('triggered_by_user').order_by('-created_at')
         
         context['show_start_button'] = (
             self.request.user.is_staff

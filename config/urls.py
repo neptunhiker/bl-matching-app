@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.contrib.auth.decorators import login_required
 from django.urls import path, include
 from django.views.generic import TemplateView
+from django.conf import settings
 from config.views import healthcheck
 
 urlpatterns = [
@@ -32,3 +33,7 @@ urlpatterns = [
     path('benachrichtigungen/', include('notifications.urls')),
     path('', login_required(TemplateView.as_view(template_name='landing.html')), name='landing'),
 ]
+
+if settings.DEBUG:
+    import debug_toolbar
+    urlpatterns = [path('__debug__/', include(debug_toolbar.urls))] + urlpatterns
