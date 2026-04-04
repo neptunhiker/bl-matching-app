@@ -1,13 +1,11 @@
+import hashlib
+import hmac
 import json
-from unittest.mock import patch
-
-import json
+import time
 from unittest.mock import patch
 
 import pytest
 from django.urls import reverse
-
-from bookings.models import CalendlyBooking
 
 from bookings.models import CalendlyBooking
 
@@ -69,8 +67,19 @@ class TestBookingsListView:
 # Helpers for calendly_webhook tests
 # ---------------------------------------------------------------------------
 
+TEST_SIGNING_KEY = "test-calendly-signing-key-for-pytest"
+
 _INVITEE_URI = "https://api.calendly.com/scheduled_events/XXXXX/invitees/abc-123"
 _EVENT_URI = "https://api.calendly.com/scheduled_events/XXXXX"
+
+
+def _make_signature(body: bytes, key: str = TEST_SIGNING_KEY, ts: int | None = None) -> str:
+    """Return a valid Calendly-Webhook-Signature header value for *body*."""
+    if ts is None:
+        ts = int(time.time())
+    message = f"{ts}.{body.decode('utf-8')}".encode("utf-8")
+    digest = hmac.new(key.encode("utf-8"), msg=message, digestmod=hashlib.sha256).hexdigest()
+    return f"t={ts},v1={digest}"
 
 
 def _created_payload(invitee_uri=_INVITEE_URI):
@@ -106,14 +115,22 @@ def _canceled_payload(invitee_uri=_INVITEE_URI):
 class TestCalendlyWebhook:
     """Tests for the calendly_webhook view."""
 
+    @pytest.fixture(autouse=True)
+    def _set_signing_key(self, settings):
+        settings.CALENDLY_SIGNING_KEY = TEST_SIGNING_KEY
+
     def _url(self):
         return reverse("calendly_webhook")
 
-    def _post(self, client, payload):
+    def _post(self, client, payload, *, signing_key=TEST_SIGNING_KEY, ts=None, signature=None):
+        """POST *payload* with a valid (or custom) Calendly signature header."""
+        body = json.dumps(payload).encode("utf-8")
+        sig = signature if signature is not None else _make_signature(body, key=signing_key, ts=ts)
         return client.post(
             self._url(),
-            data=json.dumps(payload),
+            data=body,
             content_type="application/json",
+            HTTP_CALENDLY_WEBHOOK_SIGNATURE=sig,
         )
 
     # --- Method & parsing guard-rails ---
@@ -124,10 +141,13 @@ class TestCalendlyWebhook:
         assert response.status_code == 405
 
     def test_invalid_json_returns_400(self, client):
+        body = b"not valid json {{{"
+        sig = _make_signature(body)
         response = client.post(
             self._url(),
-            data="not valid json {{{",
+            data=body,
             content_type="application/json",
+            HTTP_CALENDLY_WEBHOOK_SIGNATURE=sig,
         )
 
         assert response.status_code == 400
@@ -214,3 +234,45 @@ class TestCalendlyWebhook:
 
         assert response.status_code == 200
         assert CalendlyBooking.objects.count() == 0
+
+    # --- Signature / authentication guard-rails ---
+
+    def test_missing_signature_header_returns_403(self, client):
+        body = json.dumps(_created_payload()).encode("utf-8")
+        response = client.post(
+            self._url(),
+            data=body,
+            content_type="application/json",
+            # No HTTP_CALENDLY_WEBHOOK_SIGNATURE header.
+        )
+
+        assert response.status_code == 403
+
+    def test_wrong_signature_returns_403(self, client):
+        response = self._post(client, _created_payload(), signature="t=9999,v1=badhexvalue")
+
+        assert response.status_code == 403
+        assert CalendlyBooking.objects.count() == 0
+
+    def test_stale_timestamp_returns_403(self, client):
+        stale_ts = int(time.time()) - 600  # 10 minutes ago — beyond the 5-minute window
+        response = self._post(client, _created_payload(), ts=stale_ts)
+
+        assert response.status_code == 403
+        assert CalendlyBooking.objects.count() == 0
+
+    def test_unconfigured_signing_key_returns_403(self, client, settings):
+        settings.CALENDLY_SIGNING_KEY = ""
+
+        response = self._post(client, _created_payload())
+
+        assert response.status_code == 403
+        assert CalendlyBooking.objects.count() == 0
+
+    def test_valid_signature_with_wrong_key_returns_403(self, client):
+        # Signature computed with a different key than what's in settings.
+        response = self._post(client, _created_payload(), signing_key="some-other-key")
+
+        assert response.status_code == 403
+        assert CalendlyBooking.objects.count() == 0
+

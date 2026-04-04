@@ -1,11 +1,15 @@
 # bookings/views.py
+import hashlib
+import hmac
 import json
 import logging
+import time
 
+from django.conf import settings
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import CalendlyBooking
@@ -16,6 +20,42 @@ from .utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Maximum age (seconds) we accept for a webhook timestamp — prevents replays.
+_WEBHOOK_MAX_AGE_SECONDS = 300
+
+
+def _verify_calendly_signature(header: str, raw_body: bytes, signing_key: str) -> bool:
+    """
+    Verify the Calendly-Webhook-Signature header.
+
+    Header format:  t=<unix_timestamp>,v1=<hex_hmac>
+    Signed message: f"{timestamp}.{raw_body_as_str}"
+    Algorithm:      HMAC-SHA256 with the account signing key.
+    """
+    try:
+        parts = dict(part.split("=", 1) for part in header.split(","))
+        timestamp = parts["t"]
+        expected_sig = parts["v1"]
+    except (KeyError, ValueError):
+        return False
+
+    # Reject stale requests (replay attack prevention).
+    try:
+        age = int(time.time()) - int(timestamp)
+        if not (0 <= age <= _WEBHOOK_MAX_AGE_SECONDS):
+            return False
+    except ValueError:
+        return False
+
+    message = f"{timestamp}.{raw_body.decode('utf-8')}".encode("utf-8")
+    computed = hmac.new(
+        signing_key.encode("utf-8"),
+        msg=message,
+        digestmod=hashlib.sha256,
+    ).hexdigest()
+
+    return hmac.compare_digest(computed, expected_sig)
 
 
 class StaffRequiredMixin(UserPassesTestMixin):
@@ -34,8 +74,11 @@ def calendly_webhook(request):
       - invitee.canceled → upsert with canceled status
       - anything else    → acknowledge silently (200)
 
-    No authentication is applied; Calendly does not support shared-secret
-    verification on its webhook delivery.
+    Every request is authenticated via HMAC-SHA256: Calendly signs the payload
+    with the account signing key and includes the signature in the
+    ``Calendly-Webhook-Signature`` header (format: ``t=<ts>,v1=<hexdigest>``).
+    Requests with a missing, invalid, or stale signature are rejected with 403.
+    Set ``CALENDLY_SIGNING_KEY`` in .env (copy from Calendly webhook settings).
     """
     logger.info("========== NEW WEBHOOK ==========")
     logger.info(
@@ -50,9 +93,24 @@ def calendly_webhook(request):
         logger.warning("Invalid method for webhook", extra={"method": request.method})
         return JsonResponse({"detail": "Method not allowed"}, status=405)
 
+    # --- Signature verification ---
+    signing_key = getattr(settings, "CALENDLY_SIGNING_KEY", "")
+    if not signing_key:
+        logger.error("Calendly webhook: CALENDLY_SIGNING_KEY is not configured — rejecting request.")
+        return HttpResponseForbidden("Webhook signing key not configured.")
+
+    sig_header = request.META.get("HTTP_CALENDLY_WEBHOOK_SIGNATURE", "")
+    if not sig_header:
+        logger.warning("Calendly webhook: missing Calendly-Webhook-Signature header.")
+        return HttpResponseForbidden("Missing signature.")
+
+    raw_body = request.body
+    if not _verify_calendly_signature(sig_header, raw_body, signing_key):
+        logger.warning("Calendly webhook: invalid or stale signature.")
+        return HttpResponseForbidden("Invalid signature.")
+
     try:
-        raw_body = request.body.decode("utf-8")
-        payload = json.loads(raw_body)
+        payload = json.loads(raw_body.decode("utf-8"))
     except json.JSONDecodeError:
         logger.exception("Invalid JSON received from Calendly")
         return JsonResponse({"detail": "Invalid JSON"}, status=400)

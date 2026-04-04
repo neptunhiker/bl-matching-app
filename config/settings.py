@@ -205,6 +205,20 @@ SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')
 # Must be set in .env — if missing the endpoint will reject all requests.
 BREVO_WEBHOOK_SECRET = os.environ.get('BREVO_WEBHOOK_SECRET', '')
 
+# Calendly webhook signing key — used to verify the HMAC-SHA256 signature on
+# every inbound Calendly webhook.
+#
+# How to set this up:
+#   1. Generate a strong random secret (e.g. `python -c "import secrets; print(secrets.token_hex(32))"`)
+#   2. Store it in .env as CALENDLY_SIGNING_KEY=<your_secret>
+#   3. When registering the webhook subscription via the Calendly API
+#      (POST /webhook_subscriptions), pass the same value as the `signing_key`
+#      field in the request body.  Calendly will then HMAC-sign every payload
+#      it delivers using this key.
+#
+# Must be set; if missing the endpoint will reject all requests.
+CALENDLY_SIGNING_KEY = os.environ.get('CALENDLY_SIGNING_KEY', '')
+
 # Brevo webhook IP allowlist. Comma-separated CIDRs.
 # Set to empty string in .env to disable the check (local dev / ngrok smoke test).
 # Leave unset in .env to enforce Brevo's published ranges in production.
