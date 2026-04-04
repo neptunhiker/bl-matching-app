@@ -38,14 +38,30 @@ def _verify_calendly_signature(header: str, raw_body: bytes, signing_key: str) -
         timestamp = parts["t"]
         expected_sig = parts["v1"]
     except (KeyError, ValueError):
+        logger.error(
+            "[CALENDLY-SIG] Could not parse Calendly-Webhook-Signature header — "
+            "expected format 't=<ts>,v1=<hex>' but got: %.120s",
+            header,
+        )
         return False
 
     # Reject stale requests (replay attack prevention).
     try:
-        age = int(time.time()) - int(timestamp)
+        now = int(time.time())
+        age = now - int(timestamp)
+        logger.debug(
+            "[CALENDLY-SIG] Timestamp check: header_ts=%s server_ts=%s age_seconds=%s max=%s",
+            timestamp, now, age, _WEBHOOK_MAX_AGE_SECONDS,
+        )
         if not (0 <= age <= _WEBHOOK_MAX_AGE_SECONDS):
+            logger.warning(
+                "[CALENDLY-SIG] Timestamp out of window: age=%s seconds (max %s). "
+                "Check that server clock is correct.",
+                age, _WEBHOOK_MAX_AGE_SECONDS,
+            )
             return False
     except ValueError:
+        logger.error("[CALENDLY-SIG] Non-integer timestamp in header: %s", timestamp)
         return False
 
     message = f"{timestamp}.{raw_body.decode('utf-8')}".encode("utf-8")
@@ -55,7 +71,17 @@ def _verify_calendly_signature(header: str, raw_body: bytes, signing_key: str) -
         digestmod=hashlib.sha256,
     ).hexdigest()
 
-    return hmac.compare_digest(computed, expected_sig)
+    match = hmac.compare_digest(computed, expected_sig)
+    if not match:
+        logger.warning(
+            "[CALENDLY-SIG] HMAC mismatch. "
+            "computed=%.16s… expected=%.16s… "
+            "(signing key length=%d chars)",
+            computed, expected_sig, len(signing_key),
+        )
+    else:
+        logger.debug("[CALENDLY-SIG] Signature verified OK.")
+    return match
 
 
 class StaffRequiredMixin(UserPassesTestMixin):
@@ -82,32 +108,46 @@ def calendly_webhook(request):
     """
     logger.info("========== NEW WEBHOOK ==========")
     logger.info(
-        "Webhook received",
-        extra={
-            "method": request.method,
-            "path": request.path,
-        },
+        "[CALENDLY] Incoming request: method=%s path=%s content_type=%s content_length=%s",
+        request.method,
+        request.path,
+        request.content_type,
+        request.META.get("CONTENT_LENGTH", "?"),
     )
 
     if request.method != "POST":
-        logger.warning("Invalid method for webhook", extra={"method": request.method})
+        logger.warning("[CALENDLY] Rejected: method=%s (expected POST)", request.method)
         return JsonResponse({"detail": "Method not allowed"}, status=405)
 
     # --- Signature verification ---
     signing_key = getattr(settings, "CALENDLY_SIGNING_KEY", "")
     if not signing_key:
-        logger.error("Calendly webhook: CALENDLY_SIGNING_KEY is not configured — rejecting request.")
+        logger.error(
+            "[CALENDLY] CALENDLY_SIGNING_KEY is empty — check your .env file. Rejecting request."
+        )
         return HttpResponseForbidden("Webhook signing key not configured.")
+
+    logger.debug("[CALENDLY] Signing key loaded (length=%d chars).", len(signing_key))
 
     sig_header = request.META.get("HTTP_CALENDLY_WEBHOOK_SIGNATURE", "")
     if not sig_header:
-        logger.warning("Calendly webhook: missing Calendly-Webhook-Signature header.")
+        logger.warning(
+            "[CALENDLY] Missing Calendly-Webhook-Signature header. "
+            "Request headers present: %s",
+            [k for k in request.META if k.startswith("HTTP_")],
+        )
         return HttpResponseForbidden("Missing signature.")
 
+    logger.debug("[CALENDLY] Signature header received: %.80s", sig_header)
+
     raw_body = request.body
+    logger.debug("[CALENDLY] Raw body length: %d bytes.", len(raw_body))
+
     if not _verify_calendly_signature(sig_header, raw_body, signing_key):
-        logger.warning("Calendly webhook: invalid or stale signature.")
+        logger.warning("[CALENDLY] Signature verification failed — returning 403.")
         return HttpResponseForbidden("Invalid signature.")
+
+    logger.info("[CALENDLY] Signature verified successfully.")
 
     try:
         payload = json.loads(raw_body.decode("utf-8"))
@@ -122,13 +162,15 @@ def calendly_webhook(request):
     invitee_uri = (invitee_data.get("uri") or "").strip()
     event_uri = (scheduled_event.get("uri") or invitee_data.get("event") or "").strip()
 
+    logger.info("[CALENDLY] Event type: %s", event)
+
     safe_summary = build_safe_webhook_summary(
         payload=payload,
         invitee_data=invitee_data,
         scheduled_event=scheduled_event,
     )
 
-    logger.info("Webhook parsed summary: %s", safe_summary)
+    logger.info("[CALENDLY] Parsed payload summary: %s", safe_summary)
 
     if event in {"invitee.created", "invitee.canceled"} and not invitee_uri:
         logger.error(

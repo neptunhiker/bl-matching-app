@@ -266,7 +266,7 @@ LOGGING = {
         },
         'bookings': {
             'handlers': ['console', 'bookings_file'],
-            'level': 'INFO',
+            'level': 'DEBUG' if DEBUG else 'INFO',
             'propagate': False,
         },
     },
