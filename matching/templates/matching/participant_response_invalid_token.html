@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Ungültiger Link{% endblock %}
+
+{% block body %}
+<div class="max-w-lg mx-auto px-4 py-16 text-center">
+
+  <div class="flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full bg-neutral-100">
+    <svg class="w-8 h-8 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M13.828 10.172a4 4 0 010 5.656M10.172 10.172a4 4 0 010 5.656m6.364-8.485a9 9 0 010 12.728M6.343 6.343a9 9 0 010 12.728"/>
+    </svg>
+  </div>
+
+  <h1 class="text-2xl font-bold text-neutral-800 mb-3">Ungültiger Link</h1>
+  <p class="text-neutral-600">
+    Dieser Link ist ungültig oder existiert nicht mehr.
+  </p>
+
+  <p class="mt-6 text-sm text-neutral-400">
+    Falls du Hilfe benötigst, melde dich gerne bei uns.
+  </p>
+
+</div>
+{% endblock %}

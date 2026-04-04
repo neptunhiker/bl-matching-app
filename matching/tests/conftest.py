@@ -123,3 +123,87 @@ def rtc_high_priority(db, matching_attempt, coach_2):
         coach=coach_2,
         priority=1,
     )
+
+
+@pytest.fixture
+def matching_event(db, matching_attempt, staff_user):
+    from matching.models import MatchingEvent, TriggeredByOptions
+    return MatchingEvent.objects.create(
+        matching_attempt=matching_attempt,
+        event_type=MatchingEvent.EventType.CREATED,
+        triggered_by=TriggeredByOptions.STAFF,
+        triggered_by_user=staff_user,
+    )
+
+
+@pytest.fixture
+def bl_staff(db, staff_user):
+    from profiles.models import BeginnerLuftStaff
+    return BeginnerLuftStaff.objects.create(
+        user=staff_user,
+        slack_user_id='U12345678',
+    )
+
+
+# ── Phase 3: token fixtures ──────────────────────────────────────────────────
+
+@pytest.fixture
+def matching_attempt_with_coach(db, matching_attempt, coach):
+    matching_attempt.matched_coach = coach
+    matching_attempt.save()
+    return matching_attempt
+
+
+@pytest.fixture
+def coach_action_token_accept(db, rtc):
+    from matching.models import CoachActionToken
+    from matching.tokens import generate_secure_token
+    return CoachActionToken.objects.create(
+        request_to_coach=rtc,
+        action=CoachActionToken.Action.ACCEPT,
+        token=generate_secure_token(),
+    )
+
+
+@pytest.fixture
+def coach_action_token_decline(db, rtc):
+    from matching.models import CoachActionToken
+    from matching.tokens import generate_secure_token
+    return CoachActionToken.objects.create(
+        request_to_coach=rtc,
+        action=CoachActionToken.Action.DECLINE,
+        token=generate_secure_token(),
+    )
+
+
+@pytest.fixture
+def coach_action_token_confirm_intro_call(db, matching_attempt_with_coach):
+    from matching.models import CoachActionToken
+    from matching.tokens import generate_secure_token
+    return CoachActionToken.objects.create(
+        matching_attempt=matching_attempt_with_coach,
+        action=CoachActionToken.Action.CONFIRM_INTRO_CALL,
+        token=generate_secure_token(),
+    )
+
+
+@pytest.fixture
+def participant_action_token_start(db, matching_attempt_with_coach):
+    from matching.models import ParticipantActionToken
+    from matching.tokens import generate_secure_token
+    return ParticipantActionToken.objects.create(
+        matching_attempt=matching_attempt_with_coach,
+        action=ParticipantActionToken.Action.START_COACHING,
+        token=generate_secure_token(),
+    )
+
+
+@pytest.fixture
+def participant_action_token_clarify(db, matching_attempt_with_coach):
+    from matching.models import ParticipantActionToken
+    from matching.tokens import generate_secure_token
+    return ParticipantActionToken.objects.create(
+        matching_attempt=matching_attempt_with_coach,
+        action=ParticipantActionToken.Action.CLARIFICATION_NEEDED,
+        token=generate_secure_token(),
+    )
