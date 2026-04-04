@@ -232,6 +232,9 @@ SYSTEM_EMAIL_NAME = "Dein BeginnerLuft Team"
 SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN', '')
 SLACK_SIGNING_SECRET = os.environ.get('SLACK_SIGNING_SECRET', '')
 
+_LOGS_DIR = BASE_DIR / 'logs'
+_LOGS_DIR.mkdir(exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -248,7 +251,7 @@ LOGGING = {
         },
         'bookings_file': {
             'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'bookings.log',
+            'filename': _LOGS_DIR / 'bookings.log',
             'formatter': 'verbose',
             'level': 'INFO',
         },
