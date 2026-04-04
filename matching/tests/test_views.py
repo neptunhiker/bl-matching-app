@@ -1100,3 +1100,179 @@ def test_confirm_intro_call_valid(client, coach_action_token_confirm_intro_call,
         matching_attempt=ma,
         event_type=MatchingEvent.EventType.INTRO_CALL_FEEDBACK_RECEIVED_FROM_COACH,
     ).exists()
+
+
+# ── MatchingAttemptCreateView: uncovered branches ────────────────────────────
+
+@pytest.mark.django_db
+def test_create_matching_form_valid_ue_below_one(rf, staff_user, participant, bl_staff):
+    """Lines 47-48: ue < 1 guard inside form_valid.
+
+    The form's own MinValueValidator prevents ue=0 from reaching form_valid during
+    a normal POST, so we exercise this guard by calling form_valid directly with a
+    mock form whose cleaned_data contains ue=0.
+    """
+    from unittest.mock import MagicMock, patch
+    from django.contrib.messages.storage.fallback import FallbackStorage
+    from matching.views import MatchingAttemptCreateView
+
+    request = rf.post('/matching/create/')
+    request.user = staff_user
+    request.session = {}
+    request._messages = FallbackStorage(request)
+
+    view = MatchingAttemptCreateView()
+    view.request = request
+    view.kwargs = {}
+    view.args = []
+    view.object = None
+
+    mock_form = MagicMock()
+    mock_form.cleaned_data = {'ue': 0, 'participant': participant, 'bl_contact': bl_staff}
+
+    with patch.object(view, 'form_invalid', return_value=MagicMock(status_code=200)) as mock_invalid:
+        view.form_valid(mock_form)
+
+    mock_invalid.assert_called_once_with(mock_form)
+    from django.contrib.messages import get_messages
+    msgs = list(get_messages(request))
+    assert any("Unterrichtseinheiten" in str(m) for m in msgs)
+
+
+@pytest.mark.django_db
+def test_create_matching_validation_error_no_existing_url(client, staff_user, bl_staff, participant, monkeypatch):
+    """Line 71: else-branch of the ValidationError handler, where e.message is falsy."""
+    import matching.services as svc
+    from django.core.exceptions import ValidationError
+
+    def raise_no_url(*args, **kwargs):
+        err = ValidationError("placeholder")
+        err.message = None  # make `existing` falsy so the else-branch executes
+        raise err
+
+    monkeypatch.setattr(svc, 'create_matching_attempt', raise_no_url)
+    client.force_login(staff_user)
+    url = reverse('matching_attempt_create')
+    r = client.post(url, data={'participant': participant.pk, 'ue': 40, 'bl_contact': bl_staff.pk})
+    assert r.status_code == 200
+    msgs = list(get_messages(r.wsgi_request))
+    assert any("Es existiert bereits ein aktives Matching." in str(m) for m in msgs)
+
+
+@pytest.mark.django_db
+def test_create_matching_integrity_error_with_conflicting(
+    client, staff_user, bl_staff, participant, matching_attempt, monkeypatch
+):
+    """Lines 75-90: IntegrityError handler when a conflicting active MA exists.
+
+    `matching_attempt` fixture creates an IN_PREPARATION MA for the same participant,
+    which is an ACTIVESTATE, so the filter returns it and the URL-link message is shown.
+    """
+    import matching.services as svc
+    from django.db import IntegrityError
+
+    monkeypatch.setattr(
+        svc, 'create_matching_attempt',
+        lambda *a, **k: (_ for _ in ()).throw(IntegrityError()),
+    )
+    client.force_login(staff_user)
+    url = reverse('matching_attempt_create')
+    r = client.post(url, data={'participant': participant.pk, 'ue': 40, 'bl_contact': bl_staff.pk})
+    assert r.status_code == 200
+    msgs = list(get_messages(r.wsgi_request))
+    assert any("aktives Matching" in str(m) for m in msgs)
+
+
+@pytest.mark.django_db
+def test_create_matching_integrity_error_without_conflicting(
+    client, staff_user, bl_staff, participant_2, monkeypatch
+):
+    """Lines 90-95: IntegrityError handler when no conflicting active MA can be found.
+
+    Uses participant_2 who has no existing MatchingAttempt, so the filter returns
+    nothing and the fallback plain-text message is shown.
+    """
+    import matching.services as svc
+    from django.db import IntegrityError
+
+    monkeypatch.setattr(
+        svc, 'create_matching_attempt',
+        lambda *a, **k: (_ for _ in ()).throw(IntegrityError()),
+    )
+    client.force_login(staff_user)
+    url = reverse('matching_attempt_create')
+    r = client.post(url, data={'participant': participant_2.pk, 'ue': 40, 'bl_contact': bl_staff.pk})
+    assert r.status_code == 200
+    msgs = list(get_messages(r.wsgi_request))
+    assert any("bereits ein aktives Matching vorhanden" in str(m) for m in msgs)
+
+
+# ── MatchingAttemptDetailView: coach_requests loop body ──────────────────────
+
+@pytest.mark.django_db
+def test_matching_attempt_detail_with_coach_requests(client, staff_user, rtc):
+    """Lines 133-134: for-loop body in get_context_data runs when coach_requests exist."""
+    client.force_login(staff_user)
+    url = reverse('matching_attempt_detail', kwargs={'pk': rtc.matching_attempt.pk})
+    r = client.get(url)
+    assert r.status_code == 200
+
+
+# ── MatchingEventDetailView: payload formatting branches ─────────────────────
+
+@pytest.mark.django_db
+def test_matching_event_detail_payload_iso_datetime_string(client, staff_user, matching_attempt):
+    """Lines 673-678: payload value is a parseable ISO-datetime string."""
+    from matching.models import MatchingEvent, TriggeredByOptions
+
+    event = MatchingEvent.objects.create(
+        matching_attempt=matching_attempt,
+        event_type=MatchingEvent.EventType.CREATED,
+        triggered_by=TriggeredByOptions.STAFF,
+        triggered_by_user=staff_user,
+        payload={"ts": "2026-01-15T10:30:00+00:00"},
+    )
+    client.force_login(staff_user)
+    r = client.get(reverse('matching_event_detail', kwargs={'pk': event.pk}))
+    assert r.status_code == 200
+    keys = [k for k, _ in r.context['formatted_payload']]
+    assert 'ts' in keys
+
+
+@pytest.mark.django_db
+def test_matching_event_detail_payload_plain_string(client, staff_user, matching_attempt):
+    """Line 694: payload value is a plain (non-datetime) string — falls through to str()."""
+    from matching.models import MatchingEvent, TriggeredByOptions
+
+    event = MatchingEvent.objects.create(
+        matching_attempt=matching_attempt,
+        event_type=MatchingEvent.EventType.CREATED,
+        triggered_by=TriggeredByOptions.STAFF,
+        triggered_by_user=staff_user,
+        payload={"label": "some plain text", "count": 42},
+    )
+    client.force_login(staff_user)
+    r = client.get(reverse('matching_event_detail', kwargs={'pk': event.pk}))
+    assert r.status_code == 200
+    keys = [k for k, _ in r.context['formatted_payload']]
+    assert 'label' in keys
+    assert 'count' in keys
+
+
+@pytest.mark.django_db
+def test_matching_event_detail_payload_dict(client, staff_user, matching_attempt):
+    """Lines 688-692: payload value is a dict — serialised with json.dumps()."""
+    from matching.models import MatchingEvent, TriggeredByOptions
+
+    event = MatchingEvent.objects.create(
+        matching_attempt=matching_attempt,
+        event_type=MatchingEvent.EventType.CREATED,
+        triggered_by=TriggeredByOptions.STAFF,
+        triggered_by_user=staff_user,
+        payload={"metadata": {"key": "value", "nested": True}},
+    )
+    client.force_login(staff_user)
+    r = client.get(reverse('matching_event_detail', kwargs={'pk': event.pk}))
+    assert r.status_code == 200
+    formatted = dict(r.context['formatted_payload'])
+    assert '"key"' in formatted['metadata']
