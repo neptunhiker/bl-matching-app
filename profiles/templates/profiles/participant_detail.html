@@ -113,11 +113,17 @@
     </div>
 
     {# Footer #}
-    <div class="mt-10 pt-8 border-t border-neutral-100">
+    <div class="mt-10 pt-8 border-t border-neutral-100 flex items-center justify-between">
       <a href="{% url 'participant_list' %}"
          class="text-sm text-neutral-400 hover:text-neutral-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300 rounded-sm">
         ← Zurück zur Liste
       </a>
+      {% if participant.calendly_booking %}
+      <a href="{% url 'calendly_booking_detail' participant.calendly_booking.pk %}"
+         class="text-sm text-neutral-400 hover:text-primary-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
+        Calendly-Buchung ansehen →
+      </a>
+      {% endif %}
     </div>
 
   </div>

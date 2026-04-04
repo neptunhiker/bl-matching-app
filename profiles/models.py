@@ -129,6 +129,14 @@ class Participant(models.Model):
     background_information = models.TextField(blank=True, verbose_name='Hintergrundinformationen')
     coaching_target = models.TextField(blank=True, verbose_name='Coaching-Ziel')
     avgs_data_docs_available = models.BooleanField(default=False, verbose_name='AVGS-Daten verfügbar', help_text='Liegen alle notwendigen AVGS-Daten vor, um mit dem Matching zu starten?')
+    calendly_booking = models.OneToOneField(
+        "bookings.CalendlyBooking",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="participant",
+        verbose_name="Calendly-Buchung",
+    )
     
     @property
     def full_name(self):

@@ -128,6 +128,18 @@ class ParticipantCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateView):
     def get_success_url(self):
         return reverse_lazy('participant_detail', kwargs={'pk': self.object.pk})
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        booking_pk = self.request.GET.get("booking")
+        if booking_pk:
+            from bookings.models import CalendlyBooking
+            try:
+                booking = CalendlyBooking.objects.get(pk=booking_pk)
+                self.object.calendly_booking = booking
+                self.object.save(update_fields=["calendly_booking"])
+            except CalendlyBooking.DoesNotExist:
+                pass
+        return response
 
 
 class ParticipantUpdateView(LoginRequiredMixin, StaffRequiredMixin, UpdateView):
