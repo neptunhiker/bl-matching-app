@@ -9,6 +9,41 @@ from django.urls import reverse
 
 from bookings.models import CalendlyBooking
 
+class TestBookingsDetailView:
+    @pytest.mark.django_db
+    def test_booking_detail_redirects_anonymous_to_login(self, client, calendly_booking):
+        url = reverse("calendly_booking_detail", args=[calendly_booking.id])
+
+        response = client.get(url)
+
+        assert response.status_code == 302
+        assert reverse("login") in response.url
+        assert f"next={url}" in response.url
+        
+    @pytest.mark.django_db
+    def test_booking_detail_forbidden_for_logged_in_non_staff(self, client, coach_user_1, calendly_booking):
+        client.force_login(coach_user_1)
+
+        response = client.get(reverse("calendly_booking_detail", args=[calendly_booking.id]))
+
+        assert response.status_code == 403
+        
+    @pytest.mark.django_db
+    def test_booking_detail_accessible_for_logged_in_staff(self, client, staff_user, calendly_booking):
+        client.force_login(staff_user)
+
+        response = client.get(reverse("calendly_booking_detail", args=[calendly_booking.id]))
+
+        assert response.status_code == 200
+        
+    @pytest.mark.django_db
+    def test_booking_detail_accessible_for_logged_in_superuser(self, client, superuser, calendly_booking):
+        client.force_login(superuser)
+
+        response = client.get(reverse("calendly_booking_detail", args=[calendly_booking.id]))
+
+        assert response.status_code == 200
+
 class TestBookingsListView:
     @pytest.mark.django_db
     def test_bookings_list_redirects_anonymous_to_login(self, client):
