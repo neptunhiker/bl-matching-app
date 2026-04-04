@@ -44,7 +44,7 @@
             {% if booking.status == 'active' %}
               <span class="inline-flex items-center gap-1 text-green-600">Aktiv</span>
             {% elif booking.status == 'canceled' %}
-              <span class="inline-flex items-center gap-1 text-red-600">Storniert</span>
+              <span class="inline-flex items-center gap-1 text-red-600">Abgesagt</span>
             {% else %}
               <span class="inline-flex items-center gap-1 text-neutral-500">{{ booking.status|title }}</span>
             {% endif %}
