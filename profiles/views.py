@@ -69,8 +69,65 @@ class ParticipantCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateView):
     form_class = ParticipantForm
     template_name = 'profiles/participant_form.html'
 
+    # Q&A question texts used for prefill
+    _LANGUAGE_QUESTION = "Auf welcher Sprache möchtest du das Coaching machen?"
+    _COACHING_FORMAT = "Wie möchtest du dein Coaching am liebsten machen?"
+    _AVGS_QUESTION     = "Hast du schon einen AVGS Gutschein?"
+
+    def get_initial(self):
+        initial = super().get_initial()
+        booking_pk = self.request.GET.get("booking")
+        if not booking_pk:
+            return initial
+
+        from bookings.models import CalendlyBooking
+        from .models import Language as LangModel
+
+        try:
+            booking = CalendlyBooking.objects.get(pk=booking_pk)
+        except CalendlyBooking.DoesNotExist:
+            return initial
+
+        initial.update({
+            "first_name": booking.invitee_first_name.lower().capitalize().strip(),
+            "last_name":  booking.invitee_last_name.lower().capitalize().strip(),
+            "email":      booking.invitee_email.strip(),
+        })
+
+        qa_map = {
+            qa["question"].strip(): qa.get("answer", "")
+            for qa in (booking.questions_and_answers or [])
+            if "question" in qa
+        }
+
+        # Coaching format
+        format_answer = qa_map.get(self._COACHING_FORMAT, "").strip()
+        if format_answer:
+            if format_answer.lower() in ["online", "präsenz", "hybrid"]:
+                initial["coaching_format_online"] = format_answer.lower() == "online"
+                initial["coaching_format_presence"] = format_answer.lower() == "präsenz"
+                initial["coaching_format_hybrid"] = format_answer.lower() == "hybrid"
+            
+        
+        # Language
+        lang_answer = qa_map.get(self._LANGUAGE_QUESTION, "").strip()
+        print(lang_answer)
+        if lang_answer:
+            matched = LangModel.objects.filter(name__iexact=lang_answer)
+            if matched.exists():
+                initial["languages"] = matched
+        print(f"Prefilled languages: {initial.get('languages', [])}")
+
+        # AVGS
+        avgs_answer = qa_map.get(self._AVGS_QUESTION, "").strip().lower()
+        if avgs_answer:
+            initial["avgs_data_docs_available"] = avgs_answer.startswith("ja")
+
+        return initial
+
     def get_success_url(self):
         return reverse_lazy('participant_detail', kwargs={'pk': self.object.pk})
+
 
 
 class ParticipantUpdateView(LoginRequiredMixin, StaffRequiredMixin, UpdateView):

@@ -13,6 +13,20 @@
     <span class="text-tertiary-700">{{ booking.invitee_name|default:booking.invitee_email }}</span>
   </nav>
 
+  <div class="text-right mb-3">
+    {% url 'participant_create' as create_base_url %}
+    {% with pk_str=booking.pk|stringformat:"s" %}
+      {% with create_url=create_base_url|add:"?booking="|add:pk_str %}
+        {% with name=booking.invitee_first_name|lower|capfirst %}
+          {% with btn_text="+ "|add:name|add:" als TN anlegen" %}
+            {% include "components/_button.html" with button_href=create_url button_text=btn_text button_size="sm" %}
+          {% endwith %}
+        {% endwith %}
+      {% endwith %}
+    {% endwith %}
+  </div>
+
+
   <div class="bg-white p-5 rounded-xl">
 
     {# Page header #}
@@ -28,7 +42,7 @@
           </p>
         {% endif %}
       </div>
-      <div class="shrink-0 pt-1">
+      <div class="shrink-0 pt-1 flex items-center gap-3">
         {% if booking.status == 'active' %}
           <span class="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">Aktiv</span>
         {% elif booking.status == 'canceled' %}
@@ -36,6 +50,7 @@
         {% else %}
           <span class="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600">{{ booking.status|title }}</span>
         {% endif %}
+        
       </div>
     </div>
 
@@ -64,7 +79,10 @@
 
       </dl>
 
-      <div class="max-w-xl">
+      <div class="row-span-2">
+        <!-- # column 1 -->
+        <!-- # column 2 -->
+        <div>
         {# Questions & Answers #}
         {% if booking.questions_and_answers %}
         <div class="pt-6">
@@ -83,7 +101,6 @@
         </div>
         {% endif %}
       </div>
-
     </div>
 
     {# Footer #}
