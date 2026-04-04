@@ -1,5 +1,3 @@
-import os
-
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Max, Q
 
@@ -10,17 +8,19 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.html import format_html
 from django.views.generic import DetailView, ListView, CreateView, View, UpdateView, DeleteView, TemplateView
-from urllib3 import request
+from django_fsm import TransitionNotAllowed
 from urllib.parse import urlparse
 
 
-from matching.tests.conftest import matching_attempt
 from profiles.models import Coach
 from .models import CoachActionToken, MatchingAttempt, RequestToCoach, MatchingEvent, TriggeredByOptions, ParticipantActionToken
 from .tokens import consume_token
 from matching import services
+from matching.forms import RequestToCoachForm, RequestToCoachUpdateForm
+from matching.utils import build_notifications
 from django.utils import dateparse
 import json
 
@@ -95,12 +95,6 @@ class MatchingAttemptCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateVi
             return self.form_invalid(form)
 
         return redirect(self.object.get_absolute_url())
-    
-       
-        
-
-    def get_success_url(self):
-        return reverse('matching_attempt_detail', kwargs={'pk': self.object.pk})
 
 
 class MatchingAttemptDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailView):
@@ -108,54 +102,40 @@ class MatchingAttemptDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailVi
     template_name = 'matching/matching_attempt_detail.html'
     context_object_name = 'matching_attempt'
 
+    def get_object(self, queryset=None):
+        return (
+            MatchingAttempt.objects
+            .prefetch_related(
+                'coach_requests__email_logs',
+                'coach_requests__slack_logs',
+                'email_logs',
+                'slack_logs',
+            )
+            .get(pk=self.kwargs['pk'])
+        )
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         matching_attempt = self.object
-        # Collect emails (direct on matching + per-request) and slack logs, then merge
-        direct_emails = list(matching_attempt.email_logs.all().select_related('request_to_coach'))
+        # Collect emails and slack logs (direct on matching + per-request) in a single pass
         coach_emails = []
-        for req in matching_attempt.coach_requests.all().select_related('coach'):
-            for email in req.email_logs.all().select_related('request_to_coach'):
-                coach_emails.append(email)
+        coach_slack = []
+        for req in matching_attempt.coach_requests.all():
+            coach_emails.extend(req.email_logs.all())
+            coach_slack.extend(req.slack_logs.all())
         all_emails = sorted(
-            direct_emails + coach_emails,
+            list(matching_attempt.email_logs.all()) + coach_emails,
             key=lambda e: e.sent_at,
             reverse=True,
         )
-        # Slack logs (direct + per-request)
-        direct_slack = list(matching_attempt.slack_logs.all().select_related('to'))
-        coach_slack = []
-        for req in matching_attempt.coach_requests.all().select_related('coach'):
-            for s in req.slack_logs.all().select_related('to'):
-                coach_slack.append(s)
         all_slack = sorted(
-            direct_slack + coach_slack,
+            list(matching_attempt.slack_logs.all()) + coach_slack,
             key=lambda s: s.sent_at,
             reverse=True,
         )
 
         # Build unified notifications list with type markers so template can render both
-        notifications = []
-        for e in all_emails:
-            notifications.append({
-                'type': 'email',
-                'obj': e,
-                'sent_at': e.sent_at,
-            })
-        for s in all_slack:
-            notifications.append({
-                'type': 'slack',
-                'obj': s,
-                'sent_at': s.sent_at,
-            })
-        notifications = sorted(notifications, key=lambda n: n['sent_at'], reverse=True)
-
-        context['all_emails'] = all_emails
-        context['all_slack'] = all_slack
-        context['notifications'] = notifications
-        # context['transitions'] = list(
-        #     matching_attempt.transitions.order_by('-created_at')
-        # )
+        context['notifications'] = build_notifications(all_emails, all_slack)
 
         context['events'] = matching_attempt.matching_events.order_by('-created_at')
         
@@ -191,11 +171,16 @@ class StartMatchingView(LoginRequiredMixin, StaffRequiredMixin, View):
 
     def post(self, request, pk):
         matching_attempt = get_object_or_404(MatchingAttempt, pk=pk)
-        matching_attempt.start_matching(
-            triggered_by_user=request.user,
-        )
-        matching_attempt.save()
-       
+        try:
+            matching_attempt.start_matching(
+                triggered_by_user=request.user,
+            )
+            matching_attempt.save()
+        except TransitionNotAllowed:
+            messages.error(
+                request,
+                f"Matching kann im aktuellen Status '{matching_attempt.get_state_display()}' nicht gestartet werden.",
+            )
         return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
     
 class ResumeMatchingView(LoginRequiredMixin, StaffRequiredMixin, View):
@@ -206,11 +191,16 @@ class ResumeMatchingView(LoginRequiredMixin, StaffRequiredMixin, View):
 
     def post(self, request, pk):
         matching_attempt = get_object_or_404(MatchingAttempt, pk=pk)
-        matching_attempt.resume_matching(
-            triggered_by_user=request.user,
-        )
-        matching_attempt.save()
-       
+        try:
+            matching_attempt.resume_matching(
+                triggered_by_user=request.user,
+            )
+            matching_attempt.save()
+        except TransitionNotAllowed:
+            messages.error(
+                request,
+                f"Matching kann im aktuellen Status '{matching_attempt.get_state_display()}' nicht fortgesetzt werden.",
+            )
         return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
 
 
@@ -229,6 +219,8 @@ class ToggleAutomationView(LoginRequiredMixin, StaffRequiredMixin, View):
             matching_attempt.enable_automation(triggered_by_user=request.user)
         elif action == "disable":
             matching_attempt.disable_automation(triggered_by_user=request.user)
+        else:
+            messages.error(request, f"Unbekannte Aktion: {action!r}.")
 
         return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
 
@@ -257,70 +249,14 @@ class RequestToCoachCreateView(LoginRequiredMixin, StaffRequiredMixin, View):
 
     def post(self, request, pk):
         matching_attempt = get_object_or_404(MatchingAttempt, pk=pk)
-        coach_id = request.POST.get("coach_id", "").strip()
-        max_requests = request.POST.get("max_number_of_requests", "3").strip()
-        posted_priority = request.POST.get("priority", "").strip()
-        ue = request.POST.get("ue", "").strip()
-        
-        errors = {}
+        form = RequestToCoachForm(request.POST, matching_attempt=matching_attempt)
 
-        coach = None
-        if not coach_id:
-            errors["coach"] = "Bitte einen Coach auswählen."
-        else:
-            try:
-                coach = Coach.objects.get(pk=coach_id)
-            except (Coach.DoesNotExist, ValueError):
-                errors["coach"] = "Ungültiger Coach."
-                coach = None
-        # Only check status if coach is valid and no previous coach error
-        if coach and "coach" not in errors:
-            if coach.status != Coach.Status.AVAILABLE:
-                errors["coach"] = f"Coach {coach.full_name} ist derzeit nicht verfügbar (Status: {coach.get_status_display()})."
-
-        if coach and "coach" not in errors:
-            # Double-check that the coach doesn't already have a request for this matching attempt to prevent races
-            if matching_attempt.coach_requests.filter(coach=coach).exists():
-                errors["coach"] = f"Coach {coach.full_name} hat bereits eine Anfrage für dieses Matching."
-
-        try:
-            max_requests = int(max_requests)
-            if max_requests < 1:
-                raise ValueError
-        except (ValueError, TypeError):
-            errors["max_number_of_requests"] = "Muss eine positive Zahl sein."
-
-        # Priority: optional override; must be integer >= 1 and unique per matching_attempt
-        priority = None
-        if posted_priority:
-            try:
-                priority = int(posted_priority)
-                if priority < 1:
-                    raise ValueError
-            except (ValueError, TypeError):
-                errors["priority"] = "Muss eine ganze Zahl >= 1 sein."
-        else:
-            priority = self._next_priority(matching_attempt)
-
-        if "priority" not in errors:
-            existing = list(matching_attempt.coach_requests.values_list("priority", flat=True))
-            if priority in existing:
-                existing_sorted = ", ".join(str(p) for p in sorted(existing)) if existing else "keine"
-                errors["priority"] = (
-                    f"Diese Priorität ist bereits vergeben. Bestehende Prioritäten: {existing_sorted}"
-                )
-                
-        if "ue" not in errors:
-            try:
-                ue = int(ue)
-                if ue < 1:
-                    raise ValueError
-                if ue > matching_attempt.ue:
-                    errors["ue"] = f"Der Coach darf keinen Coaching-Auftrag erhalten, der mehr UE ({ue}) als die insgesamt genehmigten UE ({matching_attempt.ue}) hat."
-            except (ValueError, TypeError):
-                errors["ue"] = "Muss eine positive Zahl sein."
-
-        if errors:
+        if not form.is_valid():
+            # Remap coach_id → coach to match the key the template expects
+            errors = {
+                ('coach' if k == 'coach_id' else k): v[0]
+                for k, v in form.errors.items()
+            }
             available_coaches = Coach.objects.available().select_related('user').order_by('user__last_name', 'user__first_name')
             return render(request, "matching/request_to_coach_form.html", {
                 "pk": pk,
@@ -328,19 +264,20 @@ class RequestToCoachCreateView(LoginRequiredMixin, StaffRequiredMixin, View):
                 "next_priority": self._next_priority(matching_attempt),
                 "errors": errors,
                 "posted_coach_name": request.POST.get("coach_name", ""),
-                "posted_coach_id": coach_id,
+                "posted_coach_id": request.POST.get("coach_id", ""),
                 "posted_max_requests": request.POST.get("max_number_of_requests", "3"),
                 "ue": request.POST.get("ue", ""),
                 "posted_priority": request.POST.get("priority", ""),
                 "available_coaches": available_coaches,
             })
-        # priority has been validated above (either user-supplied or auto-assigned)
+
+        priority = form.cleaned_data['priority'] or self._next_priority(matching_attempt)
         services.create_request_to_coach(
             matching_attempt=matching_attempt,
-            coach=coach,
+            coach=form.coach,
             priority=priority,
-            ue=ue,
-            max_number_of_requests=max_requests,
+            ue=form.cleaned_data['ue'],
+            max_number_of_requests=form.cleaned_data['max_number_of_requests'],
             triggered_by=TriggeredByOptions.STAFF,
             triggered_by_user=request.user,
         )
@@ -350,7 +287,7 @@ class RequestToCoachCreateView(LoginRequiredMixin, StaffRequiredMixin, View):
 
 class RequestToCoachUpdateView(LoginRequiredMixin, StaffRequiredMixin, UpdateView):
     model = RequestToCoach
-    fields = ['priority', 'max_number_of_requests']
+    form_class = RequestToCoachUpdateForm
     template_name = 'matching/request_to_coach_edit.html'
 
     def get_context_data(self, **kwargs):
@@ -364,26 +301,14 @@ class RequestToCoachUpdateView(LoginRequiredMixin, StaffRequiredMixin, UpdateVie
         })
         return context
 
-    def form_valid(self, form):
-        priority = form.cleaned_data.get('priority')
-        if priority is None or int(priority) < 1:
-            form.add_error('priority', 'Muss eine ganze Zahl >= 1 sein.')
-            return self.form_invalid(form)
-
-        matching_attempt = self.object.matching_attempt
-        if matching_attempt.coach_requests.exclude(pk=self.object.pk).filter(priority=priority).exists():
-            existing = matching_attempt.coach_requests.exclude(pk=self.object.pk).values_list('priority', flat=True)
-            existing_sorted = ", ".join(str(p) for p in sorted(existing)) if existing else 'keine'
-            form.add_error('priority', f'Diese Priorität ist bereits vergeben. Bestehende Prioritäten: {existing_sorted}')
-            return self.form_invalid(form)
-
-        response = super().form_valid(form)
-        return response
-
     def get_success_url(self):
         # Prefer explicit `next` parameter (POST or GET) to return to the originating page.
         next_url = self.request.POST.get('next') or self.request.GET.get('next')
-        if next_url:
+        if next_url and url_has_allowed_host_and_scheme(
+            url=next_url,
+            allowed_hosts={self.request.get_host()},
+            require_https=self.request.is_secure(),
+        ):
             return next_url
         return reverse('matching_attempt_detail', kwargs={'pk': self.object.matching_attempt.pk})
 
@@ -393,10 +318,8 @@ class RequestToCoachDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteVie
     template_name = 'matching/request_to_coach_confirm_delete.html'
     
     def post(self, request, *args, **kwargs):
-        from matching.services import create_matching_event
-        
         self.object = self.get_object()
-        create_matching_event(
+        services.create_matching_event(
             matching_attempt=self.object.matching_attempt,
             event_type=MatchingEvent.EventType.RTC_DELETED,
             triggered_by=TriggeredByOptions.STAFF,
@@ -410,17 +333,14 @@ class RequestToCoachDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteVie
     def get_success_url(self):
         # Allow deletion to redirect back to an explicit `next` parameter when present.
         next_url = self.request.POST.get('next') or self.request.GET.get('next')
-        if next_url:
+        if next_url and url_has_allowed_host_and_scheme(
+            url=next_url,
+            allowed_hosts={self.request.get_host()},
+            require_https=self.request.is_secure(),
+        ):
             # Protect against redirecting to the deleted object's detail page.
-            # Accept both absolute and relative URLs by comparing path parts.
-            try:
-                parsed = urlparse(next_url)
-                next_path = parsed.path
-            except Exception:
-                next_path = next_url
-
             own_detail_path = reverse('request_to_coach_detail', kwargs={'pk': self.object.pk})
-            if next_path and next_path != own_detail_path:
+            if urlparse(next_url).path != own_detail_path:
                 return next_url
 
         return reverse('matching_attempt_detail', kwargs={'pk': self.object.matching_attempt.pk})
@@ -430,7 +350,10 @@ class MatchingAttemptListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
     model = MatchingAttempt
     template_name = 'matching/matchings.html'
     context_object_name = 'matching_attempts'
-    
+
+    def get_queryset(self):
+        return MatchingAttempt.objects.select_related('participant', 'bl_contact').order_by('-created_at')
+
 class RequestToCoachDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailView):
     model = RequestToCoach
     template_name = 'matching/request_to_coach_detail.html'
@@ -442,16 +365,9 @@ class RequestToCoachDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailVie
         email_logs = list(self.object.email_logs.order_by('-sent_at').select_related('request_to_coach__coach'))
         slack_logs = list(self.object.slack_logs.order_by('-sent_at').select_related('request_to_coach__coach'))
 
-        notifications = []
-        for e in email_logs:
-            notifications.append({'type': 'email', 'obj': e, 'sent_at': e.sent_at})
-        for s in slack_logs:
-            notifications.append({'type': 'slack', 'obj': s, 'sent_at': s.sent_at})
-        notifications = sorted(notifications, key=lambda n: n['sent_at'], reverse=True)
-
         context['email_logs'] = email_logs
         context['slack_logs'] = slack_logs
-        context['notifications'] = notifications
+        context['notifications'] = build_notifications(email_logs, slack_logs)
 
         context['events'] = list(
             self.object.events.order_by('-created_at')
@@ -633,7 +549,7 @@ class ParticipantRespondView(View):
                 {
                     **base_context,
                     'action': token_instance.action,
-                    'coacing_can_start': coaching_can_start,
+                    'coaching_can_start': coaching_can_start,
                 },
             )
         else:
@@ -643,7 +559,7 @@ class ParticipantRespondView(View):
                 {
                     **base_context,
                     'action': token_instance.action,
-                    'coacing_can_start': coaching_can_start,
+                    'coaching_can_start': coaching_can_start,
                     'bl_contact': matching_attempt.bl_contact,
                 },
             )
@@ -661,7 +577,9 @@ class ConfirmIntroCallView(View):
     2. If token not found → render invalid token page
     3. If token already used (used_at set) → render already used page
     4. If MatchingAttempt already in a terminal state → render already used page with previous status
-    5. Otherwise, transition MatchingAttempt to READY_FOR_START_EMAIL and render success page"""
+    5. Otherwise, log a INTRO_CALL_FEEDBACK_RECEIVED_FROM_COACH event and render success page
+
+    Note: this view does not transition MatchingAttempt state. It only records the event."""
 
 
     # States that mean that the matching has been completed already
@@ -784,27 +702,19 @@ class CancelMatchingView(LoginRequiredMixin, StaffRequiredMixin, View):
        
         return redirect(reverse("matching_attempt_detail", kwargs={"pk": pk}))
     
-class ManualOverrideMatchingView(LoginRequiredMixin, StaffRequiredMixin, TemplateView):
+class ManualOverrideMatchingView(LoginRequiredMixin, StaffRequiredMixin, View):
     """Manually set a matched coach on a MatchingAttempt, bypassing the normal flow. Used for exceptional cases where automation fails or manual intervention is desired.
 
     POST /matching/<pk>/manual_matching_override/
     """
-    
-    template_name = 'matching/manual_matching_override.html'
-    
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        matching_attempt_pk = self.kwargs.get("matching_attempt_pk")
+
+    def get(self, request, matching_attempt_pk):
         matching_attempt = get_object_or_404(MatchingAttempt, pk=matching_attempt_pk)
-        context["matching_attempt"] = matching_attempt
-        context["available_coaches"] = Coach.objects.available().select_related('user').order_by('user__last_name', 'user__first_name')
-        return context
-    
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
-    
-    
+        return render(request, 'matching/manual_matching_override.html', {
+            "matching_attempt": matching_attempt,
+            "available_coaches": Coach.objects.available().select_related('user').order_by('user__last_name', 'user__first_name'),
+        })
+
     def post(self, request, matching_attempt_pk):
         matching_attempt = get_object_or_404(MatchingAttempt, pk=matching_attempt_pk)
         coach_id = request.POST.get("coach_id")

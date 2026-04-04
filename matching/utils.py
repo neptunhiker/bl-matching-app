@@ -41,6 +41,18 @@ def get_deadline(
         return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
     
 
+def build_notifications(email_logs, slack_logs):
+    """Merge email and slack log lists into a single time-sorted notifications list.
+
+    Each entry is a dict with keys: 'type' ('email'|'slack'), 'obj', 'sent_at'.
+    """
+    notifications = (
+        [{'type': 'email', 'obj': e, 'sent_at': e.sent_at} for e in email_logs]
+        + [{'type': 'slack', 'obj': s, 'sent_at': s.sent_at} for s in slack_logs]
+    )
+    return sorted(notifications, key=lambda n: n['sent_at'], reverse=True)
+
+
 def get_urgency_message(participant: Participant, current_date: datetime.date = timezone.now().date(), start_date: datetime.date = None):
     """Generate an urgency message for the coach based on how soon the coaching should start."""
     
