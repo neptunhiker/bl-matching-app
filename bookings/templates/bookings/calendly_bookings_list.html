@@ -4,107 +4,62 @@
 {% block title %}Calendly Buchungen{% endblock %}
 
 {% block body %}
-<div class="max-w-5xl mx-auto px-4 py-10">
-	<div class="mb-8">
-		<h1 class="text-2xl sm:text-3xl font-semibold ">Calendly Buchungen</h1>
-		<p class="text-sm text-purple-700/70 mt-1">
-			{{ bookings|length }} Eintrag{{ bookings|length|pluralize:",e" }}
-		</p>
-	</div>
+<div class="max-w-5xl mx-auto px-4 sm:px-6 py-10">
 
-	{% if bookings %}
-		<div class="hidden md:block bg-white/75 backdrop-blur-sm rounded-2xl shadow-sm overflow-hidden">
-			<table class="min-w-full">
-				<thead class="bg-primary-100/70 border-b border-primary-200/60">
-					<tr>
-						<th class="text-left text-xs uppercase tracking-wide text-purple-800/80 font-semibold px-6 py-4">Person</th>
-						<th class="text-left text-xs uppercase tracking-wide text-purple-800/80 font-semibold px-6 py-4">Datum</th>
-						<th class="text-left text-xs uppercase tracking-wide text-purple-800/80 font-semibold px-6 py-4">Uhrzeit</th>
-						<th class="text-left text-xs uppercase tracking-wide text-purple-800/80 font-semibold px-6 py-4">Status</th>
-					</tr>
-				</thead>
-				<tbody class="divide-y divide-primary-100/70">
-					{% for booking in bookings %}
-						<tr class="hover:bg-white/60 transition-colors">
-							<td class="px-6 py-4 text-sm text-purple-950 font-medium">
-								{{ booking.invitee_name|default:booking.invitee_email }}
-							</td>
-							<td class="px-6 py-4 text-sm text-purple-900/90">
-								{% if booking.start_time %}
-									{{ booking.start_time|localtime|date:"d.m.Y" }}
-								{% else %}
-									-
-								{% endif %}
-							</td>
-							<td class="px-6 py-4 text-sm text-purple-900/90">
-								{% if booking.start_time %}
-									{{ booking.start_time|localtime|date:"H:i" }}
-								{% else %}
-									-
-								{% endif %}
-							</td>
-							<td class="px-6 py-4">
-								<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
-									{% if booking.status == 'active' %}
-										bg-green-100 text-green-800
-									{% elif booking.status == 'canceled' %}
-										bg-red-100 text-red-700
-									{% else %}
-										bg-neutral-100 text-neutral-700
-									{% endif %}">
-									{{ booking.status|default:"unknown"|title }}
-								</span>
-							</td>
-						</tr>
-					{% endfor %}
-				</tbody>
-			</table>
-		</div>
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-semibold text-tertiary-700">Calendly Buchungen</h1>
+      <p class="text-sm text-neutral-500 mt-1">{{ bookings|length }} Einträge insgesamt</p>
+    </div>
+  </div>
 
-		<div class="md:hidden space-y-3">
-			{% for booking in bookings %}
-				<div class="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm px-4 py-4">
-					<div class="flex items-start justify-between gap-3">
-						<p class="text-sm font-semibold text-purple-950 leading-tight">
-							{{ booking.invitee_name|default:booking.invitee_email }}
-						</p>
-						<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap
-							{% if booking.status == 'active' %}
-								bg-green-100 text-green-800
-							{% elif booking.status == 'canceled' %}
-								bg-red-100 text-red-700
-							{% else %}
-								bg-neutral-100 text-neutral-700
-							{% endif %}">
-							{{ booking.status|default:"unknown"|title }}
-						</span>
-					</div>
+  {% if bookings %}
+  <div class="bg-white/70 rounded-2xl shadow-sm overflow-hidden border border-white/60">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-primary-50 text-tertiary-700">
+          <th class="px-5 py-3 font-semibold text-left">Name</th>
+          <th class="px-5 py-3 font-semibold text-left">Termin</th>
+          <th class="px-5 py-3 font-semibold text-left">Status</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-neutral-100">
+        {% for booking in bookings %}
+        <tr class="hover:bg-primary-50/50 transition-colors text-left cursor-pointer"
+            onclick="window.location='{% url 'calendly_booking_detail' booking.pk %}'">
+          <td class="px-5 py-3 font-medium text-tertiary-700">
+            <a href="{% url 'calendly_booking_detail' booking.pk %}"
+               class="hover:text-primary-600 transition-colors">
+              {{ booking.invitee_name|default:booking.invitee_email }}
+            </a>
+          </td>
+          <td class="px-5 py-3 text-neutral-600">
+            {% if booking.start_time %}
+              {{ booking.start_time|localtime|date:"d.m.Y" }}, {{ booking.start_time|localtime|date:"H:i" }} Uhr
+            {% else %}
+              –
+            {% endif %}
+          </td>
+          <td class="px-5 py-3">
+            {% if booking.status == 'active' %}
+              <span class="inline-flex items-center gap-1 text-green-600">Aktiv</span>
+            {% elif booking.status == 'canceled' %}
+              <span class="inline-flex items-center gap-1 text-red-600">Storniert</span>
+            {% else %}
+              <span class="inline-flex items-center gap-1 text-neutral-500">{{ booking.status|title }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
-					<div class="mt-3 flex items-center gap-5 text-sm text-purple-900/90">
-						<p>
-							<span class="text-purple-700/70">Datum:</span>
-							{% if booking.start_time %}
-								{{ booking.start_time|localtime|date:"d.m.Y" }}
-							{% else %}
-								-
-							{% endif %}
-						</p>
-						<p>
-							<span class="text-purple-700/70">Uhrzeit:</span>
-							{% if booking.start_time %}
-								{{ booking.start_time|localtime|date:"H:i" }}
-							{% else %}
-								-
-							{% endif %}
-						</p>
-					</div>
-				</div>
-			{% endfor %}
-		</div>
-	{% else %}
-		<div class="bg-white/70 backdrop-blur-sm rounded-2xl shadow-sm px-8 py-16 text-center">
-			<p class="text-purple-700/70 text-lg">Noch keine Calendly Buchungen vorhanden.</p>
-		</div>
-	{% endif %}
+  {% else %}
+  <div class="bg-white/70 rounded-2xl shadow-sm border border-white/60 px-8 py-16 text-center">
+    <p class="text-neutral-500 text-sm">Noch keine Calendly Buchungen vorhanden.</p>
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}

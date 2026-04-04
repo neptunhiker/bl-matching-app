@@ -8,7 +8,7 @@ import time
 from django.conf import settings
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import ListView
+from django.views.generic import ListView, DetailView
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -266,3 +266,11 @@ class CalendlyBookingsListView(LoginRequiredMixin, StaffRequiredMixin, ListView)
             CalendlyBooking.objects
             .order_by("-start_time", "-created_at")
         )
+
+
+class CalendlyBookingDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailView):
+    """Staff-only detail view of a single Calendly booking."""
+
+    model = CalendlyBooking
+    template_name = "bookings/calendly_booking_detail.html"
+    context_object_name = "booking"
