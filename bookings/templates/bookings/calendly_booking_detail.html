@@ -86,16 +86,13 @@
         {# Questions & Answers #}
         {% if booking.questions_and_answers %}
         <div class="pt-6">
-          <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-4">Fragen &amp; Antworten</p>
-          <div class="space-y-1">
+          <p class="text-xs font-medium uppercase tracking-widest text-primary-500 mb-4">Fragen &amp; Antworten</p>
+          <div class="space-y-6">
             {% for qa in booking.questions_and_answers %}
-            <details class="group border-b border-neutral-100 py-3">
-              <summary class="cursor-pointer list-none flex items-center justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
-                <span class="text-sm font-semibold text-neutral-700">{{ qa.question|default:"Frage" }}</span>
-                <span class="text-neutral-300 group-open:rotate-180 transition-transform motion-reduce:transition-none shrink-0 select-none">⌄</span>
-              </summary>
-              <p class="mt-3 pb-1 text-sm leading-7 text-neutral-600 whitespace-pre-wrap max-w-[68ch]">{{ qa.answer|default:"–" }}</p>
-            </details>
+            <div class="bg-primary-50 rounded-lg px-4 py-4">
+              <p class="text-xs font-medium uppercase tracking-widest text-primary-600 mb-2">{{ qa.question|default:"Frage" }}</p>
+              <p class="text-sm leading-7 text-neutral-800 whitespace-pre-wrap max-w-[68ch]">{{ qa.answer|default:"–" }}</p>
+            </div>
             {% endfor %}
           </div>
         </div>
