@@ -39,6 +39,7 @@ def handle_matching_started_or_resumed_event(event):
     else:
         logger.debug(f"No RTC in preparation state found for MatchingAttempt {event.matching_attempt.id} at matching started event")
 
+@transaction.atomic
 def handle_rtq_sent_event(event):
     from matching.models import RequestToCoach
     from matching.models import MatchingEvent
@@ -85,6 +86,7 @@ def handle_rtc_reminder_sent_to_coach_event(event):
         raise ValueError(f"Unsupported communication channel for coach {coach}: {coach.preferred_communication_channel}")
     
     
+@transaction.atomic
 def handle_matching_request_accepted_event(event):
     from matching.models import MatchingEvent
     from matching import services
@@ -107,6 +109,7 @@ def handle_matching_request_accepted_event(event):
         services.continue_matching_after_rtc_accepted(matching_attempt)
 
         
+@transaction.atomic
 def handle_matching_request_declined_event(event):
     from matching.models import MatchingEvent, TriggeredByOptions
     from matching import services
@@ -320,6 +323,7 @@ def handle_clarification_need_info_to_coach_event(event):
         raise ValueError(f"Unsupported communication channel for coach {coach}: {coach.preferred_communication_channel}")
     
     
+@transaction.atomic
 def handle_all_rtcs_declined_event(event):
     from matching.models import MatchingEvent, TriggeredByOptions
     

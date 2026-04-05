@@ -760,7 +760,6 @@ def test_rtc_create_post_valid(client, staff_user, matching_attempt, coach, monk
         'coach_id': str(coach.pk),
         'ue': 40,
         'priority': 10,
-        'max_number_of_requests': 3,
     })
     assert r.status_code == 302
     assert r['Location'] == reverse('matching_attempt_detail', kwargs={'pk': matching_attempt.pk})
@@ -770,7 +769,7 @@ def test_rtc_create_post_valid(client, staff_user, matching_attempt, coach, monk
 def test_rtc_create_post_invalid_missing_coach(client, staff_user, matching_attempt):
     client.force_login(staff_user)
     url = reverse('request_to_coach_create', kwargs={'pk': matching_attempt.pk})
-    r = client.post(url, data={'ue': 40, 'priority': 10, 'max_number_of_requests': 3})
+    r = client.post(url, data={'ue': 40, 'priority': 10})
     assert r.status_code == 200
     assert 'errors' in r.context
     assert 'coach' in r.context['errors']
@@ -811,20 +810,19 @@ def test_toggle_automation_invalid_action(client, staff_user, matching_attempt):
 def test_rtc_update_post_valid(client, staff_user, rtc):
     client.force_login(staff_user)
     url = reverse('request_to_coach_edit', kwargs={'pk': rtc.pk})
-    r = client.post(url, data={'priority': 30, 'max_number_of_requests': 5})
+    r = client.post(url, data={'priority': 30})
     assert r.status_code == 302
     assert r['Location'] == reverse('matching_attempt_detail', kwargs={'pk': rtc.matching_attempt.pk})
     from matching.models import RequestToCoach
     updated = RequestToCoach.objects.get(pk=rtc.pk)
     assert updated.priority == 30
-    assert updated.max_number_of_requests == 5
 
 
 @pytest.mark.django_db
 def test_rtc_update_post_with_next_param(client, staff_user, rtc):
     client.force_login(staff_user)
     url = reverse('request_to_coach_edit', kwargs={'pk': rtc.pk})
-    r = client.post(url, data={'priority': 30, 'max_number_of_requests': 3, 'next': '/matchings/'})
+    r = client.post(url, data={'priority': 30, 'next': '/matchings/'})
     assert r.status_code == 302
     assert r['Location'] == '/matchings/'
 

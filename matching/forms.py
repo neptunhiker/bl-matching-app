@@ -7,15 +7,11 @@ from .models import RequestToCoach
 class RequestToCoachUpdateForm(forms.ModelForm):
     class Meta:
         model = RequestToCoach
-        fields = ['priority', 'max_number_of_requests']
+        fields = ['priority']
         error_messages = {
             'priority': {
                 'invalid': "Muss eine ganze Zahl >= 1 sein.",
                 'min_value': "Muss eine ganze Zahl >= 1 sein.",
-            },
-            'max_number_of_requests': {
-                'invalid': "Muss eine positive Zahl sein.",
-                'min_value': "Muss eine positive Zahl sein.",
             },
         }
 
@@ -33,14 +29,6 @@ class RequestToCoachUpdateForm(forms.ModelForm):
 class RequestToCoachForm(forms.Form):
     coach_id = forms.CharField(
         required=False,
-    )
-    max_number_of_requests = forms.IntegerField(
-        min_value=1,
-        error_messages={
-            'invalid': "Muss eine positive Zahl sein.",
-            'min_value': "Muss eine positive Zahl sein.",
-            'required': "Muss eine positive Zahl sein.",
-        },
     )
     priority = forms.IntegerField(
         min_value=1,

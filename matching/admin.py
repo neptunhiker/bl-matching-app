@@ -39,10 +39,10 @@ class MatchingAttemptAdmin(admin.ModelAdmin):
     
 @admin.register(RequestToCoach)
 class RequestToCoachAdmin(admin.ModelAdmin):
-    list_display = ['id', 'matching_attempt', 'coach', 'state', 'priority', 'first_sent_at', 'deadline_at']
+    list_display = ['id', 'matching_attempt', 'coach', 'state', 'priority', 'deadline_at']
     list_filter = ['state', 'priority']
     search_fields = ['matching_attempt__participant__first_name', 'matching_attempt__participant__last_name', 'matching_attempt__participant__email', 'coach__user__email']
-    ordering = ['-first_sent_at']
+    ordering = ['-created_at']
     exclude = ['state']
     
       

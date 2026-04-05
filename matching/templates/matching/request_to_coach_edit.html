@@ -34,14 +34,6 @@
           {% endif %}
         </div>
 
-        <div class="mb-6">
-          <label for="id_max_number_of_requests" class="block text-sm font-semibold text-neutral-700 mb-1">Max. Anzahl Anfragen</label>
-          {{ form.max_number_of_requests }}
-          {% if form.max_number_of_requests.errors %}
-            <p class="text-xs text-red-500">{{ form.max_number_of_requests.errors.0 }}</p>
-          {% endif %}
-        </div>
-
         <div class="flex items-center gap-3">
           <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-primary-600 text-white">Speichern</button>
           {% if request.GET.next %}

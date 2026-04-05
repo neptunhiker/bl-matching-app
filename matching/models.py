@@ -36,14 +36,7 @@ class TriggeredByOptions(models.TextChoices):
     PARTICIPANT = "participant", "Teilnehmer:in"
 
 class MatchingAttemptQuerySet(models.QuerySet):
-
-        
-    def eligible_for_start_info_notification(self):
-        return self.filter(
-            state=MatchingAttempt.State.READY_FOR_START_NOTIFICATION,
-            coaching_start_info_sent_at__isnull=True,
-            automation_enabled=True,
-        )
+    pass
 
 class MatchingAttempt(models.Model):
     class State(models.TextChoices):
@@ -52,7 +45,6 @@ class MatchingAttempt(models.Model):
         AWAITING_INTRO_CALL_FEEDBACK_FROM_COACH = "awaiting_intro_call_feedback_from_coach", "Warten auf Coach-Antwort zu Intro-Call Anfrage"
         AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT = "awaiting_intro_call_feedback_from_participant", "Warten auf TN-Antwort zu Intro-Call"
         CLARIFICATION_WITH_PARTICIPANT_NEEDED = "clarification_with_participant_needed", "Klärung mit TN nötig"
-        READY_FOR_START_NOTIFICATION = "ready_for_start_notification", "Bereit für Coaching-Start-Benachrichtigung"
         MATCHING_COMPLETED = "matching_completed", "Matching abgeschlossen"
         FAILED = "failed", "Keinen Coach gefunden"
         CANCELLED = "cancelled", "Matching abgebrochen"
@@ -64,7 +56,6 @@ class MatchingAttempt(models.Model):
         State.AWAITING_INTRO_CALL_FEEDBACK_FROM_COACH,
         State.AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT,
         State.CLARIFICATION_WITH_PARTICIPANT_NEEDED,
-        State.READY_FOR_START_NOTIFICATION,
     ]
 
     TERMINAL_STATES = [
@@ -149,12 +140,6 @@ class MatchingAttempt(models.Model):
         help_text="Zeitpunkt, zu dem der/die Teilnehmer:in und der Coach Infos für ein Kennenlerngespräch (Intro-Call) erhalten haben."
     )
     
-    coaching_start_info_sent_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Zeitpunkt, zu dem der/die Teilnehmer:in und der Coach eine Info zum Start des Coachings erhalten haben."
-    )
-    
     cancelled_at = models.DateTimeField(null=True, blank=True)
     
     objects = MatchingAttemptQuerySet.as_manager()
@@ -224,13 +209,12 @@ class MatchingAttempt(models.Model):
     # -------------------------------------------------------
         
     @transition(field=state, source=State.IN_PREPARATION, target=State.AWAITING_RTC_REPLY)
-    def start_matching(self, triggered_by_user: User):
-        
-        services.trigger_start_matching(self, triggered_by_user)
+    def start_matching(self):
+        pass
         
     @transition(field=state, source=State.FAILED, target=State.AWAITING_RTC_REPLY)
-    def resume_matching(self, triggered_by_user: User):  
-        services.trigger_resume_matching(self, triggered_by_user)
+    def resume_matching(self):
+        pass
     
     @transition(field=state, source=State.AWAITING_RTC_REPLY, target=State.AWAITING_INTRO_CALL_FEEDBACK_FROM_COACH)
     def send_intro_call_notifications(self):
@@ -363,12 +347,6 @@ class RequestToCoach(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    requests_sent = models.PositiveIntegerField(default=0)
-    max_number_of_requests = models.PositiveIntegerField(default=3)
-
-    first_sent_at = models.DateTimeField(null=True, blank=True)
-    last_sent_at = models.DateTimeField(null=True, blank=True)
-
     responded_at = models.DateTimeField(null=True, blank=True)
 
     
@@ -465,9 +443,6 @@ class RequestToCoach(models.Model):
 
     @transition(field=state, source=State.AWAITING_REPLY, target=State.ACCEPTED)
     def accept(self, on_time: bool) -> "RequestToCoach":
-        if on_time:
-            self.matching_attempt.matched_coach = self.coach
-            
         return self
 
 

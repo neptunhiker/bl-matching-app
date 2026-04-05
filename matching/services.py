@@ -44,7 +44,7 @@ def create_matching_attempt(participant, ue, bl_contact, created_by):
 
     return attempt
   
-def create_request_to_coach(matching_attempt, coach: Coach, priority: int, ue: int, triggered_by: str, triggered_by_user: User = None, max_number_of_requests: int = 3):
+def create_request_to_coach(matching_attempt, coach: Coach, priority: int, ue: int, triggered_by: str, triggered_by_user: User = None):
     
     from matching.models import RequestToCoach, MatchingEvent
     
@@ -64,7 +64,6 @@ def create_request_to_coach(matching_attempt, coach: Coach, priority: int, ue: i
             coach=coach,
             priority=priority,
             ue=ue,
-            max_number_of_requests=max_number_of_requests,
         )
         
         create_matching_event(
@@ -224,11 +223,13 @@ def accept_or_decline_request_to_coach(rtc, accept: bool, response_time: datetim
             if accept:
                 event_type = MatchingEvent.EventType.RTC_ACCEPTED
                 rtc.accept(on_time=on_time)
+                rtc.save()  # Ensure RTC state change is saved before event is created
+                rtc.matching_attempt.matched_coach = rtc.coach
+                rtc.matching_attempt.save(update_fields=["matched_coach"])
             else:
                 event_type = MatchingEvent.EventType.RTC_DECLINED
                 rtc.reject()
-                
-            rtc.save()  # Ensure state change is saved before event is created
+                rtc.save()  # Ensure RTC state change is saved before event is created
 
             create_matching_event(
                 matching_attempt=rtc.matching_attempt,

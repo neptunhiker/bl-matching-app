@@ -1,6 +1,6 @@
 from matching.models import MatchingEvent
 from matching.handlers import notification_handlers
-from matching.handlers import state_hanlders
+from matching.handlers import state_handlers
 
 def dispatch_event(event: MatchingEvent):
     handlers = {

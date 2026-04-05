@@ -3,7 +3,7 @@ from django.db.models import Max, Q, Prefetch
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -18,6 +18,7 @@ from urllib.parse import urlparse
 from profiles.models import Coach
 from .models import CoachActionToken, MatchingAttempt, RequestToCoach, MatchingEvent, TriggeredByOptions, ParticipantActionToken
 from .tokens import consume_token
+from . import services
 from matching import services
 from matching.forms import RequestToCoachForm, RequestToCoachUpdateForm
 from matching.utils import build_notifications
@@ -181,11 +182,11 @@ class StartMatchingView(LoginRequiredMixin, StaffRequiredMixin, View):
     def post(self, request, pk):
         matching_attempt = get_object_or_404(MatchingAttempt, pk=pk)
         try:
-            matching_attempt.start_matching(
-                triggered_by_user=request.user,
-            )
-            matching_attempt.save()
-        except TransitionNotAllowed:
+            with transaction.atomic():
+                matching_attempt.start_matching()
+                matching_attempt.save()
+                services.trigger_start_matching(matching_attempt, request.user)
+        except (TransitionNotAllowed, ValidationError):
             messages.error(
                 request,
                 f"Matching kann im aktuellen Status '{matching_attempt.get_state_display()}' nicht gestartet werden.",
@@ -201,11 +202,11 @@ class ResumeMatchingView(LoginRequiredMixin, StaffRequiredMixin, View):
     def post(self, request, pk):
         matching_attempt = get_object_or_404(MatchingAttempt, pk=pk)
         try:
-            matching_attempt.resume_matching(
-                triggered_by_user=request.user,
-            )
-            matching_attempt.save()
-        except TransitionNotAllowed:
+            with transaction.atomic():
+                matching_attempt.resume_matching()
+                matching_attempt.save()
+                services.trigger_resume_matching(matching_attempt, request.user)
+        except (TransitionNotAllowed, ValidationError):
             messages.error(
                 request,
                 f"Matching kann im aktuellen Status '{matching_attempt.get_state_display()}' nicht fortgesetzt werden.",
@@ -274,7 +275,6 @@ class RequestToCoachCreateView(LoginRequiredMixin, StaffRequiredMixin, View):
                 "errors": errors,
                 "posted_coach_name": request.POST.get("coach_name", ""),
                 "posted_coach_id": request.POST.get("coach_id", ""),
-                "posted_max_requests": request.POST.get("max_number_of_requests", "3"),
                 "ue": request.POST.get("ue", ""),
                 "posted_priority": request.POST.get("priority", ""),
                 "available_coaches": available_coaches,
@@ -286,7 +286,6 @@ class RequestToCoachCreateView(LoginRequiredMixin, StaffRequiredMixin, View):
             coach=form.coach,
             priority=priority,
             ue=form.cleaned_data['ue'],
-            max_number_of_requests=form.cleaned_data['max_number_of_requests'],
             triggered_by=TriggeredByOptions.STAFF,
             triggered_by_user=request.user,
         )

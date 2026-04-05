@@ -75,7 +75,6 @@ INSTALLED_APPS = [
     'profiles.apps.ProfilesConfig',
     'emails.apps.EmailsConfig',
     'matching.apps.MatchingConfig',
-    'notifications.apps.NotificationsConfig',
     'slack.apps.SlackConfig',
 ]
 MIDDLEWARE = [
