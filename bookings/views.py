@@ -164,6 +164,37 @@ def calendly_webhook(request):
 
     logger.info("[CALENDLY] Event type: %s", event)
 
+    # --- Environment-based event filtering ---
+    # Staff prefix their answer to "Hier kannst du uns dein Anliegen mitteilen:"
+    # with "test" (case-insensitive) to mark an event as a staging test.
+    # Staging only processes test events; production rejects them.
+    _TEST_QUESTION = "Hier kannst du uns dein Anliegen mitteilen:"
+    _qa_list = invitee_data.get("questions_and_answers") or []
+    _anliegen_answer = next(
+        (
+            (qa.get("answer") or "")
+            for qa in _qa_list
+            if (qa.get("question") or "").strip() == _TEST_QUESTION
+        ),
+        "",
+    )
+    is_test_event = _anliegen_answer.strip()[:4].lower() == "test"
+    environment = getattr(settings, "ENVIRONMENT", "development")
+
+    if environment == "production" and is_test_event:
+        logger.info(
+            "[CALENDLY] Ignoring test event on production (answer prefix=%r). Returning 200.",
+            _anliegen_answer[:10],
+        )
+        return JsonResponse({"detail": "Test event ignored on production."})
+
+    if environment == "staging" and not is_test_event and event in {"invitee.created", "invitee.canceled"}:
+        logger.info(
+            "[CALENDLY] Ignoring non-test event on staging (answer prefix=%r). Returning 200.",
+            _anliegen_answer[:10],
+        )
+        return JsonResponse({"detail": "Only test events are processed on staging."})
+
     safe_summary = build_safe_webhook_summary(
         payload=payload,
         invitee_data=invitee_data,
