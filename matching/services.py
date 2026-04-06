@@ -179,34 +179,6 @@ def trigger_resume_matching(matching_attempt, triggered_by_user):
     )
 
 
-def trigger_matching_notification_to_coach(rtc, triggered_by, triggered_by_user):
-    from matching.models import MatchingEvent
-    
-    if rtc.deadline_at is not None:
-        raise ValueError("Cannot trigger notification for RTC that already has a deadline (already sent)")
-    
-    if rtc.state != rtc.State.IN_PREPARATION:
-        raise ValueError("Cannot trigger notification for RTC that is not active")
-    
-    if rtc.coach is None:
-        raise ValueError("Cannot trigger notification for RTC without a coach")
-    
-    rtc.send_first_request()
-    rtc.save()  # Ensure state change is saved before event is created
-
-    create_matching_event(
-        matching_attempt=rtc.matching_attempt,
-        event_type=MatchingEvent.EventType.RTC_SENT_TO_COACH,
-        triggered_by=triggered_by,
-        triggered_by_user=triggered_by_user,
-        payload={
-            "rtc_id": str(rtc.id),
-            "coach_id": str(rtc.coach_id) if rtc.coach_id is not None else None,
-            "deadline_at": rtc.deadline_at.isoformat(),
-        }
-    )
-
-
 def accept_or_decline_request_to_coach(rtc, accept: bool, response_time: datetime.datetime, responded_by_user: User):
     from matching.models import MatchingEvent, TriggeredByOptions
     from matching.services import create_matching_event

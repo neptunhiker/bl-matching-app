@@ -1,8 +1,28 @@
+import logging
+
 from matching.models import MatchingEvent
 from matching.handlers import notification_handlers
 from matching.handlers import state_handlers
 
+logger = logging.getLogger(__name__)
+
+
 def dispatch_event(event: MatchingEvent):
+    """
+    Routes a MatchingEvent to its registered handlers.
+
+    Automation gate: if automation_enabled is False on the underlying
+    MatchingAttempt, dispatch is skipped entirely. No exceptions —
+    when automation is off, nothing happens.
+    """
+    if not event.matching_attempt.automation_enabled:
+        logger.info(
+            "Automation disabled for MatchingAttempt %s — skipping dispatch for event %s",
+            event.matching_attempt_id,
+            event.event_type,
+        )
+        return
+
     handlers = {
         MatchingEvent.EventType.STARTED: [
             notification_handlers.handle_matching_started_or_resumed_event,
