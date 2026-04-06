@@ -107,7 +107,7 @@ def send_first_coach_request_slack(rtc):
                 "type": "mrkdwn",
                 "text": (
                     f"Gute Neuigkeiten, {coach.first_name}! Hättest du Lust, dieses Coaching zu übernehmen?\n\n"
-                    f"*Teilnehmer:in:* {participant}\n"
+                    f"*Coaching mit:* {participant}\n"
                     f"*Unterrichtseinheiten:* {ue}\n"
                     f"*Startdatum:* {start_date.strftime('%d.%m.%Y')}\n\n"
                 )
@@ -395,7 +395,7 @@ def send_intro_call_request_slack(matching_attempt):
                 "type": "mrkdwn",
                 "text": (
                     f"*① Bitte vereinbare ein Kennenlerngespräch mit {participant.first_name}*\n"
-                    f"*{participant.first_name}* weiß bereits Bescheid und wartet darauf, von Dir zu hören 🙂. "
+                    f"*{participant.first_name}* weiß bereits Bescheid und wartet darauf, von Dir zu hören 🙂.\n"
                     f"📧 `{participant.email}`"
                 )
             }
@@ -833,7 +833,7 @@ def send_clarification_need_info_to_coach_slack(matching_attempt):
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"Wir meldens uns jetzt erstmal bei *{participant.first_name}* und klären, was genau noch offen ist. Wir melden uns dann anschließend wieder bei dir. "
+                    f"Wir melden uns jetzt erstmal bei *{participant.first_name}* und klären, was genau noch offen ist. Wir melden uns dann anschließend wieder bei dir. "
                 )
             }
         },
