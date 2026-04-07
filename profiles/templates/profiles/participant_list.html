@@ -39,15 +39,11 @@
           <td class="px-5 py-3 text-neutral-600">{{ participant.start_date|date:"d.m.Y" }}</td>
           {% if participant.avgs_data_docs_available %}
           <td class="px-5 py-3">
-            <span class="inline-flex items-center gap-1 text-green-600">
-              Ja
-            </span>
+            <span class="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">Ja</span>
           </td>
           {% else %}
           <td class="px-5 py-3">
-            <span class="inline-flex items-center gap-1 text-red-600">
-              Nein
-            </span>
+            <span class="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">Nein</span>
           </td>
           {% endif %}
 

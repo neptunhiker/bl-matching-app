@@ -24,15 +24,6 @@
       </h1>
       <p class="mt-1.5 text-sm text-neutral-500">{{ coach.email }}</p>
       <div class="mt-3 flex flex-wrap items-center gap-2">
-      {% if coach.preferred_communication_channel == 'slack' %}
-          <span class="inline-flex h-5 w-5 items-center justify-center rounded " aria-label="Slack" title="Bevorzugt Slack">
-            <img src="{% static 'icons/slack.svg' %}" alt="Slack" class="h-3 w-3" />
-          </span>
-        {% else %}
-          <span class="inline-flex h-5 w-5 items-center justify-center rounded " aria-label="E-Mail" title="Bevorzugt E-Mail">
-            <img src="{% static 'icons/envelope.svg' %}" alt="E-Mail" class="h-3 w-3" />
-          </span>
-        {% endif %}
         {% if coach.status == 'available' %}
           {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="success" %}
         {% elif coach.status == 'inactive' %}
@@ -44,6 +35,9 @@
         {% endif %}
         {% if coach.maximum_capacity %}
           <span class="text-xs bg-neutral-100 border rounded-xl p-1">max. {{ coach.maximum_capacity }} Coachings</span>
+        {% endif %}
+        {% if coach.city %}
+          <span class="text-xs bg-neutral-100 border rounded-xl p-1">{{ coach.city }}</span>
         {% endif %}
         
       </div>
@@ -72,42 +66,20 @@
   {# Body #}
   <div class="mt-8 space-y-8">
 
-    {# Key fields #}
-    <dl class="grid grid-cols-1 sm:grid-cols-3 gap-y-6 gap-x-8">
-      <div>
-        <dt class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-1.5">Stadt</dt>
-        <dd class="text-sm text-neutral-700">{{ coach.city|default:"—" }}</dd>
-      </div>
-      <div>
-        <dt class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-1.5">LinkedIn</dt>
-        <dd class="text-sm">
-          {% if coach.linkedin_url %}
-            <a href="{{ coach.linkedin_url }}" target="_blank" rel="noopener noreferrer"
-               class="text-primary-600 hover:underline underline-offset-2 break-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
-              {{ coach.linkedin_url }}
-            </a>
-          {% else %}
-            <span class="text-neutral-400">—</span>
-          {% endif %}
-        </dd>
-      </div>
-      <div>
-        <dt class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-1.5">Website</dt>
-        <dd class="text-sm">
-          {% if coach.website_url %}
-            <a href="{{ coach.website_url }}" target="_blank" rel="noopener noreferrer"
-               class="text-primary-600 hover:underline underline-offset-2 break-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
-              {{ coach.website_url }}
-            </a>
-          {% else %}
-            <span class="text-neutral-400">—</span>
-          {% endif %}
-        </dd>
-      </div>
-    </dl>
-
     {# Languages + Formats #}
-    <div class="border-t border-neutral-100 pt-8 grid grid-cols-1 sm:grid-cols-2 gap-8 ">
+    <div class=" grid grid-cols-1 sm:grid-cols-3 gap-8">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Kommunikation über</p>
+        <div class="flex items-center gap-2">
+          {% if coach.preferred_communication_channel == 'slack' %}
+            <img src="{% static 'icons/slack.svg' %}" alt="Slack" class="h-4 w-4" />
+            <span class="text-sm text-neutral-700">Slack</span>
+          {% else %}
+            <img src="{% static 'icons/envelope.svg' %}" alt="E-Mail" class="h-4 w-4" />
+            <span class="text-sm text-neutral-700">E-Mail</span>
+          {% endif %}
+        </div>
+      </div>
       <div>
         <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Sprachen</p>
         <div class="flex flex-wrap gap-1.5">
@@ -137,38 +109,59 @@
       </div>
     </div>
 
-    {# Expandable sections #}
-    <div class="border-t border-neutral-100 pt-2">
-      <details class="group border-b border-neutral-100 py-4">
-        <summary class="cursor-pointer list-none flex items-center justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
-          <span class="text-sm font-semibold text-neutral-700">Coaching-Stil</span>
-          <span class="text-neutral-300 group-open:rotate-180 transition-transform motion-reduce:transition-none shrink-0 select-none">⌄</span>
-        </summary>
-        <p class="mt-3 pb-1 text-sm leading-7 text-neutral-600 whitespace-pre-wrap max-w-[68ch]">{{ coach.coaching_style|default:"—" }}</p>
-      </details>
+    {# Text sections #}
+    <div class="space-y-6">
+      <div class="bg-primary-50 rounded-lg px-4 py-4">
+        <p class="text-xs font-medium uppercase tracking-widest text-primary-600 mb-2">Biografie</p>
+        <p class="text-sm leading-7 text-neutral-800 whitespace-pre-wrap max-w-[68ch]">{{ coach.bio|default:"—" }}</p>
+      </div>
 
-      <details class="group border-b border-neutral-100 py-4">
-        <summary class="cursor-pointer list-none flex items-center justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
-          <span class="text-sm font-semibold text-neutral-700">Biografie</span>
-          <span class="text-neutral-300 group-open:rotate-180 transition-transform motion-reduce:transition-none shrink-0 select-none">⌄</span>
-        </summary>
-        <p class="mt-3 pb-1 text-sm leading-7 text-neutral-600 whitespace-pre-wrap max-w-[68ch]">{{ coach.bio|default:"—" }}</p>
-      </details>
+      <div class="bg-primary-50 rounded-lg px-4 py-4">
+        <p class="text-xs font-medium uppercase tracking-widest text-primary-600 mb-2">Coaching-Stil</p>
+        <p class="text-sm leading-7 text-neutral-800 whitespace-pre-wrap max-w-[68ch]">{{ coach.coaching_style|default:"—" }}</p>
+      </div>
 
-      <details class="group py-4">
-        <summary class="cursor-pointer list-none flex items-center justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
-          <span class="text-sm font-semibold text-neutral-700">Status-Kommentar</span>
-          <span class="text-neutral-300 group-open:rotate-180 transition-transform motion-reduce:transition-none shrink-0 select-none">⌄</span>
-        </summary>
-        <p class="mt-3 pb-1 text-sm leading-7 text-neutral-600 whitespace-pre-wrap max-w-[68ch]">{{ coach.status_notes|default:"Kein Status-Kommentar hinterlegt." }}</p>
-      </details>
+      <div class="bg-primary-50 rounded-lg px-4 py-4">
+        <p class="text-xs font-medium uppercase tracking-widest text-primary-600 mb-2">Status-Kommentar</p>
+        <p class="text-sm leading-7 text-neutral-800 whitespace-pre-wrap max-w-[68ch]">{{ coach.status_notes|default:"Kein Status-Kommentar hinterlegt." }}</p>
+      </div>
     </div>
+
+    {# Links #}
+    <dl class="border-t border-neutral-100 pt-8 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
+      <div>
+        <dt class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-1.5">LinkedIn</dt>
+        <dd class="text-sm">
+          {% if coach.linkedin_url %}
+            <a href="{{ coach.linkedin_url }}" target="_blank" rel="noopener noreferrer"
+               class="text-primary-600 hover:underline underline-offset-2 break-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
+              {{ coach.linkedin_url }}
+            </a>
+          {% else %}
+            <span class="text-neutral-400">—</span>
+          {% endif %}
+        </dd>
+      </div>
+      <div>
+        <dt class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-1.5">Website</dt>
+        <dd class="text-sm">
+          {% if coach.website_url %}
+            <a href="{{ coach.website_url }}" target="_blank" rel="noopener noreferrer"
+               class="text-primary-600 hover:underline underline-offset-2 break-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
+              {{ coach.website_url }}
+            </a>
+          {% else %}
+            <span class="text-neutral-400">—</span>
+          {% endif %}
+        </dd>
+      </div>
+    </dl>
 
   </div>
 
 
   {# Footer #}
-  <div class="mt-10 pt-8 border-t border-neutral-100">
+  <div class="mt-10 ">
     <a href="{% url 'coach_list' %}"
        class="text-sm text-neutral-400 hover:text-neutral-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300 rounded-sm">
       ← Zurück zur Liste
