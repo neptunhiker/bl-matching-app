@@ -14,4 +14,5 @@ urlpatterns = [
     path('coaches/<uuid:pk>/', views.CoachDetailView.as_view(), name='coach_detail'),
     path('coaches/<uuid:pk>/bearbeiten/', views.CoachUpdateView.as_view(), name='coach_update'),
     path('coaches/<uuid:pk>/loeschen/', views.CoachDeleteView.as_view(), name='coach_delete'),
+    path('coaches/abrufen/', views.get_coaches, name='get_coaches'),
 ]

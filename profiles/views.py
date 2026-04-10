@@ -1,6 +1,11 @@
+import os
+import requests
+
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.urls import reverse_lazy
+from django.http import JsonResponse, HttpResponseServerError
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
+from django.urls import reverse_lazy
 
 from .forms import ParticipantForm, CoachForm, CoachUpdateForm
 from .models import Participant, Coach
@@ -276,3 +281,36 @@ class CoachDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
     template_name = 'profiles/coach_confirm_delete.html'
     context_object_name = 'coach'
     success_url = reverse_lazy('coach_list') 
+    
+    
+
+
+@login_required
+def get_coaches(request):
+    API_URL = "https://coaching-hub.beginnerluft.de/api/v1/coaches/"
+    API_KEY = os.environ.get("COACHING_HUB_API_KEY")
+    if not API_KEY:
+        return HttpResponseServerError("API key not configured.")
+
+    headers = {"Authorization": f"Api-Key {API_KEY}"}
+
+    COACHING_HUB_API_URL = os.environ.get("COACHING_HUB_API_URL")
+    COACHING_HUB_API_KEY = os.environ.get("COACHING_HUB_API_KEY")
+    from django.http import JsonResponse, HttpResponseServerError
+
+    if not API_URL:
+        return HttpResponseServerError("API URL not configured.")
+    if not API_KEY:
+        return HttpResponseServerError("API key not configured.")
+
+    headers = {
+        "Authorization": f"Api-Key {API_KEY}",
+    }
+
+    try:
+        response = requests.get(API_URL, headers=headers, timeout=10)
+        response.raise_for_status()  # Raises an error for non-2xx responses
+        coaches = response.json()
+        return JsonResponse(coaches, safe=False)
+    except requests.RequestException as e:
+        return HttpResponseServerError(f"Error fetching coaches: {e}")
