@@ -88,6 +88,7 @@ def matching_attempt_with_coach(participant, coach_with_slack, bl_contact):
         ue=48,
         matched_coach=coach_with_slack,
         bl_contact=bl_contact,
+        intro_call_deadline_at=timezone.now() + datetime.timedelta(days=3),
     )
 
 
