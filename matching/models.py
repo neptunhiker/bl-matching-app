@@ -122,24 +122,6 @@ class MatchingAttempt(models.Model):
         related_name="successful_matches",
     )
     
-    intro_call_requested_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Zeitpunkt, zu dem der Coach erstmals gebeten wurde, einen Intro-Call mit dem(r) Teilnehmer:in zu organisieren."
-    )
-    
-    intro_call_confirmed_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Zeitpunkt, zu dem der Coach das Intro-Gespräch bestätigt hat."
-    )
-
-    intro_call_info_sent_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Zeitpunkt, zu dem der/die Teilnehmer:in und der Coach Infos für ein Kennenlerngespräch (Intro-Call) erhalten haben."
-    )
-    
     cancelled_at = models.DateTimeField(null=True, blank=True)
     
     objects = MatchingAttemptQuerySet.as_manager()
