@@ -32,7 +32,7 @@
       </div>
         <h1 class="text-2xl font-bold text-neutral-800 mb-3">Coaching angenommen!</h1>
         <p class="text-neutral-600">
-          Du hast das Coaching mit <strong>{{ participant_name }}</strong> angenommen. Bitte vereinbare nun ein Kennenlerngespräch mit {{ participant_first_name }}, um die Details zum Coaching zu besprechen und offene Fragen zu klären. Wir schicken Dir dazu in Kürze eine {% if coach.preferred_communication_channel == 'slack' %}Slack-Nachricht{% else %}E-Mail{% endif %} mit den Kontaktdaten von {{ participant_first_name }}.
+          Du hast das Coaching mit <strong>{{ participant_name }}</strong> angenommen. Bitte vereinbare nun ein Kennenlerngespräch mit {{ participant_first_name }} bis zum {{ deadline_for_intro_call|date:"d.m.Y – H:i" }}, um die Details zum Coaching zu besprechen und offene Fragen zu klären. Wir schicken Dir dazu in Kürze eine {% if coach.preferred_communication_channel == 'slack' %}Slack-Nachricht{% else %}E-Mail{% endif %} mit den Kontaktdaten von {{ participant_first_name }}.
         </p>
 
     {% else %}

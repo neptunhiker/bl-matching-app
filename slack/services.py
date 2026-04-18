@@ -10,7 +10,7 @@ from accounts.models import User
 from matching.locks import _get_locked_request_to_coach, _get_locked_matching_attempt
 
 from matching.tokens import generate_accept_and_decline_token, generate_intro_call_feedback_url
-from matching.utils import get_urgency_message
+from matching.utils import get_urgency_message, get_deadline_for_intro_call, get_intro_call_extension_deadline
 from slack.models import SlackLog
 
 
@@ -364,6 +364,8 @@ def send_intro_call_request_slack(matching_attempt):
     
     urgency_msg = get_urgency_message(participant, start_date=start_date)
     
+    deadline_for_intro_call = get_deadline_for_intro_call(timezone.now())
+    
     if not user_id:
         raise ValueError(f"Coach {coach} does not have a Slack user ID")
 
@@ -394,7 +396,7 @@ def send_intro_call_request_slack(matching_attempt):
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"*① Bitte vereinbare ein Kennenlerngespräch mit {participant.first_name}*\n"
+                    f"*① Bitte vereinbare ein Kennenlerngespräch mit {participant.first_name} bis zum {deadline_for_intro_call.strftime('%d.%m.%Y')} um {deadline_for_intro_call.strftime('%H:%M')} Uhr*\n"
                     f"*{participant.first_name}* weiß bereits Bescheid und wartet darauf, von Dir zu hören 🙂.\n"
                     f"📧 `{participant.email}`"
                 )

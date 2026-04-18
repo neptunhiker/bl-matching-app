@@ -21,7 +21,7 @@ from .tokens import consume_token
 from . import services
 from matching import services
 from matching.forms import RequestToCoachForm, RequestToCoachUpdateForm
-from matching.utils import build_notifications
+from matching.utils import build_notifications, get_deadline_for_intro_call, get_intro_call_extension_deadline
 from django.utils import dateparse
 import json
 
@@ -456,6 +456,7 @@ class CoachRespondView(View):
         now = timezone.now()
         deadline = rtc.deadline_at
         on_time = (deadline is None) or (now <= deadline)
+        deadline_for_intro_call = get_deadline_for_intro_call(now)
         
         services.accept_or_decline_request_to_coach(
             rtc=rtc,
@@ -474,6 +475,7 @@ class CoachRespondView(View):
                 'is_accept': is_accept,
                 'on_time': on_time,
                 'deadline': rtc.deadline_at,
+                'deadline_for_intro_call': deadline_for_intro_call,
             },
         )
 

@@ -9,12 +9,13 @@ from django.db import transaction
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.urls import reverse
+from django.utils import timezone
 
 from accounts.models import User
 from matching.locks import _get_locked_request_to_coach, _get_locked_matching_attempt
 
 from matching.tokens import generate_accept_and_decline_token, generate_intro_call_feedback_url, generate_start_coaching_and_clarification_needed_urls
-from matching.utils import get_urgency_message
+from matching.utils import get_urgency_message, get_deadline_for_intro_call, get_intro_call_extension_deadline
 from .models import EmailLog
 
 
@@ -196,6 +197,8 @@ def send_intro_call_request_email(matching_attempt):
     
     intro_call_feedback_url = generate_intro_call_feedback_url(matching_attempt)
     
+    deadline_for_intro_call = get_deadline_for_intro_call(timezone.now())
+    
     coach = matching_attempt.matched_coach
     context = {
         "recipient_name": coach.first_name,
@@ -205,6 +208,7 @@ def send_intro_call_request_email(matching_attempt):
         "learn_more_url": settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk}),
         "urgency_message": get_urgency_message(participant, start_date=participant.start_date),
         "intro_call_feedback_url": intro_call_feedback_url,
+        "deadline_for_intro_call": deadline_for_intro_call,
         "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
     }
     
