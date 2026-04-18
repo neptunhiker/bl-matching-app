@@ -887,3 +887,187 @@ def send_clarification_need_info_to_coach_slack(matching_attempt):
             status=SlackLog.Status.FAILED,
             error_message=str(e),
         )
+
+
+def send_intro_call_reminder_slack(matching_attempt):
+    """Send a reminder Slack message to the coach asking them to organise the intro call before the extended deadline."""
+    client = WebClient(token=settings.SLACK_BOT_TOKEN)
+    coach = matching_attempt.matched_coach
+    participant = matching_attempt.participant
+    url_participant = settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk})
+    deadline = matching_attempt.intro_call_deadline_at
+    user_id = coach.slack_user_id
+
+    if not user_id:
+        raise ValueError(f"Coach {coach} does not have a Slack user ID")
+
+    intro_call_feedback_url = generate_intro_call_feedback_url(matching_attempt)
+
+    logger.info(f"Sending intro call reminder Slack to coach {coach} (matching_attempt: {matching_attempt.id})")
+    subject = f"Erinnerung: Bitte vereinbare ein Kennenlerngespräch mit {participant.first_name}"
+
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": f"🔔 Erinnerung: Kennenlerngespräch mit {participant}"
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"Wir wollten dich kurz erinnern, dass du noch kein Kennenlerngespräch mit "
+                    f"*{participant.first_name}* vereinbart hast.\n\n"
+                    f"Bitte melde dich bis spätestens *{timezone.localtime(deadline).strftime('%d.%m.%Y – %H:%M')} Uhr* bei "
+                    f"*{participant.first_name}*.\n\n"
+                    f"📧 `{participant.email}`"
+                )
+            }
+        },
+        {
+            "type": "actions",
+            "elements": [
+                {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "🚀 Kennenlerngespräch hat stattgefunden!"
+                    },
+                    "url": intro_call_feedback_url,
+                    "style": "primary"
+                },
+            ]
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"<{url_participant}|➡ Zum Profil von {participant.first_name}>"
+            },
+        },
+    ]
+
+    message = _blocks_to_text(blocks)
+
+    try:
+        dm_channel = _open_dm_channel(client, user_id)
+        client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
+        logger.info(f"Successfully sent intro call reminder Slack to coach {coach}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message=message,
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+        )
+    except SlackApiError as e:
+        logger.error(f"Slack API error sending intro call reminder to coach {coach}: {e}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error sending intro call reminder to coach {coach}: {e}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+
+
+def send_intro_call_timeout_notification_to_staff_slack(matching_attempt):
+    """Notify the BL staff contact via Slack that the coach has not organised the intro call even after the reminder. Staff should escalate manually."""
+    client = WebClient(token=settings.SLACK_BOT_TOKEN)
+    coach = matching_attempt.matched_coach
+    participant = matching_attempt.participant
+    bl_contact = matching_attempt.bl_contact
+    url_participant = settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk})
+    deadline = matching_attempt.intro_call_deadline_at
+    user_id = bl_contact.slack_user_id if bl_contact else None
+
+    if not user_id:
+        raise ValueError(f"BL contact for matching attempt {matching_attempt.id} does not have a Slack user ID")
+
+    logger.info(f"Sending intro call timeout staff notification Slack to BL contact {bl_contact} (matching_attempt: {matching_attempt.id})")
+    subject = f"⚠️ Coach hat kein Kennenlerngespräch mit {participant.first_name} vereinbart"
+
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": f"⚠️ Kein Kennenlerngespräch vereinbart – bitte eskalieren"
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"*{coach}* hat trotz Erinnerung bis zum "
+                    f"*{timezone.localtime(deadline).strftime('%d.%m.%Y – %H:%M')} Uhr* "
+                    f"kein Kennenlerngespräch mit *{participant.first_name}* vereinbart.\n\n"
+                    f"Bitte kontaktiere *{coach.first_name}* direkt und kläre, ob das Coaching noch stattfinden kann."
+                )
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"*Teilnehmer:in:* {participant} (`{participant.email}`)\n"
+                    f"*Coach:* {coach}\n\n"
+                    f"<{url_participant}|➡ Zum Profil von {participant.first_name}>"
+                )
+            },
+        },
+    ]
+
+    message = _blocks_to_text(blocks)
+
+    try:
+        dm_channel = _open_dm_channel(client, user_id)
+        client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
+        logger.info(f"Successfully sent intro call timeout staff notification Slack to {bl_contact}")
+        create_slack_log(
+            to=bl_contact.user,
+            subject=subject,
+            message=message,
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+        )
+    except SlackApiError as e:
+        logger.error(f"Slack API error sending intro call timeout notification to staff {bl_contact}: {e}")
+        create_slack_log(
+            to=bl_contact.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error sending intro call timeout notification to staff {bl_contact}: {e}")
+        create_slack_log(
+            to=bl_contact.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )

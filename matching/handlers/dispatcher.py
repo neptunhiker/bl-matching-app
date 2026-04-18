@@ -75,6 +75,12 @@ def dispatch_event(event: MatchingEvent):
         MatchingEvent.EventType.RTC_REMINDER_SENT_TO_COACH: [
             notification_handlers.handle_rtc_reminder_sent_to_coach_event,
         ],
+        MatchingEvent.EventType.INTRO_CALL_REMINDER_SENT_TO_COACH: [
+            notification_handlers.handle_intro_call_reminder_sent_to_coach_event,
+        ],
+        MatchingEvent.EventType.INTRO_CALL_TIMED_OUT_STAFF_NOTIFIED: [
+            notification_handlers.handle_intro_call_timed_out_staff_notified_event,
+        ],
         
         # State handlers
         MatchingEvent.EventType.ALL_RTCS_DECLINED: [
