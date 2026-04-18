@@ -36,6 +36,7 @@ class MatchingAttemptAdmin(admin.ModelAdmin):
     list_filter = ['automation_enabled']
     search_fields = ['participant__first_name', 'participant__last_name', 'participant__email']
     ordering = ['-created_at']
+    readonly_fields = ['id', 'state', 'created_at']
     
 @admin.register(RequestToCoach)
 class RequestToCoachAdmin(admin.ModelAdmin):

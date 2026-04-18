@@ -919,11 +919,9 @@ def send_intro_call_reminder_slack(matching_attempt):
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"Wir wollten dich kurz erinnern, dass du noch kein Kennenlerngespräch mit "
-                    f"*{participant.first_name}* vereinbart hast.\n\n"
-                    f"Bitte melde dich bis spätestens *{timezone.localtime(deadline).strftime('%d.%m.%Y – %H:%M')} Uhr* bei "
-                    f"*{participant.first_name}*.\n\n"
-                    f"📧 `{participant.email}`"
+                    f"Wir wollten dich kurz erinnern, dass du uns noch keine Rückmeldung zu deinem Kennenlerngespräch mit "
+                    f"*{participant.first_name}* gegeben hast.\n\n"
+                    f"Bitte melde dich bis spätestens *{timezone.localtime(deadline).strftime('%d.%m.%Y – %H:%M')} Uhr* bei uns und bestätige bitte, dass ihr gesprochen habt und dass es aus deiner Sicht losgehen kann."
                 )
             }
         },
@@ -1016,9 +1014,7 @@ def send_intro_call_timeout_notification_to_staff_slack(matching_attempt):
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"*{coach}* hat trotz Erinnerung bis zum "
-                    f"*{timezone.localtime(deadline).strftime('%d.%m.%Y – %H:%M')} Uhr* "
-                    f"kein Kennenlerngespräch mit *{participant.first_name}* vereinbart.\n\n"
+                    f"*{coach}* hat uns trotz Erinnerung bisher keine Rückmeldung zu einem Kennenlerngespräch mit *{participant.first_name}* gegeben.\n\n"
                     f"Bitte kontaktiere *{coach.first_name}* direkt und kläre, ob das Coaching noch stattfinden kann."
                 )
             }
@@ -1028,9 +1024,8 @@ def send_intro_call_timeout_notification_to_staff_slack(matching_attempt):
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"*Teilnehmer:in:* {participant} (`{participant.email}`)\n"
+                    f"*Teilnehmer:in:* {participant}\n"
                     f"*Coach:* {coach}\n\n"
-                    f"<{url_participant}|➡ Zum Profil von {participant.first_name}>"
                 )
             },
         },
@@ -1060,6 +1055,7 @@ def send_intro_call_timeout_notification_to_staff_slack(matching_attempt):
             status=SlackLog.Status.FAILED,
             error_message=str(e),
         )
+        raise
     except Exception as e:
         logger.error(f"Unexpected error sending intro call timeout notification to staff {bl_contact}: {e}")
         create_slack_log(
@@ -1071,3 +1067,4 @@ def send_intro_call_timeout_notification_to_staff_slack(matching_attempt):
             status=SlackLog.Status.FAILED,
             error_message=str(e),
         )
+        raise

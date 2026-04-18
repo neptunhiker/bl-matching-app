@@ -42,25 +42,27 @@ def get_deadline(
     
 def get_deadline_for_intro_call(start: datetime) -> datetime:
     """Calculate the deadline for the coaching to organize the intro call. The deadline shall be 3 working days later, e.g. when the request goes out on a Monday then the deadline is Thursday at 18:00."""
-    if start.weekday() in [0, 1]:  # Monday, Tuesday
-        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=3)
-    if start.weekday() in [2, 3, 4]:  # Wednesday, Thursday, Friday
-        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=5)
-    if start.weekday() == 5:  # Saturday
-        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=4)
-    if start.weekday() == 6:  # Sunday
-        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=3)
+    local_start = timezone.localtime(start) if timezone.is_aware(start) else start
+    if local_start.weekday() in [0, 1]:  # Monday, Tuesday
+        return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=3)
+    if local_start.weekday() in [2, 3, 4]:  # Wednesday, Thursday, Friday
+        return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=5)
+    if local_start.weekday() == 5:  # Saturday
+        return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=4)
+    if local_start.weekday() == 6:  # Sunday
+        return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=3)
     
 def get_intro_call_extension_deadline(start: datetime) -> datetime:
     """Calculate the extension deadline which shall be a working day later until 6 pm. E.g. if the original deadline was until Monday 18:00 and the coach is reminded to report back on the intro call then he/she shall receive one more deadline until Tuesday 18:00."""
-    if start.weekday() in [0, 1, 2, 3]:  # Monday, Tuesday, Wednesday, Thursday
-        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
-    if start.weekday() == 4:  # Friday
-        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=3)
-    if start.weekday() == 5:  # Saturday
-        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=2)
-    if start.weekday() == 6:  # Sunday
-        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    local_start = timezone.localtime(start) if timezone.is_aware(start) else start
+    if local_start.weekday() in [0, 1, 2, 3]:  # Monday, Tuesday, Wednesday, Thursday
+        return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    if local_start.weekday() == 4:  # Friday
+        return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=3)
+    if local_start.weekday() == 5:  # Saturday
+        return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=2)
+    if local_start.weekday() == 6:  # Sunday
+        return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
     
     
 

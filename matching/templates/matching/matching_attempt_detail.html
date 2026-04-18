@@ -97,6 +97,20 @@
 
       </dl>
 
+      {% if matching_attempt.state == 'awaiting_intro_call_feedback_from_coach' and matching_attempt.intro_call_deadline_at %}
+      <div class="mt-4 flex items-center gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+        <span class="h-5 w-5 text-amber-500 shrink-0">
+          {% include "components/icons/missed_deadline.html" %}
+        </span>
+        <div>
+          <p class="text-xs font-jakarta font-semibold text-amber-600 mb-0.5">Deadline Kennenlerngespräch</p>
+          <p class="text-sm font-semibold text-neutral-800">
+            {{ matching_attempt.intro_call_deadline_at|date:"d.m.Y" }} – {{ matching_attempt.intro_call_deadline_at|time:"H:i" }} Uhr
+          </p>
+        </div>
+      </div>
+      {% endif %}
+
       <details class="mt-6 space-y-3">
         <summary class="cursor-pointer text-sm font-medium text-primary-600 hover:text-primary-800 transition-colors y-3">
           Details
