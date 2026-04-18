@@ -685,6 +685,7 @@ class MatchingEvent(models.Model):
         # =========================================================
         INTRO_CALL_REQUEST_SENT_TO_COACH = "intro_call_request_sent_to_coach", "Intro-Call Anfrage an Coach versendet"
         INTRO_CALL_REMINDER_SENT_TO_COACH = "intro_call_reminder_sent_to_coach", "Reminder für Intro-Call Anfrage"
+        INTRO_CALL_TIMED_OUT_STAFF_NOTIFIED = "intro_call_timed_out_staff_notified", "Staff über abgelaufene Intro-Call Frist informiert"
 
         INTRO_CALL_FEEDBACK_RECEIVED_FROM_COACH = "intro_call_feedback_received_from_coach", "Feedback zum Intro-Call von Coach erhalten"
         
