@@ -40,6 +40,18 @@ def get_deadline(
     if local_start.weekday() == 6:  # Sunday
         return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
     
+def get_deadline_for_intro_call(start: datetime) -> datetime:
+    """Calculate the deadline for the coaching to organize the intro call. The deadline shall be 3 working days later, e.g. when the request goes out on a Monday then the deadline is Thursday at 18:00."""
+    if start.weekday() in [0, 1]:  # Monday, Tuesday
+        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=3)
+    if start.weekday() in [2, 3, 4]:  # Wednesday, Thursday, Friday
+        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=5)
+    if start.weekday() == 5:  # Saturday
+        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=4)
+    if start.weekday() == 6:  # Sunday
+        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=3)
+    
+    
 
 def build_notifications(email_logs, slack_logs):
     """Merge email and slack log lists into a single time-sorted notifications list.
