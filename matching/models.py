@@ -36,7 +36,36 @@ class TriggeredByOptions(models.TextChoices):
     PARTICIPANT = "participant", "Teilnehmer:in"
 
 class MatchingAttemptQuerySet(models.QuerySet):
-    pass
+
+    def eligible_for_intro_call_reminder(self):
+        already_reminded = MatchingEvent.objects.filter(
+            matching_attempt=OuterRef('pk'),
+            event_type=MatchingEvent.EventType.INTRO_CALL_REMINDER_SENT_TO_COACH,
+        )
+        return self.filter(
+            state=MatchingAttempt.State.AWAITING_INTRO_CALL_FEEDBACK_FROM_COACH,
+            automation_enabled=True,
+            intro_call_deadline_at__lt=timezone.now(),
+        ).exclude(Exists(already_reminded))
+
+    def eligible_for_intro_call_staff_escalation(self):
+        already_notified = MatchingEvent.objects.filter(
+            matching_attempt=OuterRef('pk'),
+            event_type=MatchingEvent.EventType.INTRO_CALL_TIMED_OUT_STAFF_NOTIFIED,
+        )
+        has_been_reminded = MatchingEvent.objects.filter(
+            matching_attempt=OuterRef('pk'),
+            event_type=MatchingEvent.EventType.INTRO_CALL_REMINDER_SENT_TO_COACH,
+        )
+        return self.filter(
+            state=MatchingAttempt.State.AWAITING_INTRO_CALL_FEEDBACK_FROM_COACH,
+            automation_enabled=True,
+            intro_call_deadline_at__lt=timezone.now(),
+        ).filter(
+            Exists(has_been_reminded)
+        ).exclude(
+            Exists(already_notified)
+        )
 
 class MatchingAttempt(models.Model):
     class State(models.TextChoices):
