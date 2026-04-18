@@ -122,6 +122,14 @@ class MatchingAttempt(models.Model):
         related_name="successful_matches",
     )
     
+    intro_call_deadline_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name="Frist für Intro-Call",
+        help_text="Frist, bis zu der der Coach einen Intro-Call mit dem(r) Teilnehmer:in organisieren soll.",
+    )
+
     cancelled_at = models.DateTimeField(null=True, blank=True)
     
     objects = MatchingAttemptQuerySet.as_manager()
