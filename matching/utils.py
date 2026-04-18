@@ -51,6 +51,17 @@ def get_deadline_for_intro_call(start: datetime) -> datetime:
     if start.weekday() == 6:  # Sunday
         return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=3)
     
+def get_intro_call_extension_deadline(start: datetime) -> datetime:
+    """Calculate the extension deadline which shall be a working day later until 6 pm. E.g. if the original deadline was until Monday 18:00 and the coach is reminded to report back on the intro call then he/she shall receive one more deadline until Tuesday 18:00."""
+    if start.weekday() in [0, 1, 2, 3]:  # Monday, Tuesday, Wednesday, Thursday
+        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    if start.weekday() == 4:  # Friday
+        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=3)
+    if start.weekday() == 5:  # Saturday
+        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=2)
+    if start.weekday() == 6:  # Sunday
+        return start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    
     
 
 def build_notifications(email_logs, slack_logs):
