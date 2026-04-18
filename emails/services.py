@@ -15,7 +15,7 @@ from accounts.models import User
 from matching.locks import _get_locked_request_to_coach, _get_locked_matching_attempt
 
 from matching.tokens import generate_accept_and_decline_token, generate_intro_call_feedback_url, generate_start_coaching_and_clarification_needed_urls
-from matching.utils import get_urgency_message, get_deadline_for_intro_call, get_intro_call_extension_deadline
+from matching.utils import get_urgency_message, get_intro_call_extension_deadline
 from .models import EmailLog
 
 
@@ -197,7 +197,7 @@ def send_intro_call_request_email(matching_attempt):
     
     intro_call_feedback_url = generate_intro_call_feedback_url(matching_attempt)
     
-    deadline_for_intro_call = get_deadline_for_intro_call(timezone.now())
+    deadline_for_intro_call = matching_attempt.intro_call_deadline_at
     
     coach = matching_attempt.matched_coach
     context = {

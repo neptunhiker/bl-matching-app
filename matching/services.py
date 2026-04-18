@@ -3,6 +3,9 @@ import logging
 
 from django.db import transaction, IntegrityError
 from django.core.exceptions import ValidationError
+from django.utils import timezone
+
+from matching.utils import get_deadline_for_intro_call
 
 from accounts.models import User
 
@@ -197,7 +200,8 @@ def accept_or_decline_request_to_coach(rtc, accept: bool, response_time: datetim
                 rtc.accept(on_time=on_time)
                 rtc.save()  # Ensure RTC state change is saved before event is created
                 rtc.matching_attempt.matched_coach = rtc.coach
-                rtc.matching_attempt.save(update_fields=["matched_coach"])
+                rtc.matching_attempt.intro_call_deadline_at = get_deadline_for_intro_call(timezone.now())
+                rtc.matching_attempt.save(update_fields=["matched_coach", "intro_call_deadline_at"])
             else:
                 event_type = MatchingEvent.EventType.RTC_DECLINED
                 rtc.reject()
