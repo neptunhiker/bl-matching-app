@@ -2,7 +2,7 @@ import logging
 
 from django.db import transaction
 
-from emails.services import send_first_coach_request_email, send_reminder_coach_request_email, send_intro_call_request_email, send_intro_call_info_email_to_participant, send_feedback_request_email_after_intro_call_to_participant, send_intro_call_feedback_reminder_email_to_participant, send_coaching_start_info_email_to_coach, send_coaching_start_info_email_to_participant, send_escalation_info_email_to_staff, send_clarification_call_booked_info_to_coach_email
+from emails.services import send_first_coach_request_email, send_reminder_coach_request_email, send_intro_call_request_email, send_intro_call_reminder_email_to_coach, send_intro_call_info_email_to_participant, send_feedback_request_email_after_intro_call_to_participant, send_intro_call_feedback_reminder_email_to_participant, send_coaching_start_info_email_to_coach, send_coaching_start_info_email_to_participant, send_escalation_info_email_to_staff, send_clarification_call_booked_info_to_coach_email
 from profiles.models import Coach
 from slack.services import send_first_coach_request_slack, send_reminder_coach_request_slack, send_intro_call_request_slack, send_coaching_starting_info_slack, send_escalation_info_slack, send_all_rtcs_declined_info_slack, send_intro_call_reminder_slack, send_intro_call_timeout_notification_to_staff_slack, send_clarification_call_booked_info_to_staff_slack, send_clarification_call_booked_info_to_coach_slack, send_participant_intro_call_feedback_timeout_notification_to_staff_slack
 
@@ -361,12 +361,7 @@ def handle_intro_call_reminder_sent_to_coach_event(event):
     if coach.preferred_communication_channel == Coach.CommunicationChannel.SLACK:
         send_intro_call_reminder_slack(matching_attempt)
     elif coach.preferred_communication_channel == Coach.CommunicationChannel.EMAIL:
-        # Email reminder not yet implemented — fall back to Slack
-        logger.warning(
-            f"Email intro call reminder not implemented for coach {coach}; "
-            f"sending Slack reminder instead."
-        )
-        send_intro_call_reminder_slack(matching_attempt)
+        send_intro_call_reminder_email_to_coach(matching_attempt)
     else:
         raise ValueError(f"Unsupported communication channel for coach {coach}: {coach.preferred_communication_channel}")
 

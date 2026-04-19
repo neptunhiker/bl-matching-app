@@ -169,3 +169,35 @@ class TestSendEmail:
         log = _send(matching_attempt=matching_attempt)
 
         assert log.matching_attempt == matching_attempt
+
+
+# ---------------------------------------------------------------------------
+# send_intro_call_reminder_email_to_coach
+# ---------------------------------------------------------------------------
+
+@pytest.mark.django_db(transaction=True)
+class TestSendIntroCallReminderEmailToCoach:
+    """
+    Verifies that send_intro_call_reminder_email_to_coach() dispatches send_email
+    with the correct recipient and template.
+    """
+
+    def test_dispatches_correct_email(self, matching_attempt, coach):
+        """
+        The function should call send_email with the coach's email address and
+        the intro_call_reminder_to_coach template.
+        """
+        from emails.services import send_intro_call_reminder_email_to_coach
+
+        matching_attempt.matched_coach = coach
+        matching_attempt.save(update_fields=["matched_coach"])
+
+        with patch("emails.services.send_email") as mock_send_email, \
+             patch("emails.services.generate_intro_call_feedback_url", return_value="http://example.com/confirm"):
+            send_intro_call_reminder_email_to_coach(matching_attempt)
+
+        mock_send_email.assert_called_once()
+        call_kwargs = mock_send_email.call_args.kwargs
+        assert call_kwargs["to"] == coach.user.email
+        assert call_kwargs["template_name"] == "emails/intro_call_reminder_to_coach.html"
+        assert call_kwargs["matching_attempt"] == matching_attempt

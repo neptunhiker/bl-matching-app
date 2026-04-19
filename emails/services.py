@@ -228,6 +228,39 @@ def send_intro_call_request_email(matching_attempt):
 
 
 @transaction.atomic
+def send_intro_call_reminder_email_to_coach(matching_attempt, triggered_by: str = "system"):
+    """Send a reminder email to the coach to organise the intro call before the extended deadline."""
+
+    matching_attempt = _get_locked_matching_attempt(matching_attempt)
+
+    participant = matching_attempt.participant
+    coach = matching_attempt.matched_coach
+
+    context = {
+        "recipient_name": coach.first_name,
+        "participant": participant,
+        "participant_email": participant.email,
+        "intro_call_feedback_url": generate_intro_call_feedback_url(matching_attempt),
+        "deadline_for_intro_call": matching_attempt.intro_call_deadline_at,
+        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
+    }
+
+    transaction.on_commit(
+        lambda: send_email(
+            to=coach.user.email,
+            subject=f"Erinnerung: Vereinbare ein Kennenlerngespräch mit {participant.first_name}",
+            template_name="emails/intro_call_reminder_to_coach.html",
+            context=context,
+            matching_attempt=matching_attempt,
+            sent_by=context["author"],
+            triggered_by=triggered_by,
+        )
+    )
+
+    return matching_attempt
+
+
+@transaction.atomic
 def send_intro_call_info_email_to_participant(matching_attempt, triggered_by: str="system", triggered_by_user: User = None):
     """Send an email to the participant with information about the matched coach and next steps for the intro call."""
     
