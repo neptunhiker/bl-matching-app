@@ -111,6 +111,20 @@
       </div>
       {% endif %}
 
+      {% if matching_attempt.state == 'awaiting_intro_call_feedback_from_participant' and matching_attempt.participant_intro_call_feedback_deadline_at %}
+      <div class="mt-4 flex items-center gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+        <span class="h-5 w-5 text-amber-500 shrink-0">
+          {% include "components/icons/missed_deadline.html" %}
+        </span>
+        <div>
+          <p class="text-xs font-jakarta font-semibold text-amber-600 mb-0.5">Deadline TN-Rückmeldung</p>
+          <p class="text-sm font-semibold text-neutral-800">
+            {{ matching_attempt.participant_intro_call_feedback_deadline_at|date:"d.m.Y" }} – {{ matching_attempt.participant_intro_call_feedback_deadline_at|time:"H:i" }} Uhr
+          </p>
+        </div>
+      </div>
+      {% endif %}
+
       <details class="mt-6 space-y-3">
         <summary class="cursor-pointer text-sm font-medium text-primary-600 hover:text-primary-800 transition-colors y-3">
           Details
@@ -208,7 +222,8 @@
       </h2>
       {% if request.user.is_staff and matching_attempt.is_active or matching_attempt.state == 'failed' %}
         {% url 'request_to_coach_create' matching_attempt.pk as create_request_url %}
-        {% include "components/_button.html" with button_text="+ Erstellen" button_variant="primary" button_size="sm" button_href=create_request_url %}
+        {% include "components/_button.html" with button_text="+" button_variant="primary" button_size="sm" button_href=create_request_url button_class="sm:hidden" %}
+        {% include "components/_button.html" with button_text="+ Erstellen" button_variant="primary" button_size="sm" button_href=create_request_url button_class="hidden sm:inline-flex" %}
       {% endif %}
     </div>
 
