@@ -222,6 +222,9 @@ BREVO_WEBHOOK_SECRET = os.environ.get('BREVO_WEBHOOK_SECRET', '')
 # Must be set; if missing the endpoint will reject all requests.
 CALENDLY_SIGNING_KEY = os.environ.get('CALENDLY_SIGNING_KEY', '')
 
+# Calendly check-in event type URL — used to build the clarification call booking link.
+CALENDLY_CHECKIN_URL = os.environ.get('CALENDLY_CHECKIN_URL', 'https://calendly.com/beginnerluft/check-in')
+
 # Brevo webhook IP allowlist. Comma-separated CIDRs.
 # Set to empty string in .env to disable the check (local dev / ngrok smoke test).
 # Leave unset in .env to enforce Brevo's published ranges in production.

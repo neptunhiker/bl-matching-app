@@ -14,7 +14,7 @@ from django.utils import timezone
 from accounts.models import User
 from matching.locks import _get_locked_request_to_coach, _get_locked_matching_attempt
 
-from matching.tokens import generate_accept_and_decline_token, generate_intro_call_feedback_url, generate_start_coaching_and_clarification_needed_urls
+from matching.tokens import generate_accept_and_decline_token, generate_intro_call_feedback_url, generate_participant_response_urls
 from matching.utils import get_urgency_message, get_intro_call_extension_deadline
 from .models import EmailLog
 
@@ -266,7 +266,7 @@ def send_feedback_request_email_after_intro_call_to_participant(matching_attempt
     participant = matching_attempt.participant
     
     coach = matching_attempt.matched_coach
-    start_coaching_url, clarification_needed_url = generate_start_coaching_and_clarification_needed_urls(matching_attempt)
+    start_coaching_url, calendly_url = generate_participant_response_urls(matching_attempt)
     
     context = {
         "recipient_name": participant.first_name,
@@ -275,7 +275,7 @@ def send_feedback_request_email_after_intro_call_to_participant(matching_attempt
         "coach_email": coach.user.email,
         "participant_first_name": participant.first_name,
         "start_coaching_url": start_coaching_url,
-        "clarification_needed_url": clarification_needed_url,
+        "calendly_url": calendly_url,
         "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
     }
     

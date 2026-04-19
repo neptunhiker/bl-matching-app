@@ -193,37 +193,45 @@ def generate_intro_call_feedback_url(matching_attempt) -> str:
     return url
 
 
-def generate_start_coaching_and_clarification_needed_urls(matching_attempt) -> tuple[str, str]:
+def generate_participant_response_urls(matching_attempt) -> tuple[str, str]:
     """
-    Create one START_COACHING token and one CLARIFICATION_NEEDED token for a *matching_attempt* and return their absolute URLs as ``(start_coaching_url, clarification_needed_url)``.
+    Create one START_COACHING token for *matching_attempt* and build a
+    Calendly clarification call URL with pre-filled name, email and UTM
+    parameters. Returns ``(start_coaching_url, calendly_url)``.
 
-    A new pair of tokens is created on every call, so each email (initial send + every reminder) gets its own fresh links.  Old tokens from earlier emails remain valid — the view's terminal-status guard prevents a participant from changing their answer after they have already responded.
+    A new token is created on every call so each email gets its own fresh
+    link. Old tokens remain valid — the view's terminal-status guard prevents
+    double-submission.
 
-    Absolute URLs are built using ``settings.SITE_URL``.
+    Absolute URLs are built using ``settings.SITE_URL`` / ``settings.CALENDLY_CHECKIN_URL``.
 
     Args:
-        matching_attempt: A ``MatchingAttempt`` instance the tokens belong to.
+        matching_attempt: A ``MatchingAttempt`` instance.
 
     Returns:
-        ``(start_coaching_url, clarification_needed_url)`` — fully qualified URLs safe to embed
-        directly in an email template.
+        ``(start_coaching_url, calendly_url)`` — fully qualified URLs safe to
+        embed directly in an email template.
     """
+    from urllib.parse import urlencode
     from django.conf import settings  # noqa: PLC0415
     from .models import ParticipantActionToken  # noqa: PLC0415
+
+    participant = matching_attempt.participant
 
     start_coaching_token = ParticipantActionToken.objects.create(
         token=generate_secure_token(),
         matching_attempt=matching_attempt,
         action=ParticipantActionToken.Action.START_COACHING,
     )
-    clarification_needed_token = ParticipantActionToken.objects.create(
-        token=generate_secure_token(),
-        matching_attempt=matching_attempt,
-        action=ParticipantActionToken.Action.CLARIFICATION_NEEDED,
-    )
 
     site_url = settings.SITE_URL.rstrip('/')
     start_coaching_url = site_url + reverse('participant_respond', kwargs={'token': start_coaching_token.token})
-    clarification_needed_url = site_url + reverse('participant_respond', kwargs={'token': clarification_needed_token.token})
 
-    return start_coaching_url, clarification_needed_url
+    params = urlencode({
+        'utm_campaign': f'matching-{matching_attempt.id}',
+        'name': f'{participant.first_name} {participant.last_name}'.strip(),
+        'email': participant.email,
+    })
+    calendly_url = f'{settings.CALENDLY_CHECKIN_URL}?{params}'
+
+    return start_coaching_url, calendly_url

@@ -611,7 +611,6 @@ class ParticipantActionToken(models.Model):
 
     class Action(models.TextChoices):
         START_COACHING = 'start_coaching', 'Coaching starten'
-        CLARIFICATION_NEEDED = 'clarification_needed', 'Klärung benötigt'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     token = models.CharField(
