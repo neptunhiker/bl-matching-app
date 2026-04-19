@@ -35,54 +35,57 @@
 {% endif %}
 
 {% if deadline %}
-<p style="margin-top:16px; color:#dc2626; font-size:0.95rem;">
-Du hast noch bis zum <strong>{{ deadline|date:"d.m.Y – H:i" }} Uhr</strong> Zeit.
-Ansonsten müssen wir leider einen anderen Coach fragen.<br>
-Ein Klick genügt 👇
-</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 24px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px;">
+  <tr>
+    <td style="padding:14px 18px; font-size:14px; line-height:1.6; color:#991b1b;">
+      Bitte antworte bis spätestens <strong>{{ deadline|date:"d.m.Y – H:i" }} Uhr</strong> —
+      danach müssen wir leider einen anderen Coach anfragen.
+    </td>
+  </tr>
+</table>
 {% endif %}
 
-<!-- Action buttons -->
-<table border="0" cellpadding="0" cellspacing="0" style="margin-top:20px;">
+<!-- Primary Button -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 12px;">
   <tr>
-    <td style="padding-right:10px;">
+    <td bgcolor="#16a34a" style="border-radius:6px; text-align:center;">
       <a href="{{ accept_url }}"
-         style="
-           background-color:#16a34a;
-           color:#ffffff;
-           padding:12px 18px;
-           text-decoration:none;
-           border-radius:6px;
-           font-weight:600;
-           display:inline-block;
-         ">
-        ✅ Ja, ich übernehme das Coaching!
-      </a>
-    </td>
-    <td>
-      <a href="{{ decline_url }}"
-         style="
-           background-color:#dc2626;
-           color:#ffffff;
-           padding:12px 18px;
-           text-decoration:none;
-           border-radius:6px;
-           font-weight:600;
-           display:inline-block;
-         ">
-        🙂 Diesmal passt es leider nicht
+         style="display:inline-block; padding:12px 20px; font-size:15px; font-weight:700; line-height:1; color:#ffffff; text-decoration:none;">
+        Coaching übernehmen
       </a>
     </td>
   </tr>
 </table>
 
-<p style="font-size:0.9rem; color:#6b7280; margin-top:18px;">
-Wenn du annimmst, geben wir dir die Kontaktdaten von <strong>{{ participant_name }}</strong>, damit du ein  Kennenlerngespräch vereinbaren kannst. So könnt ihr euch vor dem Start kurz austauschen.
+<p style="margin:0 0 24px; font-size:14px; line-height:1.6; color:#6b7280;">
+  Wenn du zusagst, schicken wir dir anschließend die Kontaktdaten von
+  <strong>{{ participant_name }}</strong>, damit ihr ein kurzes Kennenlerngespräch vereinbaren könnt.
 </p>
 
-<p style="margin-top:24px;">
-Viele Grüße<br>
-{{ author }}
+<!-- Secondary Button -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 28px;">
+  <tr>
+    <td bgcolor="#ffffff"
+        style="border:1px solid #d1d5db; border-radius:6px; text-align:center;">
+      <a href="{{ decline_url }}"
+         style="
+           display:inline-block;
+           padding:8px 14px;
+           font-size:12px;
+           font-weight:600;
+           line-height:1;
+           color:#6b7280;
+           text-decoration:none;
+         ">
+        Diesmal passt es leider nicht
+      </a>
+    </td>
+  </tr>
+</table>
+
+<p style="margin:0;">
+  Viele Grüße<br>
+  {{ author }}
 </p>
 
 {% endblock %}
