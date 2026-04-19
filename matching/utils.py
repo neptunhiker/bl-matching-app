@@ -51,7 +51,8 @@ def get_standard_deadline(start: datetime) -> datetime:
         return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=4)
     if local_start.weekday() == 6:  # Sunday
         return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=3)
-    
+    raise ValueError(f"Unexpected weekday: {local_start.weekday()}")
+
 def get_standard_extension_deadline(start: datetime) -> datetime:
     """Calculate a one-working-day extension deadline at 18:00. E.g. if the original deadline was Monday 18:00 the extended deadline is Tuesday 18:00."""
     local_start = timezone.localtime(start) if timezone.is_aware(start) else start
@@ -63,8 +64,8 @@ def get_standard_extension_deadline(start: datetime) -> datetime:
         return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=2)
     if local_start.weekday() == 6:  # Sunday
         return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
-    
-    
+    raise ValueError(f"Unexpected weekday: {local_start.weekday()}")
+
 
 def build_notifications(email_logs, slack_logs):
     """Merge email and slack log lists into a single time-sorted notifications list.
