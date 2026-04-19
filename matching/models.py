@@ -810,8 +810,6 @@ class MatchingEvent(models.Model):
         
         COACHING_CAN_START_FEEDBACK_RECEIVED_FROM_PARTICIPANT = "coaching_can_start_feedback_received_from_participant", "Positives Feedback zum Intro-Call von TN erhalten"
         
-        CLARIFICATION_NEEEDED_FEEDBACK_RECEIVED_FROM_PARTICIPANT = "clarification_needed_feedback_received_from_participant", "TN hat nach Intro-Call um Klärung gebeten"
-        
         ESCALATION_NOTIFICATION_SENT_TO_STAFF = "escalation_notification_sent_to_staff", "BeginnerLuft über notwendige Klärung informiert"
         
         INFORMATION_ABOUT_CLARIFICATION_SENT_TO_COACH = "information_about_clarification_sent_to_coach", "Coach über notwendige Klärung informiert"

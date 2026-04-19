@@ -285,18 +285,7 @@ def continue_matching_after_participant_responded_to_intro_call_feedback(matchin
                 "participant": participant.full_name,
             }
         )
-    else:
-        create_matching_event(
-            matching_attempt=matching_attempt,
-            event_type=MatchingEvent.EventType.CLARIFICATION_NEEEDED_FEEDBACK_RECEIVED_FROM_PARTICIPANT,
-            triggered_by=TriggeredByOptions.PARTICIPANT,
-            payload={
-                "response_time": response_time.isoformat(),
-                "coaching_can_start": coaching_can_start,
-                "participant": participant.full_name,
-            }
-        )
-        
+
 
         
 def send_out_official_coaching_start_notification(matching_attempt):
