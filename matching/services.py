@@ -489,6 +489,9 @@ def record_clarification_call_canceled(matching_attempt_id, invitee_email, invit
 
         if matching_attempt.state == MatchingAttempt.State.CLARIFICATION_CALL_SCHEDULED:
             matching_attempt.cancel_clarification_call_booking()
+            # Restore the deadline so automated reminders resume — the participant
+            # cancelled their clarification call and must still confirm before coaching starts.
+            matching_attempt.participant_intro_call_feedback_deadline_at = get_standard_deadline(timezone.now())
             matching_attempt.save()
 
         create_matching_event(
