@@ -197,13 +197,3 @@ def participant_action_token_start(db, matching_attempt_with_coach):
         token=generate_secure_token(),
     )
 
-
-@pytest.fixture
-def participant_action_token_clarify(db, matching_attempt_with_coach):
-    from matching.models import ParticipantActionToken
-    from matching.tokens import generate_secure_token
-    return ParticipantActionToken.objects.create(
-        matching_attempt=matching_attempt_with_coach,
-        action=ParticipantActionToken.Action.CLARIFICATION_NEEDED,
-        token=generate_secure_token(),
-    )

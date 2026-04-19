@@ -1033,20 +1033,6 @@ def test_participant_respond_start_coaching(client, participant_action_token_sta
     assert 'matching/participant_response_coaching_can_start.html' in [t.name for t in r.templates]
 
 
-@pytest.mark.django_db
-def test_participant_respond_clarification(client, participant_action_token_clarify, monkeypatch):
-    import matching.services as svc
-    monkeypatch.setattr(
-        svc,
-        'continue_matching_after_participant_responded_to_intro_call_feedback',
-        lambda *a, **k: None,
-    )
-    url = reverse('participant_respond', kwargs={'token': participant_action_token_clarify.token})
-    r = client.get(url)
-    assert r.status_code == 200
-    assert 'matching/participant_response_clarification_needed.html' in [t.name for t in r.templates]
-
-
 # ── ConfirmIntroCallView (public token) ───────────────────────────────────────
 
 @pytest.mark.django_db

@@ -60,14 +60,8 @@ def dispatch_event(event: MatchingEvent):
         MatchingEvent.EventType.COACHING_START_INFO_SENT_TO_PARTICIPANT: [
             notification_handlers.handle_coaching_start_info_sent_out_to_participant_event,
         ],
-        MatchingEvent.EventType.CLARIFICATION_NEEEDED_FEEDBACK_RECEIVED_FROM_PARTICIPANT: [
-            notification_handlers.handle_clarification_needed_feedback_received_from_participant_event,
-        ],
         MatchingEvent.EventType.ESCALATION_NOTIFICATION_SENT_TO_STAFF: [
             notification_handlers.handle_escalation_notification_sent_to_staff_event,
-        ],
-        MatchingEvent.EventType.INFORMATION_ABOUT_CLARIFICATION_SENT_TO_COACH: [
-            notification_handlers.handle_clarification_need_info_to_coach_event,
         ],
         MatchingEvent.EventType.RTC_TIMED_OUT: [
             notification_handlers.handle_rtc_timed_out_event,

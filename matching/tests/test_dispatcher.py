@@ -29,9 +29,7 @@ ALL_HANDLER_PATHS = [
     "matching.handlers.notification_handlers.handle_coaching_can_start_feedback_received_from_participant_event",
     "matching.handlers.notification_handlers.handle_coaching_start_info_sent_out_to_coach_event",
     "matching.handlers.notification_handlers.handle_coaching_start_info_sent_out_to_participant_event",
-    "matching.handlers.notification_handlers.handle_clarification_needed_feedback_received_from_participant_event",
     "matching.handlers.notification_handlers.handle_escalation_notification_sent_to_staff_event",
-    "matching.handlers.notification_handlers.handle_clarification_need_info_to_coach_event",
     "matching.handlers.notification_handlers.handle_all_rtcs_declined_event",
     "matching.handlers.notification_handlers.handle_rtc_timed_out_event",
 ]
@@ -51,9 +49,7 @@ ALL_HANDLED_EVENT_TYPES = [
     MatchingEvent.EventType.COACHING_CAN_START_FEEDBACK_RECEIVED_FROM_PARTICIPANT,
     MatchingEvent.EventType.COACHING_START_INFO_SENT_TO_COACH,
     MatchingEvent.EventType.COACHING_START_INFO_SENT_TO_PARTICIPANT,
-    MatchingEvent.EventType.CLARIFICATION_NEEEDED_FEEDBACK_RECEIVED_FROM_PARTICIPANT,
     MatchingEvent.EventType.ESCALATION_NOTIFICATION_SENT_TO_STAFF,
-    MatchingEvent.EventType.INFORMATION_ABOUT_CLARIFICATION_SENT_TO_COACH,
     MatchingEvent.EventType.ALL_RTCS_DECLINED,
     MatchingEvent.EventType.RTC_TIMED_OUT,
 ]

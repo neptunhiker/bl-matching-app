@@ -313,24 +313,6 @@ def send_out_official_coaching_start_notification(matching_attempt):
     )
     
 
-def send_clarification_needed_notifications(matching_attempt):
-    from matching.models import MatchingEvent, TriggeredByOptions
-
-    create_matching_event(
-        matching_attempt=matching_attempt,
-        event_type=MatchingEvent.EventType.ESCALATION_NOTIFICATION_SENT_TO_STAFF,
-        triggered_by=TriggeredByOptions.SYSTEM,
-        triggered_by_user=None,
-    )
-    
-    create_matching_event(
-        matching_attempt=matching_attempt,
-        event_type=MatchingEvent.EventType.INFORMATION_ABOUT_CLARIFICATION_SENT_TO_COACH,
-        triggered_by=TriggeredByOptions.SYSTEM,
-        triggered_by_user=None,
-    )
-    
-    
 def cancel_matching(matching_attempt, triggered_by_user: User):
     
     from matching.models import MatchingEvent, TriggeredByOptions

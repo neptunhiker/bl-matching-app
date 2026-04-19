@@ -561,18 +561,6 @@ class ParticipantRespondView(View):
                     'coaching_can_start': coaching_can_start,
                 },
             )
-        else:
-            return render(
-                request,
-                'matching/participant_response_clarification_needed.html',
-                {
-                    **base_context,
-                    'action': token_instance.action,
-                    'coaching_can_start': coaching_can_start,
-                    'bl_contact': matching_attempt.bl_contact,
-                },
-            )
-
 
 
 class ConfirmIntroCallView(View):

@@ -2,9 +2,9 @@ import logging
 
 from django.db import transaction
 
-from emails.services import send_first_coach_request_email, send_reminder_coach_request_email, send_intro_call_request_email, send_intro_call_info_email_to_participant, send_feedback_request_email_after_intro_call_to_participant, send_coaching_start_info_email_to_coach, send_coaching_start_info_email_to_participant, send_clarification_need_info_to_coach_email, send_escalation_info_email_to_staff, send_clarification_call_booked_info_to_coach_email
+from emails.services import send_first_coach_request_email, send_reminder_coach_request_email, send_intro_call_request_email, send_intro_call_info_email_to_participant, send_feedback_request_email_after_intro_call_to_participant, send_coaching_start_info_email_to_coach, send_coaching_start_info_email_to_participant, send_escalation_info_email_to_staff, send_clarification_call_booked_info_to_coach_email
 from profiles.models import Coach
-from slack.services import send_first_coach_request_slack, send_reminder_coach_request_slack, send_intro_call_request_slack, send_coaching_starting_info_slack, send_escalation_info_slack, send_all_rtcs_declined_info_slack, send_clarification_need_info_to_coach_slack, send_intro_call_reminder_slack, send_intro_call_timeout_notification_to_staff_slack, send_clarification_call_booked_info_to_staff_slack, send_clarification_call_booked_info_to_coach_slack
+from slack.services import send_first_coach_request_slack, send_reminder_coach_request_slack, send_intro_call_request_slack, send_coaching_starting_info_slack, send_escalation_info_slack, send_all_rtcs_declined_info_slack, send_intro_call_reminder_slack, send_intro_call_timeout_notification_to_staff_slack, send_clarification_call_booked_info_to_staff_slack, send_clarification_call_booked_info_to_coach_slack
 
 logger = logging.getLogger(__name__)
 
@@ -238,21 +238,6 @@ def handle_coaching_can_start_feedback_received_from_participant_event(event):
     
     services.send_out_official_coaching_start_notification(matching_attempt)
     
-def handle_clarification_needed_feedback_received_from_participant_event(event):
-    from matching.models import MatchingEvent
-    from matching import services
-    
-    if event.event_type != MatchingEvent.EventType.CLARIFICATION_NEEEDED_FEEDBACK_RECEIVED_FROM_PARTICIPANT:
-        return
-    
-    logger.debug(f"Handling CLARIFICATION_NEEDED_FEEDBACK_RECEIVED_FROM_PARTICIPANT event: {event.id}")
-    
-    matching_attempt = event.matching_attempt
-    matching_attempt.clarify_matching_with_participant()
-    matching_attempt.save()
-    
-    services.send_clarification_needed_notifications(matching_attempt)
-    
 def handle_coaching_start_info_sent_out_to_coach_event(event):
     from matching.models import MatchingEvent
     
@@ -300,27 +285,6 @@ def handle_escalation_notification_sent_to_staff_event(event):
             f"{event.matching_attempt.id}: {e}. Falling back to email."
         )
         send_escalation_info_email_to_staff(event.matching_attempt)
-    
-    
-def handle_clarification_need_info_to_coach_event(event):
-    from matching.models import MatchingEvent
-    
-    if event.event_type != MatchingEvent.EventType.INFORMATION_ABOUT_CLARIFICATION_SENT_TO_COACH:
-        return
-    
-    logger.debug(f"Handling INFORMATION_ABOUT_CLARIFICATION_SENT_TO_COACH event: {event.id}")
-    
-    matching_attempt = event.matching_attempt
-    
-    coach = matching_attempt.matched_coach
-    
-    if coach.preferred_communication_channel == Coach.CommunicationChannel.SLACK:
-        send_clarification_need_info_to_coach_slack(matching_attempt)
-        
-    elif coach.preferred_communication_channel == Coach.CommunicationChannel.EMAIL:
-        send_clarification_need_info_to_coach_email(matching_attempt)
-    else:
-        raise ValueError(f"Unsupported communication channel for coach {coach}: {coach.preferred_communication_channel}")
     
     
 @transaction.atomic
