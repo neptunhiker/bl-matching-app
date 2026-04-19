@@ -558,7 +558,6 @@ class ParticipantRespondView(View):
     # States that mean the participant has already given a definitive answer.
     TERMINAL_STATES = {
         MatchingAttempt.State.MATCHING_COMPLETED,
-        MatchingAttempt.State.CLARIFICATION_WITH_PARTICIPANT_NEEDED,
     }
 
     def get(self, request, token):

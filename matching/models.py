@@ -291,10 +291,6 @@ class MatchingAttempt(models.Model):
     def complete_matching(self):
         pass
     
-    @transition(field=state, source=State.AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT, target=State.CLARIFICATION_WITH_PARTICIPANT_NEEDED)
-    def clarify_matching_with_participant(self):
-        pass
-    
     @transition(field=state, source=State.AWAITING_RTC_REPLY, target=State.FAILED)
     def run_out_of_matching_requests_to_coaches(self):
         pass
