@@ -660,8 +660,34 @@ class ParticipantActionToken(models.Model):
             f"{self.get_action_display()}-Token für "
             f"{self.matching_attempt} ({used})"
         )
-        
-  
+
+
+class ClarificationCallBooking(models.Model):
+    matching_attempt = models.ForeignKey(
+        MatchingAttempt,
+        on_delete=models.CASCADE,
+        related_name="clarification_call_bookings",
+    )
+    calendly_event_uri = models.URLField(blank=True)
+    calendly_invitee_uri = models.URLField(blank=True, unique=True)
+    invitee_email = models.EmailField(blank=True)
+    start_time = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=50, default="active")  # active | canceled
+    clarification_category = models.CharField(max_length=255, blank=True)
+    clarification_description = models.TextField(blank=True)
+    raw_payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Klärungsgespräch-Buchung"
+        verbose_name_plural = "Klärungsgespräch-Buchungen"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"ClarificationCallBooking {self.matching_attempt} ({self.status})"
+
+
 class MatchingEvent(models.Model):
     
 
@@ -729,6 +755,10 @@ class MatchingEvent(models.Model):
         ESCALATION_NOTIFICATION_SENT_TO_STAFF = "escalation_notification_sent_to_staff", "BeginnerLuft über notwendige Klärung informiert"
         
         INFORMATION_ABOUT_CLARIFICATION_SENT_TO_COACH = "information_about_clarification_sent_to_coach", "Coach über notwendige Klärung informiert"
+
+        # Clarification call via Calendly (replaces old CLARIFICATION_NEEDED token flow)
+        CLARIFICATION_CALL_BOOKED = "clarification_call_booked", "TN hat Klärungsgespräch gebucht (Calendly)"
+        CLARIFICATION_CALL_CANCELED = "clarification_call_canceled", "TN hat Klärungsgespräch abgesagt (Calendly)"
 
 
         # =========================================================
