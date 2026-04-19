@@ -15,7 +15,7 @@ from accounts.models import User
 from matching.locks import _get_locked_request_to_coach, _get_locked_matching_attempt
 
 from matching.tokens import generate_accept_and_decline_token, generate_intro_call_feedback_url, generate_participant_response_urls
-from matching.utils import get_urgency_message, get_intro_call_extension_deadline
+from matching.utils import get_urgency_message, get_standard_extension_deadline
 from .models import EmailLog
 
 
@@ -276,6 +276,7 @@ def send_feedback_request_email_after_intro_call_to_participant(matching_attempt
         "participant_first_name": participant.first_name,
         "start_coaching_url": start_coaching_url,
         "calendly_url": calendly_url,
+        "deadline": matching_attempt.participant_intro_call_feedback_deadline_at,
         "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
     }
     
@@ -291,6 +292,41 @@ def send_feedback_request_email_after_intro_call_to_participant(matching_attempt
             )
     )
         
+    return matching_attempt
+
+@transaction.atomic
+def send_intro_call_feedback_reminder_email_to_participant(matching_attempt, triggered_by: str="system"):
+    """Send a reminder email to the participant after their intro call feedback deadline has passed."""
+
+    matching_attempt = _get_locked_matching_attempt(matching_attempt)
+
+    participant = matching_attempt.participant
+    coach = matching_attempt.matched_coach
+    start_coaching_url, calendly_url = generate_participant_response_urls(matching_attempt)
+
+    context = {
+        "recipient_name": participant.first_name,
+        "coach": coach,
+        "bl_contact": matching_attempt.bl_contact,
+        "participant_first_name": participant.first_name,
+        "start_coaching_url": start_coaching_url,
+        "calendly_url": calendly_url,
+        "deadline": matching_attempt.participant_intro_call_feedback_deadline_at,
+        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
+    }
+
+    transaction.on_commit(
+        lambda: send_email(
+            to=participant.email,
+            subject=f"Erinnerung: Bitte bestätige deinen Coaching-Start mit {coach.first_name}",
+            template_name='emails/intro_call_feedback_reminder_to_participant.html',
+            context=context,
+            matching_attempt=matching_attempt,
+            sent_by=context["author"],
+            triggered_by=triggered_by,
+        )
+    )
+
     return matching_attempt
 
 @transaction.atomic

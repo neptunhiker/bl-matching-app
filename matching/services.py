@@ -5,7 +5,7 @@ from django.db import transaction, IntegrityError
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from matching.utils import get_deadline_for_intro_call
+from matching.utils import get_standard_deadline, get_standard_extension_deadline
 
 from accounts.models import User
 
@@ -200,7 +200,7 @@ def accept_or_decline_request_to_coach(rtc, accept: bool, response_time: datetim
                 rtc.accept(on_time=on_time)
                 rtc.save()  # Ensure RTC state change is saved before event is created
                 rtc.matching_attempt.matched_coach = rtc.coach
-                rtc.matching_attempt.intro_call_deadline_at = get_deadline_for_intro_call(timezone.now())
+                rtc.matching_attempt.intro_call_deadline_at = get_standard_deadline(timezone.now())
                 rtc.matching_attempt.save(update_fields=["matched_coach", "intro_call_deadline_at"])
             else:
                 event_type = MatchingEvent.EventType.RTC_DECLINED
@@ -256,6 +256,10 @@ def continue_matching_after_rtc_accepted(matching_attempt):
     
 def continue_matching_after_intro_call_feedback_from_coach(matching_attempt):
     from matching.models import MatchingEvent, TriggeredByOptions
+
+    # Set the deadline for the participant to respond to the intro call feedback request.
+    matching_attempt.participant_intro_call_feedback_deadline_at = get_standard_deadline(timezone.now())
+    matching_attempt.save(update_fields=["participant_intro_call_feedback_deadline_at"])
 
     create_matching_event(
         matching_attempt=matching_attempt,
@@ -437,6 +441,8 @@ def record_clarification_call_booked(matching_attempt_id, invitee_email, invitee
         )
         if matching_attempt.state == MatchingAttempt.State.AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT:
             matching_attempt.confirm_clarification_call_booking()
+            # Clear the deadline — the participant has taken action by booking a clarification call.
+            matching_attempt.participant_intro_call_feedback_deadline_at = None
             matching_attempt.save()
 
         start_dt = parse_datetime(scheduled_event.get("start_time") or "")

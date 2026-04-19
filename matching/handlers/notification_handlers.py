@@ -2,9 +2,9 @@ import logging
 
 from django.db import transaction
 
-from emails.services import send_first_coach_request_email, send_reminder_coach_request_email, send_intro_call_request_email, send_intro_call_info_email_to_participant, send_feedback_request_email_after_intro_call_to_participant, send_coaching_start_info_email_to_coach, send_coaching_start_info_email_to_participant, send_escalation_info_email_to_staff, send_clarification_call_booked_info_to_coach_email
+from emails.services import send_first_coach_request_email, send_reminder_coach_request_email, send_intro_call_request_email, send_intro_call_info_email_to_participant, send_feedback_request_email_after_intro_call_to_participant, send_intro_call_feedback_reminder_email_to_participant, send_coaching_start_info_email_to_coach, send_coaching_start_info_email_to_participant, send_escalation_info_email_to_staff, send_clarification_call_booked_info_to_coach_email
 from profiles.models import Coach
-from slack.services import send_first_coach_request_slack, send_reminder_coach_request_slack, send_intro_call_request_slack, send_coaching_starting_info_slack, send_escalation_info_slack, send_all_rtcs_declined_info_slack, send_intro_call_reminder_slack, send_intro_call_timeout_notification_to_staff_slack, send_clarification_call_booked_info_to_staff_slack, send_clarification_call_booked_info_to_coach_slack
+from slack.services import send_first_coach_request_slack, send_reminder_coach_request_slack, send_intro_call_request_slack, send_coaching_starting_info_slack, send_escalation_info_slack, send_all_rtcs_declined_info_slack, send_intro_call_reminder_slack, send_intro_call_timeout_notification_to_staff_slack, send_clarification_call_booked_info_to_staff_slack, send_clarification_call_booked_info_to_coach_slack, send_participant_intro_call_feedback_timeout_notification_to_staff_slack
 
 logger = logging.getLogger(__name__)
 
@@ -422,3 +422,25 @@ def handle_clarification_call_canceled_event(event):
 
     # No automated notification on cancellation — staff see this in the event log / admin
     logger.info("Clarification call canceled for matching attempt %s", event.matching_attempt_id)
+
+
+def handle_intro_call_feedback_reminder_sent_to_participant_event(event):
+    from matching.models import MatchingEvent
+
+    if event.event_type != MatchingEvent.EventType.INTRO_CALL_FEEDBACK_REMINDER_SENT_TO_PARTICIPANT:
+        return
+
+    logger.debug(f"Handling INTRO_CALL_FEEDBACK_REMINDER_SENT_TO_PARTICIPANT event: {event.id}")
+
+    send_intro_call_feedback_reminder_email_to_participant(event.matching_attempt)
+
+
+def handle_intro_call_feedback_participant_timed_out_staff_notified_event(event):
+    from matching.models import MatchingEvent
+
+    if event.event_type != MatchingEvent.EventType.INTRO_CALL_FEEDBACK_PARTICIPANT_TIMED_OUT_STAFF_NOTIFIED:
+        return
+
+    logger.debug(f"Handling INTRO_CALL_FEEDBACK_PARTICIPANT_TIMED_OUT_STAFF_NOTIFIED event: {event.id}")
+
+    send_participant_intro_call_feedback_timeout_notification_to_staff_slack(event.matching_attempt)

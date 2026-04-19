@@ -10,7 +10,7 @@ from accounts.models import User
 from matching.locks import _get_locked_request_to_coach, _get_locked_matching_attempt
 
 from matching.tokens import generate_accept_and_decline_token, generate_intro_call_feedback_url
-from matching.utils import get_urgency_message, get_intro_call_extension_deadline
+from matching.utils import get_urgency_message, get_standard_extension_deadline
 from slack.models import SlackLog
 
 
@@ -1166,6 +1166,98 @@ def send_clarification_call_booked_info_to_coach_slack(matching_attempt):
         logger.error(f"Unexpected error sending clarification call booked info to coach {coach}: {e}")
         create_slack_log(
             to=coach.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+        raise
+
+
+def send_participant_intro_call_feedback_timeout_notification_to_staff_slack(matching_attempt):
+    """Notify BL staff that the participant has not responded to the intro call feedback request even after the reminder."""
+    client = WebClient(token=settings.SLACK_BOT_TOKEN)
+    coach = matching_attempt.matched_coach
+    participant = matching_attempt.participant
+    bl_contact = matching_attempt.bl_contact
+    url_participant = settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk})
+    user_id = bl_contact.slack_user_id if bl_contact else None
+
+    if not user_id:
+        raise ValueError(f"BL contact for matching attempt {matching_attempt.id} does not have a Slack user ID")
+
+    logger.info(
+        f"Sending participant intro call feedback timeout staff notification Slack to BL contact "
+        f"{bl_contact} (matching_attempt: {matching_attempt.id})"
+    )
+    subject = f"⚠️ {participant.first_name} hat nach dem Kennenlerngespräch nicht geantwortet"
+
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "⚠️ Keine Antwort von Teilnehmer:in nach Kennenlerngespräch",
+            },
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"*{participant.first_name} {participant.last_name}* hat trotz Erinnerung bislang nicht bestätigt, "
+                    f"ob das Coaching mit *{coach}* starten kann.\n\n"
+                    f"Bitte nimm direkt Kontakt mit *{participant.first_name}* auf, um zu klären, ob das Coaching stattfinden soll."
+                ),
+            },
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"*Teilnehmer:in:* <{url_participant}|{participant}>\n"
+                    f"*Coach:* {coach}\n"
+                ),
+            },
+        },
+    ]
+
+    message = _blocks_to_text(blocks)
+
+    try:
+        dm_channel = _open_dm_channel(client, user_id)
+        client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
+        logger.info(f"Successfully sent participant intro call feedback timeout staff notification Slack to {bl_contact}")
+        create_slack_log(
+            to=bl_contact.user,
+            subject=subject,
+            message=message,
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+        )
+    except SlackApiError as e:
+        logger.error(
+            f"Slack API error sending participant intro call feedback timeout notification to staff {bl_contact}: {e}"
+        )
+        create_slack_log(
+            to=bl_contact.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+        raise
+    except Exception as e:
+        logger.error(
+            f"Unexpected error sending participant intro call feedback timeout notification to staff {bl_contact}: {e}"
+        )
+        create_slack_log(
+            to=bl_contact.user,
             subject=subject,
             message="",
             matching_attempt=matching_attempt,

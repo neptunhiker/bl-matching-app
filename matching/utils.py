@@ -40,8 +40,8 @@ def get_deadline(
     if local_start.weekday() == 6:  # Sunday
         return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
     
-def get_deadline_for_intro_call(start: datetime) -> datetime:
-    """Calculate the deadline for the coaching to organize the intro call. The deadline shall be 3 working days later, e.g. when the request goes out on a Monday then the deadline is Thursday at 18:00."""
+def get_standard_deadline(start: datetime) -> datetime:
+    """Calculate a standard 3-working-day deadline at 18:00. E.g. when a request goes out on a Monday the deadline is Thursday at 18:00."""
     local_start = timezone.localtime(start) if timezone.is_aware(start) else start
     if local_start.weekday() in [0, 1]:  # Monday, Tuesday
         return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=3)
@@ -52,8 +52,8 @@ def get_deadline_for_intro_call(start: datetime) -> datetime:
     if local_start.weekday() == 6:  # Sunday
         return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=3)
     
-def get_intro_call_extension_deadline(start: datetime) -> datetime:
-    """Calculate the extension deadline which shall be a working day later until 6 pm. E.g. if the original deadline was until Monday 18:00 and the coach is reminded to report back on the intro call then he/she shall receive one more deadline until Tuesday 18:00."""
+def get_standard_extension_deadline(start: datetime) -> datetime:
+    """Calculate a one-working-day extension deadline at 18:00. E.g. if the original deadline was Monday 18:00 the extended deadline is Tuesday 18:00."""
     local_start = timezone.localtime(start) if timezone.is_aware(start) else start
     if local_start.weekday() in [0, 1, 2, 3]:  # Monday, Tuesday, Wednesday, Thursday
         return local_start.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)

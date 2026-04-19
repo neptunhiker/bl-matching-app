@@ -81,6 +81,12 @@ def dispatch_event(event: MatchingEvent):
         MatchingEvent.EventType.CLARIFICATION_CALL_CANCELED: [
             notification_handlers.handle_clarification_call_canceled_event,
         ],
+        MatchingEvent.EventType.INTRO_CALL_FEEDBACK_REMINDER_SENT_TO_PARTICIPANT: [
+            notification_handlers.handle_intro_call_feedback_reminder_sent_to_participant_event,
+        ],
+        MatchingEvent.EventType.INTRO_CALL_FEEDBACK_PARTICIPANT_TIMED_OUT_STAFF_NOTIFIED: [
+            notification_handlers.handle_intro_call_feedback_participant_timed_out_staff_notified_event,
+        ],
         
         # State handlers
         MatchingEvent.EventType.ALL_RTCS_DECLINED: [

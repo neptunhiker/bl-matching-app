@@ -21,7 +21,7 @@ from .tokens import consume_token
 from . import services
 from matching import services
 from matching.forms import RequestToCoachForm, RequestToCoachUpdateForm
-from matching.utils import build_notifications, get_intro_call_extension_deadline
+from matching.utils import build_notifications, get_standard_extension_deadline
 from django.utils import dateparse
 import json
 

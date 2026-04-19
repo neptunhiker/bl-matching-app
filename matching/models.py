@@ -67,6 +67,38 @@ class MatchingAttemptQuerySet(models.QuerySet):
             Exists(already_notified)
         )
 
+    def eligible_for_participant_intro_call_feedback_reminder(self):
+        already_reminded = MatchingEvent.objects.filter(
+            matching_attempt=OuterRef('pk'),
+            event_type=MatchingEvent.EventType.INTRO_CALL_FEEDBACK_REMINDER_SENT_TO_PARTICIPANT,
+        )
+        return self.filter(
+            state=MatchingAttempt.State.AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT,
+            automation_enabled=True,
+            participant_intro_call_feedback_deadline_at__isnull=False,
+            participant_intro_call_feedback_deadline_at__lt=timezone.now(),
+        ).exclude(Exists(already_reminded))
+
+    def eligible_for_participant_intro_call_feedback_staff_escalation(self):
+        already_notified = MatchingEvent.objects.filter(
+            matching_attempt=OuterRef('pk'),
+            event_type=MatchingEvent.EventType.INTRO_CALL_FEEDBACK_PARTICIPANT_TIMED_OUT_STAFF_NOTIFIED,
+        )
+        has_been_reminded = MatchingEvent.objects.filter(
+            matching_attempt=OuterRef('pk'),
+            event_type=MatchingEvent.EventType.INTRO_CALL_FEEDBACK_REMINDER_SENT_TO_PARTICIPANT,
+        )
+        return self.filter(
+            state=MatchingAttempt.State.AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT,
+            automation_enabled=True,
+            participant_intro_call_feedback_deadline_at__isnull=False,
+            participant_intro_call_feedback_deadline_at__lt=timezone.now(),
+        ).filter(
+            Exists(has_been_reminded)
+        ).exclude(
+            Exists(already_notified)
+        )
+
 class MatchingAttempt(models.Model):
     class State(models.TextChoices):
         IN_PREPARATION = "in_preparation", "In Vorbereitung"
@@ -159,6 +191,14 @@ class MatchingAttempt(models.Model):
         db_index=True,
         verbose_name="Frist für Intro-Call",
         help_text="Frist, bis zu der der Coach einen Intro-Call mit dem(r) Teilnehmer:in organisieren soll.",
+    )
+
+    participant_intro_call_feedback_deadline_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name="Frist für TN-Antwort nach Intro-Call",
+        help_text="Frist, bis zu der der/die Teilnehmer:in nach dem Intro-Call bestätigen soll, ob das Coaching starten kann.",
     )
 
     cancelled_at = models.DateTimeField(null=True, blank=True)
@@ -765,6 +805,8 @@ class MatchingEvent(models.Model):
         INTRO_CALL_INFO_SENT_TO_PARTICIPANT = "intro_call_info_sent_to_participant", "Intro-Call Informationen an TN versendet"
         
         INTRO_CALL_FEEDBACK_REQUESTED_FROM_PARTICIPANT = "intro_call_feedback_requested_from_participant", "Feedback zum Intro-Call bei TN angefragt"
+        INTRO_CALL_FEEDBACK_REMINDER_SENT_TO_PARTICIPANT = "intro_call_feedback_reminder_sent_to_participant", "Erinnerung für Intro-Call Feedback an TN versendet"
+        INTRO_CALL_FEEDBACK_PARTICIPANT_TIMED_OUT_STAFF_NOTIFIED = "intro_call_feedback_participant_timed_out_staff_notified", "Staff über abgelaufene Intro-Call Feedback-Frist (TN) informiert"
         
         COACHING_CAN_START_FEEDBACK_RECEIVED_FROM_PARTICIPANT = "coaching_can_start_feedback_received_from_participant", "Positives Feedback zum Intro-Call von TN erhalten"
         
