@@ -74,6 +74,7 @@ class MatchingAttempt(models.Model):
         AWAITING_INTRO_CALL_FEEDBACK_FROM_COACH = "awaiting_intro_call_feedback_from_coach", "Warten auf Coach-Antwort zu Intro-Call Anfrage"
         AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT = "awaiting_intro_call_feedback_from_participant", "Warten auf TN-Antwort zu Intro-Call"
         CLARIFICATION_WITH_PARTICIPANT_NEEDED = "clarification_with_participant_needed", "Klärung mit TN nötig"
+        CLARIFICATION_CALL_SCHEDULED = "clarification_call_scheduled", "Klärungsgespräch gebucht"
         MATCHING_COMPLETED = "matching_completed", "Matching abgeschlossen"
         FAILED = "failed", "Keinen Coach gefunden"
         CANCELLED = "cancelled", "Matching abgebrochen"
@@ -85,6 +86,7 @@ class MatchingAttempt(models.Model):
         State.AWAITING_INTRO_CALL_FEEDBACK_FROM_COACH,
         State.AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT,
         State.CLARIFICATION_WITH_PARTICIPANT_NEEDED,
+        State.CLARIFICATION_CALL_SCHEDULED,
     ]
 
     TERMINAL_STATES = [
@@ -243,7 +245,9 @@ class MatchingAttempt(models.Model):
     def send_request_for_intro_call_feedback_to_participant(self):
         pass
     
-    @transition(field=state, source=State.AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT, target=State.MATCHING_COMPLETED)
+    @transition(field=state,
+                source=[State.AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT, State.CLARIFICATION_CALL_SCHEDULED],
+                target=State.MATCHING_COMPLETED)
     def complete_matching(self):
         pass
     
@@ -254,6 +258,21 @@ class MatchingAttempt(models.Model):
     @transition(field=state, source=State.AWAITING_RTC_REPLY, target=State.FAILED)
     def run_out_of_matching_requests_to_coaches(self):
         pass
+
+    @transition(field=state,
+                source=State.AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT,
+                target=State.CLARIFICATION_CALL_SCHEDULED)
+    def confirm_clarification_call_booking(self):
+        """Calendly webhook confirmed a clarification call booking."""
+        pass
+
+    @transition(field=state,
+                source=State.CLARIFICATION_CALL_SCHEDULED,
+                target=State.AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT)
+    def cancel_clarification_call_booking(self):
+        """Calendly webhook reported a booking cancellation — revert so participant can rebook or use their token."""
+        pass
+
     # transition to cancel and allow from any state
     
     @transition(field=state, source="*", target=State.CANCELLED)
