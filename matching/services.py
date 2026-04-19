@@ -439,10 +439,23 @@ def record_clarification_call_booked(matching_attempt_id, invitee_email, invitee
             matching_attempt.confirm_clarification_call_booking()
             matching_attempt.save()
 
+        start_dt = parse_datetime(scheduled_event.get("start_time") or "")
+        if start_dt:
+            from django.utils import timezone as tz
+            start_dt = tz.localtime(start_dt)
+            start_formatted = start_dt.strftime("%d.%m.%Y %H:%M Uhr")
+        else:
+            start_formatted = ""
+
         create_matching_event(
             matching_attempt=matching_attempt,
             event_type=MatchingEvent.EventType.CLARIFICATION_CALL_BOOKED,
             triggered_by=TriggeredByOptions.SYSTEM,
+            payload={
+                "start_time": start_formatted,
+                "clarification_category": category or "",
+                "clarification_description": description or "",
+            },
         )
 
     logger.info(

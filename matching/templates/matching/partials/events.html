@@ -34,12 +34,34 @@
           <div class="flex items-center gap-3">
             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
               {% if e.event_type == 'rtc_accepted' or e.event_type == 'accepted' or e.event_type == 'intro_call_feedback_received_from_coach' or e.event_type == 'coaching_can_start_feedback_received_from_participant' %}bg-green-100 text-green-700
-              {% elif e.event_type == 'rtc_declined' or e.event_type == 'rtc_cancelled' or e.event_type == 'rtc_timed_out' or e.event_type == 'rtc_deleted' or e.event_type == 'cancelled' or e.event_type == 'failed' or e.event_type == 'clarification_needed_feedback_received_from_participant' or e.event_type == 'all_rtcs_declined' %}bg-secondary-200 text-secondary-700
+              {% elif e.event_type == 'rtc_declined' or e.event_type == 'rtc_cancelled' or e.event_type == 'rtc_timed_out' or e.event_type == 'rtc_deleted' or e.event_type == 'cancelled' or e.event_type == 'failed' or e.event_type == 'clarification_needed_feedback_received_from_participant' or e.event_type == 'all_rtcs_declined' or e.event_type == 'clarification_call_booked' %}bg-secondary-200 text-secondary-700
               {% else %}bg-neutral-100 text-neutral-600
               {% endif %}">
               <a href="{{ e.get_absolute_url }}">{{ e.get_event_type_display }}</a>
             </span>
           </div>
+          {% if e.event_type == 'clarification_call_booked' and e.payload %}
+          <dl class="mt-2 space-y-0.5 text-xs text-neutral-500">
+            {% if e.payload.start_time %}
+            <div class="flex gap-1.5">
+              <dt class="font-medium text-neutral-600 shrink-0">Termin:</dt>
+              <dd>{{ e.payload.start_time }}</dd>
+            </div>
+            {% endif %}
+            {% if e.payload.clarification_category %}
+            <div class="flex gap-1.5">
+              <dt class="font-medium text-neutral-600 shrink-0">Anliegen:</dt>
+              <dd>{{ e.payload.clarification_category }}</dd>
+            </div>
+            {% endif %}
+            {% if e.payload.clarification_description %}
+            <div class="flex gap-1.5">
+              <dt class="font-medium text-neutral-600 shrink-0">Beschreibung:</dt>
+              <dd>{{ e.payload.clarification_description }}</dd>
+            </div>
+            {% endif %}
+          </dl>
+          {% endif %}
         </div>
 
         <div class="ml-auto shrink-0 text-right">

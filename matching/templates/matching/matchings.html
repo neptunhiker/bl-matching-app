@@ -39,6 +39,7 @@
             <th class="px-5 py-3 font-semibold text-left">Teilnehmer:in</th>
             <th class="px-5 py-3 font-semibold text-left">Coach</th>
             <th class="px-5 py-3 font-semibold text-left">Status</th>
+            <th class="px-5 py-3 font-semibold text-left">Kontakt</th>
             <th class="px-5 py-3 font-semibold text-left">Erstellt</th>
           </tr>
         </thead>
@@ -60,12 +61,19 @@
             <td class="px-5 py-3">
               {% if matching.state == 'matching_completed' %}
                 {% include "components/_badge.html" with badge_text=matching.get_state_display badge_variant="success" %}
-              {% elif matching.state == 'cancelled' or matching.state == 'failed' or matching.state == 'clarification_with_participant_needed' %}
+              {% elif matching.state == 'cancelled' or matching.state == 'failed' or matching.state == 'clarification_with_participant_needed' or matching.state == 'clarification_call_scheduled' %}
                 {% include "components/_badge.html" with badge_text=matching.get_state_display badge_variant="secondary" %}
               {% elif matching.state == 'matching_confirmed' %}
                 {% include "components/_badge.html" with badge_text=matching.get_state_display badge_variant="secondary" %}
               {% else %}
                 {% include "components/_badge.html" with badge_text=matching.get_state_display badge_variant="neutral" %}
+              {% endif %}
+            </td>
+            <td class="px-5 py-3 text-xs text-neutral-600">
+              {% if matching.bl_contact %}
+                {% with u=matching.bl_contact.user %}{{ u.first_name }}{% if u.last_name %} {{ u.last_name|slice:":1" }}.{% endif %}{% endwith %}
+              {% else %}
+                <span class="text-neutral-300">—</span>
               {% endif %}
             </td>
             <td class="px-5 py-3 text-neutral-400 text-xs">{{ matching.created_at|localtime|date:"d.m.Y" }}</td>
@@ -91,7 +99,7 @@
             <div class="flex flex-col items-end gap-1 shrink-0">
               {% if matching.state == 'matching_completed' %}
                 {% include "components/_badge.html" with badge_text=matching.get_state_display badge_variant="success" %}
-              {% elif matching.state == 'cancelled' or matching.state == 'failed' or matching.state == 'clarification_with_participant_needed' %}
+              {% elif matching.state == 'cancelled' or matching.state == 'failed' or matching.state == 'clarification_with_participant_needed' or matching.state == 'clarification_call_scheduled' %}
                 {% include "components/_badge.html" with badge_text=matching.get_state_display badge_variant="danger" %}
               {% elif matching.state == 'matching_confirmed' %}
                 {% include "components/_badge.html" with badge_text=matching.get_state_display badge_variant="secondary" %}
