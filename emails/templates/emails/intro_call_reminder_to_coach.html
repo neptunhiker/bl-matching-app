@@ -7,27 +7,15 @@
 </h2>
 
 <p>
-Hallo {{ recipient_name }},
+Hey {{ recipient_name }},
 </p>
 
 <p style="margin-top:16px;">
-wir wollten dich kurz erinnern, dass wir noch keine Rückmeldung zu deinem
-Kennenlerngespräch mit <strong>{{ participant.first_name }}</strong> erhalten haben.
+kurze Erinnerung: Wir warten noch auf deine Bestätigung, dass das Kennenlerngespräch mit <strong>{{ participant.first_name }}</strong> stattgefunden hat. Ohne dein Feedback können wir den Prozess leider nicht weiterführen. Wenn du Bedenken bei der Übernahme des Coachings hast, melde dich aktiv beim Team von BeginnerLuft.
 </p>
 
 <p style="margin-top:16px;">
-Bitte melde dich direkt bei {{ participant.first_name }}, um einen Termin für das
-Kennenlerngespräch zu vereinbaren, und bestätige uns anschließend, dass ihr gesprochen habt –
-spätestens bis zum <strong>{{ deadline_for_intro_call|date:"d.m.Y – H:i" }} Uhr</strong>.
-</p>
-
-<p style="margin-top:10px;">
-Kontakt: <strong>{{ participant_email }}</strong>
-</p>
-
-<p style="margin-top:16px;">
-<strong>Wichtig:</strong> Bitte bestätige uns erst <em>nach</em> dem Gespräch, da wir
-{{ participant.first_name }} sofort danach informieren.
+Bitte gib uns bis spätestens {{ deadline_for_intro_call|date:"d.m.Y – H:i" }} Uhr Bescheid, ob das Kennenlernen stattgefunden hat und das Coaching starten kann. Nach Ablauf dieser Frist werden wir uns bei dir melden, um den Fall zu besprechen. 
 </p>
 
 <table border="0" cellpadding="0" cellspacing="0" style="margin-top:20px;">
