@@ -365,7 +365,6 @@ def send_intro_call_request_slack(matching_attempt):
     client = WebClient(token=settings.SLACK_BOT_TOKEN)
     coach = matching_attempt.matched_coach
     participant = matching_attempt.participant
-    url_participant = settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk})
     
 
     user_id = coach.slack_user_id
@@ -455,18 +454,6 @@ def send_intro_call_request_slack(matching_attempt):
             }
         },
         {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": (
-                    f"🔎 *Alle Infos zum Coaching*\n"
-                    f"Hier findest du nochmal die wichtigsten Details zu *{participant.first_name}* "
-                    f"und den Coaching-Zielen:\n\n\n"
-                    f"<{url_participant}|➡ Coaching ansehen>"
-                )
-            },
-        },
-        {
             "type": "context",
             "elements": [
                 {
@@ -520,7 +507,6 @@ def send_coaching_starting_info_slack(matching_attempt):
     client = WebClient(token=settings.SLACK_BOT_TOKEN)
     coach = matching_attempt.matched_coach
     participant = matching_attempt.participant
-    url_participant = settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk})
 
     user_id = coach.slack_user_id
     start_date = participant.start_date
@@ -565,18 +551,6 @@ def send_coaching_starting_info_slack(matching_attempt):
                     f"Falls du noch Fragen hast oder Unterstützung brauchst, melde dich gerne jederzeit bei uns im Team! Wir sind hier, um dich zu unterstützen. 😊"
                 )
             }
-        },
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": (
-                    f"🔎 *Alle Infos zum Coaching*\n"
-                    f"Hier findest du nochmal die wichtigsten Details zu *{participant.first_name}* "
-                    f"und den Coaching-Zielen:\n\n\n"
-                    f"<{url_participant}|➡ Coaching ansehen>"
-                )
-            },
         },
     ]
 
