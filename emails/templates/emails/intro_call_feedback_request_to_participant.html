@@ -38,18 +38,13 @@ Sobald Du bestätigt hast, informieren wir {{ coach.first_name }} direkt, damit 
 </p>
 
 <p style="margin-top:22px;">
-Falls Du vor dem Start noch allgemeine Fragen hast, melde Dich bitte einfach direkt bei {{ bl_contact }}
-unter <a href="mailto:{{ bl_contact.user.email }}">{{ bl_contact.user.email }}</a>.
-</p>
-
-<p style="margin-top:16px;">
-Nur wenn Du aktuell das Gefühl hast, dass {{ coach.first_name }} doch nicht {{ coach.user.german_article }} richtige Coach für Dich ist und Du deshalb noch einmal mit uns sprechen möchtest, klicke bitte hier:
+Falls Du noch offene Fragen hast oder Dir unsicher bist, ob {{ coach.first_name }} {{ coach.user.german_article }} richtige Coach für Dich ist, kannst Du gerne ein kurzes Gespräch mit uns buchen. Klicke dazu auf den Button unten — Du wirst direkt zu unserem Buchungskalender weitergeleitet, wo Du einen passenden Termin auswählen kannst.
 </p>
 
 <table border="0" cellpadding="0" cellspacing="0" style="margin-top:20px;">
   <tr>
     <td style="padding-right:10px;">
-      <a href="{{ clarification_needed_url }}"
+      <a href="{{ calendly_url }}"
          style="
            background-color:#f59e0b;
            color:#ffffff;
@@ -59,7 +54,7 @@ Nur wenn Du aktuell das Gefühl hast, dass {{ coach.first_name }} doch nicht {{ 
            font-weight:600;
            display:inline-block;
          ">
-        Ich bin unsicher, ob {{ coach.first_name }} {{ coach.user.german_article }} richtige Coach für mich ist.
+        Ich möchte zuerst ein kurzes Gespräch mit euch führen
       </a>
     </td>
   </tr>
