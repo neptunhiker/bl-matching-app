@@ -131,7 +131,8 @@ def _build_email_context(
         "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
         "accept_url": accept_url,
         "decline_url": decline_url,
-        "learn_more_url": settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk}),
+        "coaching_target": participant.coaching_target,
+        "background_information": participant.background_information,
         "deadline": rtc.deadline_at,
         "start_date": rtc.matching_attempt.participant.start_date.strftime("%d.%m.%Y"),
     }
