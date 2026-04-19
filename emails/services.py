@@ -206,7 +206,6 @@ def send_intro_call_request_email(matching_attempt):
         "participant_name": participant.first_name,
         "participant": participant,
         "participant_email": participant.email,
-        "learn_more_url": settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk}),
         "urgency_message": get_urgency_message(participant, start_date=participant.start_date),
         "intro_call_feedback_url": intro_call_feedback_url,
         "deadline_for_intro_call": deadline_for_intro_call,
