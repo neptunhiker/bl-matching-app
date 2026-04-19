@@ -2,6 +2,7 @@ import logging
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 
 from matching.models import MatchingAttempt, MatchingEvent, TriggeredByOptions
 from matching.utils import get_standard_extension_deadline
@@ -42,7 +43,7 @@ class Command(BaseCommand):
             try:
                 with transaction.atomic():
                     attempt.participant_intro_call_feedback_deadline_at = get_standard_extension_deadline(
-                        attempt.participant_intro_call_feedback_deadline_at
+                        timezone.now()
                     )
                     attempt.save(update_fields=["participant_intro_call_feedback_deadline_at"])
 
