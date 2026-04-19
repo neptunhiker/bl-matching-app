@@ -14,7 +14,8 @@ from slack.services import (
     send_coaching_starting_info_slack,
     send_escalation_info_slack,
     send_all_rtcs_declined_info_slack,
-    send_clarification_need_info_to_coach_slack,
+    send_clarification_call_booked_info_to_staff_slack,
+    send_clarification_call_booked_info_to_coach_slack,
 )
 
 
@@ -550,49 +551,158 @@ class TestSendAllRtcsDeclinedInfoSlack:
         assert "net error" in log.error_message
 
 
-# ── 10. send_clarification_need_info_to_coach_slack ───────────────────────────
+# ── 10. send_clarification_call_booked_info_to_staff_slack ───────────────────
 
-_CLARIFICATION_PATCH = "slack.services.WebClient"
+_CLARIF_STAFF_PATCH = "slack.services.WebClient"
 
 
 @pytest.mark.django_db
-class TestSendClarificationNeedInfoToCoachSlack:
+class TestSendClarificationCallBookedInfoToStaffSlack:
 
-    def test_send_clarification_happy_path(self, matching_attempt_with_coach, mock_slack_client):
-        with patch(_CLARIFICATION_PATCH, return_value=mock_slack_client):
-            send_clarification_need_info_to_coach_slack(matching_attempt_with_coach)
+    @pytest.fixture
+    def booking(self, matching_attempt_with_coach):
+        """An active ClarificationCallBooking with Q&A answers, linked to the matching attempt."""
+        from django.utils import timezone
+        from matching.models import ClarificationCallBooking
+        return ClarificationCallBooking.objects.create(
+            matching_attempt=matching_attempt_with_coach,
+            calendly_invitee_uri="https://api.calendly.com/scheduled_events/X/invitees/s1",
+            invitee_email="patricia_participant@example.com",
+            start_time=timezone.now(),
+            status="active",
+            clarification_category="Organisatorisches",
+            clarification_description="Terminplanung kläre ich gerne.",
+        )
+
+    def test_happy_path_sends_message_and_logs(
+        self, matching_attempt_with_coach, booking, mock_slack_client
+    ):
+        with patch(_CLARIF_STAFF_PATCH, return_value=mock_slack_client):
+            send_clarification_call_booked_info_to_staff_slack(matching_attempt_with_coach)
 
         mock_slack_client.chat_postMessage.assert_called_once()
         log = SlackLog.objects.get()
         assert log.status == SlackLog.Status.SENT
         assert log.matching_attempt == matching_attempt_with_coach
+        assert log.to == matching_attempt_with_coach.bl_contact.user
         assert log.sent_by == SlackLog.SentBy.SYSTEM
 
-    def test_send_clarification_no_slack_id_raises(self, matching_attempt_no_coach_slack, mock_slack_client):
-        with patch(_CLARIFICATION_PATCH, return_value=mock_slack_client):
-            with pytest.raises(ValueError):
-                send_clarification_need_info_to_coach_slack(matching_attempt_no_coach_slack)
+    def test_message_contains_booking_time(
+        self, matching_attempt_with_coach, booking, mock_slack_client
+    ):
+        with patch(_CLARIF_STAFF_PATCH, return_value=mock_slack_client):
+            send_clarification_call_booked_info_to_staff_slack(matching_attempt_with_coach)
 
-        mock_slack_client.conversations_open.assert_not_called()
+        _, kwargs = mock_slack_client.chat_postMessage.call_args
+        assert "Termin" in str(kwargs["blocks"])
+
+    def test_message_contains_qna_answers(
+        self, matching_attempt_with_coach, booking, mock_slack_client
+    ):
+        with patch(_CLARIF_STAFF_PATCH, return_value=mock_slack_client):
+            send_clarification_call_booked_info_to_staff_slack(matching_attempt_with_coach)
+
+        _, kwargs = mock_slack_client.chat_postMessage.call_args
+        blocks_str = str(kwargs["blocks"])
+        assert "Organisatorisches" in blocks_str
+        assert "Terminplanung" in blocks_str
+
+    def test_no_bl_slack_id_raises(self, matching_attempt_no_bl_slack, mock_slack_client):
+        with patch(_CLARIF_STAFF_PATCH, return_value=mock_slack_client):
+            with pytest.raises(ValueError):
+                send_clarification_call_booked_info_to_staff_slack(matching_attempt_no_bl_slack)
+
         assert SlackLog.objects.count() == 0
 
-    def test_send_clarification_slack_api_error(self, matching_attempt_with_coach, mock_slack_client):
+    def test_slack_api_error_logs_failure_and_raises(
+        self, matching_attempt_with_coach, booking, mock_slack_client
+    ):
         mock_slack_client.conversations_open.side_effect = _make_slack_error()
 
-        with patch(_CLARIFICATION_PATCH, return_value=mock_slack_client):
-            send_clarification_need_info_to_coach_slack(matching_attempt_with_coach)
+        with patch(_CLARIF_STAFF_PATCH, return_value=mock_slack_client):
+            with pytest.raises(SlackApiError):
+                send_clarification_call_booked_info_to_staff_slack(matching_attempt_with_coach)
 
         log = SlackLog.objects.get()
         assert log.status == SlackLog.Status.FAILED
         assert log.error_message != ""
 
-    def test_send_clarification_generic_exception(self, matching_attempt_with_coach, mock_slack_client):
-        mock_slack_client.chat_postMessage.side_effect = RuntimeError("crash")
+    def test_generic_exception_logs_failure_and_raises(
+        self, matching_attempt_with_coach, booking, mock_slack_client
+    ):
+        mock_slack_client.chat_postMessage.side_effect = RuntimeError("network error")
 
-        with patch(_CLARIFICATION_PATCH, return_value=mock_slack_client):
-            send_clarification_need_info_to_coach_slack(matching_attempt_with_coach)
+        with patch(_CLARIF_STAFF_PATCH, return_value=mock_slack_client):
+            with pytest.raises(RuntimeError):
+                send_clarification_call_booked_info_to_staff_slack(matching_attempt_with_coach)
 
         log = SlackLog.objects.get()
         assert log.status == SlackLog.Status.FAILED
-        assert "crash" in log.error_message
+
+
+# ── 11. send_clarification_call_booked_info_to_coach_slack ───────────────────
+
+_CLARIF_COACH_PATCH = "slack.services.WebClient"
+
+
+@pytest.mark.django_db
+class TestSendClarificationCallBookedInfoToCoachSlack:
+
+    def test_happy_path_sends_message_and_logs(
+        self, matching_attempt_with_coach, mock_slack_client
+    ):
+        with patch(_CLARIF_COACH_PATCH, return_value=mock_slack_client):
+            send_clarification_call_booked_info_to_coach_slack(matching_attempt_with_coach)
+
+        mock_slack_client.chat_postMessage.assert_called_once()
+        log = SlackLog.objects.get()
+        assert log.status == SlackLog.Status.SENT
+        assert log.matching_attempt == matching_attempt_with_coach
+        assert log.to == matching_attempt_with_coach.matched_coach.user
+        assert log.sent_by == SlackLog.SentBy.SYSTEM
+
+    def test_message_says_nothing_to_do(
+        self, matching_attempt_with_coach, mock_slack_client
+    ):
+        with patch(_CLARIF_COACH_PATCH, return_value=mock_slack_client):
+            send_clarification_call_booked_info_to_coach_slack(matching_attempt_with_coach)
+
+        _, kwargs = mock_slack_client.chat_postMessage.call_args
+        assert "nichts zu tun" in str(kwargs["blocks"])
+
+    def test_no_coach_slack_id_raises(
+        self, matching_attempt_no_coach_slack, mock_slack_client
+    ):
+        with patch(_CLARIF_COACH_PATCH, return_value=mock_slack_client):
+            with pytest.raises(ValueError):
+                send_clarification_call_booked_info_to_coach_slack(matching_attempt_no_coach_slack)
+
+        assert SlackLog.objects.count() == 0
+
+    def test_slack_api_error_logs_failure_and_raises(
+        self, matching_attempt_with_coach, mock_slack_client
+    ):
+        mock_slack_client.conversations_open.side_effect = _make_slack_error()
+
+        with patch(_CLARIF_COACH_PATCH, return_value=mock_slack_client):
+            with pytest.raises(SlackApiError):
+                send_clarification_call_booked_info_to_coach_slack(matching_attempt_with_coach)
+
+        log = SlackLog.objects.get()
+        assert log.status == SlackLog.Status.FAILED
+
+    def test_generic_exception_logs_failure_and_raises(
+        self, matching_attempt_with_coach, mock_slack_client
+    ):
+        mock_slack_client.chat_postMessage.side_effect = RuntimeError("crash")
+
+        with patch(_CLARIF_COACH_PATCH, return_value=mock_slack_client):
+            with pytest.raises(RuntimeError):
+                send_clarification_call_booked_info_to_coach_slack(matching_attempt_with_coach)
+
+        log = SlackLog.objects.get()
+        assert log.status == SlackLog.Status.FAILED
+
+
+
 

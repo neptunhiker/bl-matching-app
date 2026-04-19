@@ -8,6 +8,7 @@ import pytest
 from django.urls import reverse
 
 from bookings.models import CalendlyBooking
+from matching.models import MatchingAttempt, MatchingEvent, ClarificationCallBooking
 
 class TestBookingsDetailView:
     @pytest.mark.django_db
@@ -310,4 +311,212 @@ class TestCalendlyWebhook:
 
         assert response.status_code == 403
         assert CalendlyBooking.objects.count() == 0
+
+
+# ---------------------------------------------------------------------------
+# Check In (clarification call) webhook path
+# ---------------------------------------------------------------------------
+
+_CHECKIN_INVITEE_URI  = "https://api.calendly.com/scheduled_events/CHECKIN/invitees/ci-1"
+_CHECKIN_INVITEE_URI2 = "https://api.calendly.com/scheduled_events/CHECKIN/invitees/ci-2"
+_CHECKIN_EVENT_URI    = "https://api.calendly.com/scheduled_events/CHECKIN"
+
+
+def _check_in_created_payload(
+    invitee_uri=_CHECKIN_INVITEE_URI,
+    matching_attempt_id=None,
+    email="ada@example.com",
+):
+    tracking = {}
+    if matching_attempt_id is not None:
+        tracking["utm_campaign"] = f"matching-{matching_attempt_id}"
+    return {
+        "event": "invitee.created",
+        "payload": {
+            "uri": invitee_uri,
+            "name": "Ada Lovelace",
+            "email": email,
+            "status": "active",
+            "timezone": "Europe/Berlin",
+            "questions_and_answers": [],
+            "tracking": tracking or None,
+            "scheduled_event": {
+                "uri": _CHECKIN_EVENT_URI,
+                "name": "Check In",
+                "status": "active",
+                "start_time": "2026-05-10T10:00:00.000000Z",
+                "end_time": "2026-05-10T10:30:00.000000Z",
+            },
+        },
+    }
+
+
+def _check_in_canceled_payload(
+    invitee_uri=_CHECKIN_INVITEE_URI,
+    matching_attempt_id=None,
+    email="ada@example.com",
+):
+    payload = _check_in_created_payload(
+        invitee_uri=invitee_uri,
+        matching_attempt_id=matching_attempt_id,
+        email=email,
+    )
+    payload["event"] = "invitee.canceled"
+    payload["payload"]["status"] = "canceled"
+    payload["payload"]["scheduled_event"]["status"] = "canceled"
+    return payload
+
+
+@pytest.mark.django_db
+class TestCalendlyWebhookClarificationCall:
+    """Integration tests for the clarification-call (Check In) path through the webhook view."""
+
+    @pytest.fixture(autouse=True)
+    def _set_signing_key(self, settings):
+        settings.CALENDLY_SIGNING_KEY = TEST_SIGNING_KEY
+
+    @pytest.fixture(autouse=True)
+    def _no_dispatch(self, monkeypatch):
+        """Suppress Slack/email side effects — we test the data layer here."""
+        monkeypatch.setattr(
+            "matching.handlers.dispatcher.dispatch_event",
+            lambda event: None,
+        )
+
+    def _url(self):
+        return reverse("calendly_webhook")
+
+    def _post(self, client, payload, *, signing_key=TEST_SIGNING_KEY):
+        body = json.dumps(payload).encode("utf-8")
+        sig = _make_signature(body, key=signing_key)
+        return client.post(
+            self._url(),
+            data=body,
+            content_type="application/json",
+            HTTP_CALENDLY_WEBHOOK_SIGNATURE=sig,
+        )
+
+    # ── invitee.created ──
+
+    def test_created_check_in_creates_booking_and_transitions_state(
+        self, client, matching_attempt_for_check_in
+    ):
+        ma = matching_attempt_for_check_in
+        response = self._post(
+            client,
+            _check_in_created_payload(
+                matching_attempt_id=ma.id,
+                email=ma.participant.email,
+            ),
+        )
+
+        assert response.status_code == 200
+        assert ClarificationCallBooking.objects.count() == 1
+        b = ClarificationCallBooking.objects.get()
+        assert b.calendly_invitee_uri == _CHECKIN_INVITEE_URI
+        assert b.status == "active"
+        assert MatchingAttempt.objects.get(pk=ma.pk).state == MatchingAttempt.State.CLARIFICATION_CALL_SCHEDULED
+
+    def test_created_check_in_records_booked_event(
+        self, client, matching_attempt_for_check_in
+    ):
+        ma = matching_attempt_for_check_in
+        self._post(
+            client,
+            _check_in_created_payload(matching_attempt_id=ma.id, email=ma.participant.email),
+        )
+
+        assert MatchingEvent.objects.filter(
+            matching_attempt=ma,
+            event_type=MatchingEvent.EventType.CLARIFICATION_CALL_BOOKED,
+        ).exists()
+
+    def test_redelivery_is_idempotent(self, client, matching_attempt_for_check_in):
+        """Same invitee.created delivered twice → only one booking record."""
+        ma = matching_attempt_for_check_in
+        payload = _check_in_created_payload(
+            matching_attempt_id=ma.id, email=ma.participant.email
+        )
+        self._post(client, payload)
+        self._post(client, payload)
+
+        assert ClarificationCallBooking.objects.count() == 1
+
+    def test_rebook_with_different_uri_creates_second_record(
+        self, client, matching_attempt_for_check_in
+    ):
+        ma = matching_attempt_for_check_in
+        self._post(
+            client,
+            _check_in_created_payload(
+                invitee_uri=_CHECKIN_INVITEE_URI,
+                matching_attempt_id=ma.id,
+                email=ma.participant.email,
+            ),
+        )
+        self._post(
+            client,
+            _check_in_created_payload(
+                invitee_uri=_CHECKIN_INVITEE_URI2,
+                matching_attempt_id=ma.id,
+                email=ma.participant.email,
+            ),
+        )
+
+        assert ClarificationCallBooking.objects.count() == 2
+
+    # ── invitee.canceled ──
+
+    def test_canceled_check_in_reverts_state_and_marks_booking_canceled(
+        self, client, matching_attempt_for_check_in
+    ):
+        ma = matching_attempt_for_check_in
+        self._post(
+            client,
+            _check_in_created_payload(matching_attempt_id=ma.id, email=ma.participant.email),
+        )
+        assert MatchingAttempt.objects.get(pk=ma.pk).state == MatchingAttempt.State.CLARIFICATION_CALL_SCHEDULED
+
+        self._post(
+            client,
+            _check_in_canceled_payload(matching_attempt_id=ma.id, email=ma.participant.email),
+        )
+
+        assert MatchingAttempt.objects.get(pk=ma.pk).state == MatchingAttempt.State.AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT
+        assert ClarificationCallBooking.objects.get().status == "canceled"
+
+    # ── UTM fallback ──
+
+    def test_null_utm_resolved_by_email(self, client, matching_attempt_for_check_in):
+        """When tracking.utm_campaign is absent, the attempt is resolved by participant email."""
+        ma = matching_attempt_for_check_in
+        payload = _check_in_created_payload(
+            matching_attempt_id=None,  # no UTM
+            email=ma.participant.email,
+        )
+        response = self._post(client, payload)
+
+        assert response.status_code == 200
+        assert ClarificationCallBooking.objects.filter(matching_attempt=ma).count() == 1
+
+    def test_unresolvable_attempt_returns_200_no_booking_created(self, client):
+        """Neither UTM nor email matches → 200 (warning logged), no record created."""
+        payload = _check_in_created_payload(
+            matching_attempt_id=None,
+            email="totally-unknown@example.com",
+        )
+        response = self._post(client, payload)
+
+        assert response.status_code == 200
+        assert ClarificationCallBooking.objects.count() == 0
+
+    # ── discriminator guard ──
+
+    def test_erstgesprach_event_goes_to_intake_path_not_clarification(self, client):
+        """scheduled_event.name != 'Check In' → intake (CalendlyBooking) path, not clarification."""
+        response = self._post(client, _created_payload(invitee_uri=_INVITEE_URI))
+
+        assert response.status_code == 200
+        assert ClarificationCallBooking.objects.count() == 0
+        assert CalendlyBooking.objects.count() == 1  # intake booking was created
 

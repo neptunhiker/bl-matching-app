@@ -38,8 +38,9 @@ _ALL_SEND_FUNCS = [
     "send_escalation_info_slack",
     "send_escalation_info_email_to_staff",
     "send_all_rtcs_declined_info_slack",
-    "send_clarification_need_info_to_coach_slack",
-    "send_clarification_need_info_to_coach_email",
+    "send_clarification_call_booked_info_to_staff_slack",
+    "send_clarification_call_booked_info_to_coach_slack",
+    "send_clarification_call_booked_info_to_coach_email",
     "send_intro_call_reminder_slack",
     "send_intro_call_timeout_notification_to_staff_slack",
 ]

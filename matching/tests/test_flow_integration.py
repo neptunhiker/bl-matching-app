@@ -50,8 +50,9 @@ _ALL_SEND_FUNCS = [
     "send_escalation_info_slack",
     "send_escalation_info_email_to_staff",
     "send_all_rtcs_declined_info_slack",
-    "send_clarification_need_info_to_coach_slack",
-    "send_clarification_need_info_to_coach_email",
+    "send_clarification_call_booked_info_to_staff_slack",
+    "send_clarification_call_booked_info_to_coach_slack",
+    "send_clarification_call_booked_info_to_coach_email",
 ]
 
 
@@ -251,8 +252,9 @@ def test_s1_full_happy_path_slack_coach(
         "send_escalation_info_slack",
         "send_escalation_info_email_to_staff",
         "send_all_rtcs_declined_info_slack",
-        "send_clarification_need_info_to_coach_slack",
-        "send_clarification_need_info_to_coach_email",
+        "send_clarification_call_booked_info_to_staff_slack",
+        "send_clarification_call_booked_info_to_coach_slack",
+        "send_clarification_call_booked_info_to_coach_email",
     ]:
         notifications[name].assert_not_called(), f"{name} should not have been called in S1"
 
