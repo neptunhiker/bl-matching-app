@@ -186,14 +186,16 @@ class TestEligibleForIntroCallStaffEscalation:
 
     @pytest.mark.django_db
     def test_not_returned_after_staff_notified_event(self, attempt_awaiting_intro_call):
-        _create_event(
-            attempt_awaiting_intro_call,
-            MatchingEvent.EventType.INTRO_CALL_REMINDER_SENT_TO_COACH,
-        )
-        _create_event(
-            attempt_awaiting_intro_call,
-            MatchingEvent.EventType.INTRO_CALL_TIMED_OUT_STAFF_NOTIFIED,
-        )
+        with patch(f"{_HANDLER_MODULE}.send_intro_call_reminder_slack"):
+            _create_event(
+                attempt_awaiting_intro_call,
+                MatchingEvent.EventType.INTRO_CALL_REMINDER_SENT_TO_COACH,
+            )
+        with patch(f"{_HANDLER_MODULE}.send_intro_call_timeout_notification_to_staff_slack"):
+            _create_event(
+                attempt_awaiting_intro_call,
+                MatchingEvent.EventType.INTRO_CALL_TIMED_OUT_STAFF_NOTIFIED,
+            )
         qs = MatchingAttempt.objects.eligible_for_intro_call_staff_escalation()
         assert attempt_awaiting_intro_call not in qs
 
@@ -331,14 +333,16 @@ class TestNotifyStaffOfIntroCallTimeoutCommand:
         ).exists()
 
     def test_already_notified_attempt_is_skipped(self, attempt_awaiting_intro_call):
-        _create_event(
-            attempt_awaiting_intro_call,
-            MatchingEvent.EventType.INTRO_CALL_REMINDER_SENT_TO_COACH,
-        )
-        _create_event(
-            attempt_awaiting_intro_call,
-            MatchingEvent.EventType.INTRO_CALL_TIMED_OUT_STAFF_NOTIFIED,
-        )
+        with patch(f"{_HANDLER_MODULE}.send_intro_call_reminder_slack"):
+            _create_event(
+                attempt_awaiting_intro_call,
+                MatchingEvent.EventType.INTRO_CALL_REMINDER_SENT_TO_COACH,
+            )
+        with patch(f"{_HANDLER_MODULE}.send_intro_call_timeout_notification_to_staff_slack"):
+            _create_event(
+                attempt_awaiting_intro_call,
+                MatchingEvent.EventType.INTRO_CALL_TIMED_OUT_STAFF_NOTIFIED,
+            )
 
         with patch(f"{_HANDLER_MODULE}.send_intro_call_timeout_notification_to_staff_slack"):
             call_command("notify_staff_of_intro_call_timeout", verbosity=0)
