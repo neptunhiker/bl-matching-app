@@ -434,6 +434,38 @@ def send_clarification_need_info_to_coach_email(matching_attempt, triggered_by: 
 
 
 @transaction.atomic
+def send_clarification_call_booked_info_to_coach_email(matching_attempt, triggered_by: str = "system"):
+    """Email to the coach when the participant has booked a Calendly clarification (Check In) call."""
+
+    matching_attempt = _get_locked_matching_attempt(matching_attempt)
+
+    participant = matching_attempt.participant
+    coach = matching_attempt.matched_coach
+
+    context = {
+        "recipient_name": coach.first_name,
+        "coach_name": coach,
+        "coach_first_name": coach.first_name,
+        "participant": participant,
+        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
+    }
+
+    transaction.on_commit(
+        lambda: send_email(
+            to=coach.user.email,
+            subject=f"ℹ️ Kurzes Update: {participant.first_name} hat ein Klärungsgespräch gebucht",
+            template_name="emails/clarification_call_booked_info_to_coach.html",
+            context=context,
+            matching_attempt=matching_attempt,
+            sent_by=context["author"],
+            triggered_by=triggered_by,
+        )
+    )
+
+    return matching_attempt
+
+
+@transaction.atomic
 def send_escalation_info_email_to_staff(matching_attempt, triggered_by: str = "system"):
     """Fallback email to the BL contact when the escalation Slack notification could not be delivered."""
 

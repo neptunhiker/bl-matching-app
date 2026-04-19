@@ -1,0 +1,35 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+
+<h2 style="margin-bottom:20px;">
+Kurzes Update zum Coaching mit {{ participant.first_name }}
+</h2>
+
+<p>
+{{ participant.first_name }} hat nach dem Kennenlerngespräch mit Dir ein kurzes Klärungsgespräch mit uns gebucht,
+um noch ein paar Fragen zu klären.
+</p>
+
+<p style="margin-top:16px;">
+Wir kümmern uns darum und klären alles direkt mit {{ participant.first_name }}.
+</p>
+
+<p style="margin-top:16px;">
+👉 <strong>Für dich gibt es aktuell nichts zu tun.</strong>
+</p>
+
+<p style="margin-top:16px;">
+Sobald alles geklärt ist oder wir noch weitere Informationen von dir benötigen, melden wir uns wieder bei dir und informieren dich über die nächsten Schritte.
+</p>
+
+<p style="margin-top:24px;">
+Vielen Dank – wir halten dich auf dem Laufenden.
+</p>
+
+<p style="margin-top:16px;">
+Viele Grüße<br>
+{{ author }}
+</p>
+
+{% endblock %}

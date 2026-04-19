@@ -1067,4 +1067,219 @@ def send_intro_call_timeout_notification_to_staff_slack(matching_attempt):
             status=SlackLog.Status.FAILED,
             error_message=str(e),
         )
+
+
+def send_clarification_call_booked_info_to_staff_slack(matching_attempt):
+    """Notify BL contact when a participant books a clarification (Check In) call via Calendly."""
+    client = WebClient(token=settings.SLACK_BOT_TOKEN)
+
+    coach = matching_attempt.matched_coach
+    participant = matching_attempt.participant
+    bl_contact = matching_attempt.bl_contact
+
+    url_participant = settings.SITE_URL.rstrip("/") + reverse(
+        "participant_detail", kwargs={"pk": participant.pk}
+    )
+
+    user_id = bl_contact.slack_user_id
+    if not user_id:
+        raise ValueError(f"BL contact {bl_contact} does not have a Slack user ID")
+
+    booking = (
+        matching_attempt.clarification_call_bookings
+        .filter(status="active")
+        .order_by("-created_at")
+        .first()
+    )
+
+    subject = f"📅 {participant.first_name} hat ein Klärungsgespräch gebucht"
+
+    # Build start-time block content
+    if booking and booking.start_time:
+        local_time = timezone.localtime(booking.start_time)
+        time_str = local_time.strftime("%d.%m.%Y, %H:%M Uhr")
+        booking_info = f"📆 *Termin:* {time_str}"
+    else:
+        booking_info = "📆 *Termin:* (nicht verfügbar)"
+
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": f"📅 {participant} hat ein Klärungsgespräch gebucht",
+            },
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"*{participant.first_name}* hat nach dem Kennenlerngespräch mit *{coach}* "
+                    f"ein Klärungsgespräch (Check In) gebucht."
+                ),
+            },
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": booking_info,
+            },
+        },
+    ]
+
+    # Add Q&A answers if present
+    if booking and (booking.clarification_category or booking.clarification_description):
+        qa_parts = []
+        if booking.clarification_category:
+            qa_parts.append(f"*Anliegen:* {booking.clarification_category}")
+        if booking.clarification_description:
+            qa_parts.append(f"*Beschreibung:* {booking.clarification_description}")
+        blocks.append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "\n".join(qa_parts),
+            },
+        })
+
+    blocks.append({
+        "type": "section",
+        "text": {
+            "type": "mrkdwn",
+            "text": f"🔎 *Profil*\n<{url_participant}|➡ Zum Profil von {participant.first_name}>",
+        },
+    })
+
+    message = _blocks_to_text(blocks)
+
+    try:
+        dm_channel = _open_dm_channel(client, user_id)
+        client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
+        logger.info(f"Successfully sent clarification call booked Slack to BL contact {bl_contact}")
+        create_slack_log(
+            to=bl_contact.user,
+            subject=subject,
+            message=message,
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+        )
+    except SlackApiError as e:
+        logger.error(f"Slack API error sending clarification call booked info to BL contact {bl_contact}: {e}")
+        create_slack_log(
+            to=bl_contact.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error sending clarification call booked info to BL contact {bl_contact}: {e}")
+        create_slack_log(
+            to=bl_contact.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+        raise
+
+
+def send_clarification_call_booked_info_to_coach_slack(matching_attempt):
+    """Notify the coach (via Slack) that the participant has booked a clarification call — nothing to do for them."""
+    client = WebClient(token=settings.SLACK_BOT_TOKEN)
+
+    coach = matching_attempt.matched_coach
+    participant = matching_attempt.participant
+
+    user_id = coach.slack_user_id
+    if not user_id:
+        raise ValueError(f"Coach {coach} does not have a Slack user ID")
+
+    subject = f"ℹ️ Kurzes Update zum Coaching mit {participant.first_name}"
+
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": f"ℹ️ Kurzes Update zum Coaching mit {participant}",
+            },
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"*{participant.first_name}* hat nach dem Kennenlerngespräch mit Dir ein "
+                    f"kurzes Klärungsgespräch mit uns gebucht, um noch ein paar Fragen zu klären."
+                ),
+            },
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    "Wir kümmern uns darum und klären alles direkt mit "
+                    f"*{participant.first_name}*."
+                ),
+            },
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    "👉 *Für dich gibt es aktuell nichts zu tun.* "
+                    "Sobald alles geklärt ist, melden wir uns mit den nächsten Schritten."
+                ),
+            },
+        },
+    ]
+
+    message = _blocks_to_text(blocks)
+
+    try:
+        dm_channel = _open_dm_channel(client, user_id)
+        client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
+        logger.info(f"Successfully sent clarification call booked Slack to coach {coach}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message=message,
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+        )
+    except SlackApiError as e:
+        logger.error(f"Slack API error sending clarification call booked info to coach {coach}: {e}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error sending clarification call booked info to coach {coach}: {e}")
+        create_slack_log(
+            to=coach.user,
+            subject=subject,
+            message="",
+            matching_attempt=matching_attempt,
+            sent_by=SlackLog.SentBy.SYSTEM,
+            status=SlackLog.Status.FAILED,
+            error_message=str(e),
+        )
+        raise
+
         raise
