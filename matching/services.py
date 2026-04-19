@@ -365,5 +365,139 @@ def manually_match_participant_to_coach(matching_attempt, coach: Coach, triggere
                 "Notiz": f"Coach {coach} manuell zugeordnet. Alle Automatisierungsschritte übersprungen.",
             }
         )
-    
-    
+
+
+# ---------------------------------------------------------------------------
+# Clarification call (Calendly "Check In") service functions
+# ---------------------------------------------------------------------------
+
+def _extract_calendly_answer(questions_and_answers, labels):
+    """Return the first answer whose question label matches one of *labels* (case-insensitive strip)."""
+    normalised = [lbl.strip().lower() for lbl in labels]
+    for item in questions_and_answers:
+        if (item.get("question") or "").strip().lower() in normalised:
+            return (item.get("answer") or "").strip()
+    return ""
+
+
+def _resolve_matching_attempt_for_clarification_call(matching_attempt_id, invitee_email):
+    """Resolve a MatchingAttempt for a clarification call webhook event.
+
+    Primary:  matching_attempt_id parsed from UTM (present when participant clicks email link).
+    Fallback: participant email lookup in eligible states (for direct/staff bookings without UTM).
+    Returns the MatchingAttempt or None (after logging a warning).
+    """
+    from matching.models import MatchingAttempt
+
+    if matching_attempt_id:
+        try:
+            return MatchingAttempt.objects.get(id=matching_attempt_id)
+        except (MatchingAttempt.DoesNotExist, ValueError):
+            logger.warning(
+                "Calendly clarification webhook: no MatchingAttempt found for id=%s", matching_attempt_id
+            )
+            return None
+
+    # Fallback: find by participant email in an eligible active state.
+    ELIGIBLE_STATES = [
+        MatchingAttempt.State.AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT,
+        MatchingAttempt.State.CLARIFICATION_CALL_SCHEDULED,
+    ]
+    attempt = (
+        MatchingAttempt.objects
+        .filter(participant__email=invitee_email, state__in=ELIGIBLE_STATES)
+        .order_by("-created_at")
+        .first()
+    )
+    if attempt is None:
+        logger.warning(
+            "Calendly clarification webhook: no eligible MatchingAttempt found by email=%s", invitee_email
+        )
+    return attempt
+
+
+def record_clarification_call_booked(matching_attempt_id, invitee_email, invitee_data, scheduled_event, raw_payload):
+    from django.utils.dateparse import parse_datetime
+    from matching.models import MatchingAttempt, MatchingEvent, ClarificationCallBooking, TriggeredByOptions
+    from matching.locks import _get_locked_matching_attempt
+
+    matching_attempt = _resolve_matching_attempt_for_clarification_call(matching_attempt_id, invitee_email)
+    if matching_attempt is None:
+        return
+
+    qna = invitee_data.get("questions_and_answers") or []
+    # Category: exact label from real payload (no trailing space).
+    # Description: real label has a trailing space ("Bitte beschreibe dein Anliegen kurz: "),
+    # so list both variants to be safe.
+    category = _extract_calendly_answer(qna, ["Was ist dein Anliegen für diesen Termin?"])
+    description = _extract_calendly_answer(
+        qna,
+        ["Bitte beschreibe dein Anliegen kurz:", "Bitte beschreibe dein Anliegen kurz: "],
+    )
+    invitee_uri = (invitee_data.get("uri") or "").strip()
+
+    with transaction.atomic():
+        matching_attempt = _get_locked_matching_attempt(matching_attempt)
+        # Keyed on calendly_invitee_uri — idempotent on re-delivery.
+        # Each distinct booking (new invitee_uri) creates its own record, preserving history.
+        ClarificationCallBooking.objects.update_or_create(
+            calendly_invitee_uri=invitee_uri,
+            defaults={
+                "matching_attempt": matching_attempt,
+                "calendly_event_uri": (scheduled_event.get("uri") or ""),
+                "invitee_email": (invitee_data.get("email") or ""),
+                "start_time": parse_datetime(scheduled_event.get("start_time") or ""),
+                "status": "active",
+                "clarification_category": category,
+                "clarification_description": description,
+                "raw_payload": raw_payload,
+            },
+        )
+        if matching_attempt.state == MatchingAttempt.State.AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT:
+            matching_attempt.confirm_clarification_call_booking()
+            matching_attempt.save()
+
+        create_matching_event(
+            matching_attempt=matching_attempt,
+            event_type=MatchingEvent.EventType.CLARIFICATION_CALL_BOOKED,
+            triggered_by=TriggeredByOptions.SYSTEM,
+        )
+
+    logger.info(
+        "Clarification call booked: matching_attempt_id=%s invitee_uri=%s start_time=%s",
+        matching_attempt.id, invitee_uri, scheduled_event.get("start_time"),
+    )
+
+
+def record_clarification_call_canceled(matching_attempt_id, invitee_email, invitee_data, raw_payload):
+    from matching.models import MatchingAttempt, MatchingEvent, ClarificationCallBooking, TriggeredByOptions
+    from matching.locks import _get_locked_matching_attempt
+
+    matching_attempt = _resolve_matching_attempt_for_clarification_call(matching_attempt_id, invitee_email)
+    if matching_attempt is None:
+        return
+
+    invitee_uri = (invitee_data.get("uri") or "").strip()
+
+    with transaction.atomic():
+        matching_attempt = _get_locked_matching_attempt(matching_attempt)
+        # Cancel only the specific booking matched by invitee URI.
+        ClarificationCallBooking.objects.filter(
+            calendly_invitee_uri=invitee_uri,
+        ).update(status="canceled")
+
+        if matching_attempt.state == MatchingAttempt.State.CLARIFICATION_CALL_SCHEDULED:
+            matching_attempt.cancel_clarification_call_booking()
+            matching_attempt.save()
+
+        create_matching_event(
+            matching_attempt=matching_attempt,
+            event_type=MatchingEvent.EventType.CLARIFICATION_CALL_CANCELED,
+            triggered_by=TriggeredByOptions.SYSTEM,
+        )
+
+    logger.info(
+        "Clarification call canceled: matching_attempt_id=%s invitee_uri=%s",
+        matching_attempt.id, invitee_uri,
+    )
+

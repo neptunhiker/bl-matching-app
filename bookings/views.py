@@ -164,34 +164,51 @@ def calendly_webhook(request):
 
     logger.info("[CALENDLY] Event type: %s", event)
 
+    # --- Event-type discrimination ---
+    # Route by scheduled_event.name — more reliable than UTM which can be null
+    # on direct Calendly bookings (e.g. staff test bookings).
+    _scheduled_event_name = (scheduled_event.get("name") or "").strip()
+    _is_clarification_call = _scheduled_event_name == "Check In"
+
     # --- Environment-based event filtering ---
-    # Staff prefix their answer to "Hier kannst du uns dein Anliegen mitteilen:"
-    # with "test" (case-insensitive) to mark an event as a staging test.
-    # Staging only processes test events; production rejects them.
-    _TEST_QUESTION = "Hier kannst du uns dein Anliegen mitteilen:"
+    # Test detection differs by event type:
+    #   - Check In: prefix the free-text description answer with "test"
+    #   - Intake (Erstgespräch): prefix the answer to "Hier kannst du uns dein Anliegen mitteilen:" with "test"
     _qa_list = invitee_data.get("questions_and_answers") or []
-    _anliegen_answer = next(
-        (
-            (qa.get("answer") or "")
-            for qa in _qa_list
-            if (qa.get("question") or "").strip() == _TEST_QUESTION
-        ),
-        "",
-    )
-    is_test_event = _anliegen_answer.strip()[:4].lower() == "test"
+    if _is_clarification_call:
+        # Real question label has a trailing space, so match via startswith.
+        _test_indicator_answer = next(
+            (
+                (qa.get("answer") or "")
+                for qa in _qa_list
+                if (qa.get("question") or "").strip().lower().startswith("bitte beschreibe")
+            ),
+            "",
+        )
+    else:
+        _TEST_QUESTION = "Hier kannst du uns dein Anliegen mitteilen:"
+        _test_indicator_answer = next(
+            (
+                (qa.get("answer") or "")
+                for qa in _qa_list
+                if (qa.get("question") or "").strip() == _TEST_QUESTION
+            ),
+            "",
+        )
+    is_test_event = _test_indicator_answer.strip()[:4].lower() == "test"
     environment = getattr(settings, "ENVIRONMENT", "development")
 
     if environment == "production" and is_test_event:
         logger.info(
             "[CALENDLY] Ignoring test event on production (answer prefix=%r). Returning 200.",
-            _anliegen_answer[:10],
+            _test_indicator_answer[:10],
         )
         return JsonResponse({"detail": "Test event ignored on production."})
 
     if environment == "staging" and not is_test_event and event in {"invitee.created", "invitee.canceled"}:
         logger.info(
             "[CALENDLY] Ignoring non-test event on staging (answer prefix=%r). Returning 200.",
-            _anliegen_answer[:10],
+            _test_indicator_answer[:10],
         )
         return JsonResponse({"detail": "Only test events are processed on staging."})
 
@@ -211,7 +228,33 @@ def calendly_webhook(request):
         )
         return JsonResponse({"detail": "Missing invitee uri"}, status=400)
 
+    # --- Clarification call lookup keys ---
+    # Primary: UTM campaign contains the matching attempt ID (set when participant clicks email link).
+    # Fallback: invitee email (used when UTM is absent, e.g. staff test booking directly in Calendly).
+    _tracking = (invitee_data.get("tracking") or {})
+    _utm_campaign = (_tracking.get("utm_campaign") or "").strip()
+    _clarification_matching_id = _utm_campaign.removeprefix("matching-") if _utm_campaign.startswith("matching-") else None
+    _clarification_invitee_email = (invitee_data.get("email") or "").strip()
+
     if event == "invitee.created":
+        if _is_clarification_call:
+            from matching.services import record_clarification_call_booked
+            try:
+                record_clarification_call_booked(
+                    matching_attempt_id=_clarification_matching_id,
+                    invitee_email=_clarification_invitee_email,
+                    invitee_data=invitee_data,
+                    scheduled_event=scheduled_event,
+                    raw_payload=payload,
+                )
+            except Exception:
+                logger.exception(
+                    "Error recording clarification call booking — matching_id=%s email=%s",
+                    _clarification_matching_id, _clarification_invitee_email,
+                )
+                return JsonResponse({"detail": "Error recording clarification call booking"}, status=500)
+            return HttpResponse(status=200)
+
         # New booking — create or update by invitee URI (idempotent on re-delivery).
         try:
             booking, created = CalendlyBooking.objects.update_or_create(
@@ -244,6 +287,23 @@ def calendly_webhook(request):
         return HttpResponse(status=200)
 
     if event == "invitee.canceled":
+        if _is_clarification_call:
+            from matching.services import record_clarification_call_canceled
+            try:
+                record_clarification_call_canceled(
+                    matching_attempt_id=_clarification_matching_id,
+                    invitee_email=_clarification_invitee_email,
+                    invitee_data=invitee_data,
+                    raw_payload=payload,
+                )
+            except Exception:
+                logger.exception(
+                    "Error recording clarification call cancellation — matching_id=%s email=%s",
+                    _clarification_matching_id, _clarification_invitee_email,
+                )
+                return JsonResponse({"detail": "Error recording clarification call cancellation"}, status=500)
+            return HttpResponse(status=200)
+
         # Cancellation — upsert so the status and cancellation fields are persisted
         # even if the booking record was not created by an earlier invitee.created event.
         try:
