@@ -415,7 +415,7 @@ def record_clarification_call_booked(matching_attempt_id, invitee_email, invitee
         matching_attempt = _get_locked_matching_attempt(matching_attempt)
         # Keyed on calendly_invitee_uri — idempotent on re-delivery.
         # Each distinct booking (new invitee_uri) creates its own record, preserving history.
-        ClarificationCallBooking.objects.update_or_create(
+        _, created = ClarificationCallBooking.objects.update_or_create(
             calendly_invitee_uri=invitee_uri,
             defaults={
                 "matching_attempt": matching_attempt,
@@ -434,24 +434,32 @@ def record_clarification_call_booked(matching_attempt_id, invitee_email, invitee
             matching_attempt.participant_intro_call_feedback_deadline_at = None
             matching_attempt.save()
 
-        start_dt = parse_datetime(scheduled_event.get("start_time") or "")
-        if start_dt:
-            from django.utils import timezone as tz
-            start_dt = tz.localtime(start_dt)
-            start_formatted = start_dt.strftime("%d.%m.%Y %H:%M Uhr")
+        # Only create the event (and trigger downstream notifications) on first delivery.
+        # Calendly re-deliveries hit update_or_create with created=False — skip to avoid
+        # sending duplicate Slack/email notifications for the same booking.
+        if not created:
+            logger.info(
+                "Calendly re-delivery for invitee_uri=%s — skipping duplicate event creation", invitee_uri
+            )
         else:
-            start_formatted = ""
+            start_dt = parse_datetime(scheduled_event.get("start_time") or "")
+            if start_dt:
+                from django.utils import timezone as tz
+                start_dt = tz.localtime(start_dt)
+                start_formatted = start_dt.strftime("%d.%m.%Y %H:%M Uhr")
+            else:
+                start_formatted = ""
 
-        create_matching_event(
-            matching_attempt=matching_attempt,
-            event_type=MatchingEvent.EventType.CLARIFICATION_CALL_BOOKED,
-            triggered_by=TriggeredByOptions.SYSTEM,
-            payload={
-                "start_time": start_formatted,
-                "clarification_category": category or "",
-                "clarification_description": description or "",
-            },
-        )
+            create_matching_event(
+                matching_attempt=matching_attempt,
+                event_type=MatchingEvent.EventType.CLARIFICATION_CALL_BOOKED,
+                triggered_by=TriggeredByOptions.SYSTEM,
+                payload={
+                    "start_time": start_formatted,
+                    "clarification_category": category or "",
+                    "clarification_description": description or "",
+                },
+            )
 
     logger.info(
         "Clarification call booked: matching_attempt_id=%s invitee_uri=%s start_time=%s",
