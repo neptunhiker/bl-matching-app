@@ -192,8 +192,9 @@ def handle_intro_call_info_sent_to_participant_event(event):
         
     # Inform participant
     send_intro_call_info_email_to_participant(matching_attempt, triggered_by=triggered_by)
+
     
-    
+@transaction.atomic
 def handle_intro_call_feedback_received_from_coach_event(event):
     from matching.models import MatchingEvent
     from matching import services
