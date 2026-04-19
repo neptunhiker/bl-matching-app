@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load tz %}
+{% load tz matching_extras %}
 
 {% block title %}Alle Matchings{% endblock %}
 
@@ -30,17 +30,103 @@
     {% endif %}
   </div>
 
+  {# Filter bar #}
+  <form method="get" class="mb-6 flex flex-wrap items-center gap-2">
+    {# Preserve sort param when submitting filters #}
+    {% if current_sort != 'created_at' %}
+      <input type="hidden" name="sort" value="{{ current_sort }}">
+    {% endif %}
+
+    <select name="state" onchange="this.form.submit()"
+      class="text-sm rounded-xl border border-neutral-200 bg-white/80 px-3 py-2 pr-8 text-neutral-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400 cursor-pointer">
+      <option value="">Alle Status</option>
+      {% for value, label in state_choices %}
+        <option value="{{ value }}"{% if current_state == value %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+
+    <select name="bl_contact" onchange="this.form.submit()"
+      class="text-sm rounded-xl border border-neutral-200 bg-white/80 px-3 py-2 pr-8 text-neutral-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400 cursor-pointer">
+      <option value="">Alle Kontakte</option>
+      {% for contact in bl_contacts %}
+        <option value="{{ contact.pk }}"{% if current_bl_contact == contact.pk|stringformat:"s" %} selected{% endif %}>
+          {{ contact.user.first_name }}{% if contact.user.last_name %} {{ contact.user.last_name }}{% endif %}
+        </option>
+      {% endfor %}
+    </select>
+
+    <select name="has_coach" onchange="this.form.submit()"
+      class="text-sm rounded-xl border border-neutral-200 bg-white/80 px-3 py-2 pr-8 text-neutral-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400 cursor-pointer">
+      <option value="">Coach: Alle</option>
+      <option value="yes"{% if current_has_coach == 'yes' %} selected{% endif %}>Mit Coach</option>
+      <option value="no"{% if current_has_coach == 'no' %} selected{% endif %}>Ohne Coach</option>
+    </select>
+
+    {% if active_filter_count %}
+      <a href="{% url 'matching_attempts' %}{% if current_sort != 'created_at' %}?sort={{ current_sort }}{% endif %}"
+         class="text-sm text-neutral-400 hover:text-primary-500 transition ml-1 inline-flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"/></svg>
+        Filter zurücksetzen
+      </a>
+    {% endif %}
+  </form>
+
   {% if matching_attempts %}
     {# Desktop table #}
     <div class="hidden md:block bg-white/70 rounded-2xl shadow-sm overflow-hidden border border-white/60">
       <table class="w-full text-sm">
         <thead>
           <tr class="bg-primary-50 text-tertiary-700">
-            <th class="px-5 py-3 font-semibold text-left">Teilnehmer:in</th>
-            <th class="px-5 py-3 font-semibold text-left">Coach</th>
-            <th class="px-5 py-3 font-semibold text-left">Status</th>
-            <th class="px-5 py-3 font-semibold text-left">Kontakt</th>
-            <th class="px-5 py-3 font-semibold text-left">Erstellt</th>
+            <th class="px-5 py-3 font-semibold text-left">
+              {% sort_url 'participant' as participant_sort_url %}
+              {% sort_direction 'participant' as participant_dir %}
+              <a href="{{ participant_sort_url }}" class="inline-flex items-center gap-1 hover:text-primary-600 transition-colors">
+                Teilnehmer:in
+                <span class="{% if participant_dir %}text-primary-500{% else %}opacity-30{% endif %}">
+                  {% if participant_dir == 'asc' %}↑{% elif participant_dir == 'desc' %}↓{% else %}↕{% endif %}
+                </span>
+              </a>
+            </th>
+            <th class="px-5 py-3 font-semibold text-left">
+              {% sort_url 'coach' as coach_sort_url %}
+              {% sort_direction 'coach' as coach_dir %}
+              <a href="{{ coach_sort_url }}" class="inline-flex items-center gap-1 hover:text-primary-600 transition-colors">
+                Coach
+                <span class="{% if coach_dir %}text-primary-500{% else %}opacity-30{% endif %}">
+                  {% if coach_dir == 'asc' %}↑{% elif coach_dir == 'desc' %}↓{% else %}↕{% endif %}
+                </span>
+              </a>
+            </th>
+            <th class="px-5 py-3 font-semibold text-left">
+              {% sort_url 'state' as state_sort_url %}
+              {% sort_direction 'state' as state_dir %}
+              <a href="{{ state_sort_url }}" class="inline-flex items-center gap-1 hover:text-primary-600 transition-colors">
+                Status
+                <span class="{% if state_dir %}text-primary-500{% else %}opacity-30{% endif %}">
+                  {% if state_dir == 'asc' %}↑{% elif state_dir == 'desc' %}↓{% else %}↕{% endif %}
+                </span>
+              </a>
+            </th>
+            <th class="px-5 py-3 font-semibold text-left">
+              {% sort_url 'bl_contact' as bl_contact_sort_url %}
+              {% sort_direction 'bl_contact' as bl_contact_dir %}
+              <a href="{{ bl_contact_sort_url }}" class="inline-flex items-center gap-1 hover:text-primary-600 transition-colors">
+                Kontakt
+                <span class="{% if bl_contact_dir %}text-primary-500{% else %}opacity-30{% endif %}">
+                  {% if bl_contact_dir == 'asc' %}↑{% elif bl_contact_dir == 'desc' %}↓{% else %}↕{% endif %}
+                </span>
+              </a>
+            </th>
+            <th class="px-5 py-3 font-semibold text-left">
+              {% sort_url 'created_at' as created_sort_url %}
+              {% sort_direction 'created_at' as created_dir %}
+              <a href="{{ created_sort_url }}" class="inline-flex items-center gap-1 hover:text-primary-600 transition-colors">
+                Erstellt
+                <span class="{% if created_dir == 'asc' or current_sort == 'created_at' %}text-primary-500{% else %}opacity-30{% endif %}">
+                  {% if created_dir == 'asc' %}↑{% elif created_dir == 'desc' %}↓{% else %}↓{% endif %}
+                </span>
+              </a>
+            </th>
           </tr>
         </thead>
         <tbody class="divide-y divide-neutral-100">
@@ -116,11 +202,19 @@
 
   {% else %}
     <div class="rounded-2xl border border-white/70 bg-white/80 shadow-sm px-6 sm:px-8 py-14 text-center">
-      <p class="text-neutral-500 text-base mb-5">Noch keine Matchings vorhanden.</p>
-      {% if request.user.is_staff %}
+      {% if active_filter_count %}
+        <p class="text-neutral-500 text-base mb-5">Keine Ergebnisse für die gewählten Filter.</p>
         <div class="mx-auto max-w-xs">
-          {% include "components/_button.html" with button_text="Erstes Matching erstellen" button_variant="primary" button_size="md" button_full_width=True button_href=matching_attempt_create_url %}
+          {% url 'matching_attempts' as matching_attempts_url %}
+          {% include "components/_button.html" with button_text="Filter zurücksetzen" button_variant="secondary" button_size="md" button_full_width=True button_href=matching_attempts_url %}
         </div>
+      {% else %}
+        <p class="text-neutral-500 text-base mb-5">Noch keine Matchings vorhanden.</p>
+        {% if request.user.is_staff %}
+          <div class="mx-auto max-w-xs">
+            {% include "components/_button.html" with button_text="Erstes Matching erstellen" button_variant="primary" button_size="md" button_full_width=True button_href=matching_attempt_create_url %}
+          </div>
+        {% endif %}
       {% endif %}
     </div>
   {% endif %}

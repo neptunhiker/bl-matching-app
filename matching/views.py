@@ -15,7 +15,7 @@ from django_fsm import TransitionNotAllowed
 from urllib.parse import urlparse
 
 
-from profiles.models import Coach
+from profiles.models import Coach, BeginnerLuftStaff
 from .models import CoachActionToken, MatchingAttempt, RequestToCoach, MatchingEvent, TriggeredByOptions, ParticipantActionToken
 from .tokens import consume_token
 from . import services
@@ -359,8 +359,66 @@ class MatchingAttemptListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
     template_name = 'matching/matchings.html'
     context_object_name = 'matching_attempts'
 
+    # Maps the sort GET param to ORM order_by fields.
+    # Default (created_at) is newest-first; toggling to -created_at gives oldest-first.
+    # Note: Participant has direct last_name/first_name fields (no user FK).
+    #       Coach goes through user FK.
+    _SORT_MAP = {
+        'created_at':   ['-created_at'],
+        '-created_at':  ['created_at'],
+        'state':        ['state'],
+        '-state':       ['-state'],
+        'participant':  ['participant__last_name', 'participant__first_name'],
+        '-participant': ['-participant__last_name', '-participant__first_name'],
+        'coach':        ['matched_coach__user__last_name', 'matched_coach__user__first_name'],
+        '-coach':       ['-matched_coach__user__last_name', '-matched_coach__user__first_name'],
+        'bl_contact':   ['bl_contact__user__first_name', 'bl_contact__user__last_name'],
+        '-bl_contact':  ['-bl_contact__user__first_name', '-bl_contact__user__last_name'],
+    }
+    _DEFAULT_SORT = 'created_at'
+
     def get_queryset(self):
-        return MatchingAttempt.objects.select_related('participant', 'bl_contact').order_by('-created_at')
+        qs = MatchingAttempt.objects.select_related(
+            'participant', 'matched_coach__user', 'bl_contact__user'
+        )
+
+        # --- filters ---
+        state = self.request.GET.get('state', '')
+        if state and state in dict(MatchingAttempt.State.choices):
+            qs = qs.filter(state=state)
+
+        bl_contact = self.request.GET.get('bl_contact', '')
+        if bl_contact:
+            qs = qs.filter(bl_contact_id=bl_contact)
+
+        has_coach = self.request.GET.get('has_coach', '')
+        if has_coach == 'yes':
+            qs = qs.filter(matched_coach__isnull=False)
+        elif has_coach == 'no':
+            qs = qs.filter(matched_coach__isnull=True)
+
+        # --- sort ---
+        sort = self.request.GET.get('sort', self._DEFAULT_SORT)
+        order_fields = self._SORT_MAP.get(sort, self._SORT_MAP[self._DEFAULT_SORT])
+        return qs.order_by(*order_fields)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['state_choices'] = MatchingAttempt.State.choices
+        context['bl_contacts'] = (
+            BeginnerLuftStaff.objects
+            .select_related('user')
+            .order_by('user__first_name', 'user__last_name')
+        )
+        context['current_state'] = self.request.GET.get('state', '')
+        context['current_bl_contact'] = self.request.GET.get('bl_contact', '')
+        context['current_has_coach'] = self.request.GET.get('has_coach', '')
+        context['current_sort'] = self.request.GET.get('sort', self._DEFAULT_SORT)
+        context['active_filter_count'] = sum(
+            1 for f in ('state', 'bl_contact', 'has_coach')
+            if self.request.GET.get(f)
+        )
+        return context
 
 class RequestToCoachDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailView):
     model = RequestToCoach
