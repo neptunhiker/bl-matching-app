@@ -222,7 +222,6 @@ def send_reminder_coach_request_slack(rtc):
     client = WebClient(token=settings.SLACK_BOT_TOKEN)
     coach = rtc.coach
     participant = rtc.matching_attempt.participant
-    url_participant = settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk})
     user_id = coach.slack_user_id
     start_date = rtc.matching_attempt.participant.start_date
     
@@ -237,6 +236,24 @@ def send_reminder_coach_request_slack(rtc):
 
     logger.info(f"Sending reminder coach request Slack to coach {coach} (rtc: {rtc.id})")
     subject = f"Erinnerung - Matching-Anfrage für {rtc.matching_attempt.participant.first_name}"
+
+    info_blocks = []
+    if participant.coaching_target:
+        info_blocks.append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*Coaching-Ziel*\n{participant.coaching_target}"
+            }
+        })
+    if participant.background_information:
+        info_blocks.append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*Hintergrundinformationen*\n{participant.background_information}"
+            }
+        })
 
     blocks = [
         {
@@ -258,15 +275,14 @@ def send_reminder_coach_request_slack(rtc):
                 )
             }
         },
+        *info_blocks,
         {
             "type": "section",
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    (
-                        f"Du hast noch bis zum *{timezone.localtime(rtc.deadline_at).strftime('%d.%m.%Y – %H:%M')} Uhr* Zeit. Ansonsten müssen wir leider einen anderen Coach fragen.\n" "Ein Klick genügt 👇"
-                    )
-                    
+                    f"Du hast noch bis zum *{timezone.localtime(rtc.deadline_at).strftime('%d.%m.%Y – %H:%M')} Uhr* Zeit. Ansonsten müssen wir leider einen anderen Coach fragen.\n"
+                    "Ein Klick genügt 👇"
                 )
             }
         },
@@ -292,17 +308,6 @@ def send_reminder_coach_request_slack(rtc):
                 "style": "danger"
                 },
             ]
-        },
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": (
-                    f"Mehr Infos zum Coaching mit *{rtc.matching_attempt.participant.first_name}* "
-                    f"findest du hier\n\n"
-                    f"<{url_participant}|➡ Coaching ansehen>"
-                )
-            },
         },
         {
             "type": "context",
