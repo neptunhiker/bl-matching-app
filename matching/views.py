@@ -620,6 +620,15 @@ class ParticipantRespondView(View):
                 },
             )
 
+        # Defensive fallback — today only START_COACHING tokens exist, but guard
+        # against future action types being added without a matching response template.
+        logger.error(
+            "ParticipantRespondView: unhandled action %s for token %s",
+            token_instance.action,
+            token_instance.token,
+        )
+        return render(request, 'matching/participant_response_invalid_token.html', status=200)
+
 
 class ConfirmIntroCallView(View):
     """Handles coach confirmation of intro call completion.

@@ -1266,5 +1266,3 @@ def send_participant_intro_call_feedback_timeout_notification_to_staff_slack(mat
             error_message=str(e),
         )
         raise
-
-        raise
