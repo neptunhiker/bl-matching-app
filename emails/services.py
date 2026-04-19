@@ -308,7 +308,6 @@ def send_coaching_start_info_email_to_coach(matching_attempt, triggered_by: str=
         "participant_name": participant.first_name,
         "participant_email": participant.email,
         "start_date": start_date,
-        "learn_more_url": settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk}),
         "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
     }
     
