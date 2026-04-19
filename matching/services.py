@@ -136,7 +136,7 @@ def create_matching_event(
             raise ValueError("Events triggered by a participant must include 'participant' in payload")
 
     else:
-        print({triggered_by== TriggeredByOptions.STAFF})
+        logger.error("Invalid triggered_by value: %s", triggered_by)
         raise ValueError(f"Invalid triggered_by: {triggered_by}")
 
     # --- Create event ---
