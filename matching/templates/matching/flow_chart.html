@@ -1,438 +1,617 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Matching-Prozess{% endblock %}
+{% block title %}Matching-Prozess Flowchart{% endblock %}
 
-{% block body %}
+{% block extra_head %}
 <style>
-  :root {
-    --primary-500: #948AFC;
-    --secondary-500: #FFACE4;
-    --green-500: #22c55e;
+  .fc-page { display: flex; min-height: 100vh; }
 
-    --bg: #f8fafc;
-    --card: #ffffff;
-    --text: #1f2937;
-    --muted: #6b7280;
-    --line: #e5e7eb;
+  /* ── Sidebar ────────────────────────────────── */
+  .fc-toc {
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    width: 240px; flex-shrink: 0;
+    background: #fff; border-right: 1px solid #ede9fe;
+    padding: 28px 0; display: flex; flex-direction: column;
+  }
+  .fc-toc-logo { padding: 0 20px 20px; border-bottom: 1px solid #ede9fe; margin-bottom: 10px; }
+  .fc-toc-logo span { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #948afc; }
+  .fc-toc a {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 20px; font-size: 13px; color: #4b5563;
+    text-decoration: none; transition: all .15s; line-height: 1.4;
+    border-left: 3px solid transparent;
+  }
+  .fc-toc a:hover { color: #948afc; background: #f4f3ff; border-left-color: #c4b8fd; }
+  .fc-toc a.active { color: #948afc; background: #ede9fe; border-left-color: #948afc; font-weight: 600; }
+  .fc-toc-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; padding: 0 5px;
+    border-radius: 6px; background: #ede9fe; color: #948afc;
+    font-size: 11px; font-weight: 700; flex-shrink: 0;
+  }
+  .fc-toc a.active .fc-toc-num { background: #948afc; color: #fff; }
+
+  /* ── Main ───────────────────────────────────── */
+  .fc-main { flex: 1; min-width: 0; padding: 40px 48px 80px; overflow-x: hidden; }
+
+  /* ── Hero ───────────────────────────────────── */
+  .fc-hero { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid #ede9fe; }
+  .fc-hero-badge {
+    display: inline-block; padding: 4px 12px; border-radius: 99px;
+    background: #ede9fe; color: #6d28d9; font-size: 12px; font-weight: 600;
+    letter-spacing: .06em; text-transform: uppercase; margin-bottom: 14px;
+  }
+  .fc-hero h1 { font-size: clamp(26px, 3.5vw, 38px); font-weight: 800; color: #1a1b41; line-height: 1.15; margin: 0 0 12px; }
+  .fc-hero p { max-width: 680px; font-size: 16px; color: #6b7280; line-height: 1.65; margin: 0; }
+  .fc-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+  .fc-legend-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 12px; border-radius: 99px; font-size: 12px; font-weight: 500;
+    color: #374151; border: 1px solid #e5e7eb; background: #fff;
+  }
+  .fc-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot-staff  { background: #2563eb; }
+  .dot-system { background: #7c3aed; }
+  .dot-coach  { background: #059669; }
+  .dot-person { background: #db2777; }
+  .dot-cron   { background: #d97706; }
+  .dot-ok     { background: #16a34a; }
+  .dot-fail   { background: #dc2626; }
+
+  /* ── Sections ───────────────────────────────── */
+  .fc-section { margin-bottom: 64px; scroll-margin-top: 24px; }
+  .fc-section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .fc-section-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 10px;
+    background: linear-gradient(135deg, #948afc, #fface4);
+    color: #fff; font-size: 14px; font-weight: 800; flex-shrink: 0;
+  }
+  .fc-section h2 { font-size: 22px; font-weight: 700; color: #1a1b41; margin: 0; }
+  .fc-section-desc { font-size: 14px; color: #6b7280; line-height: 1.6; max-width: 780px; margin-bottom: 20px; padding-left: 46px; }
+
+  /* ── Diagrams ───────────────────────────────── */
+
+  /* ── Table ──────────────────────────────────── */
+  .fc-table-wrap { border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; margin-bottom: 28px; }
+  .fc-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+  .fc-table th {
+    background: #f4f3ff; color: #4c1d95; font-weight: 700; font-size: 12px;
+    letter-spacing: .06em; text-transform: uppercase;
+    padding: 10px 14px; text-align: left; border-bottom: 2px solid #ede9fe;
+  }
+  .fc-table td { padding: 12px 14px; color: #374151; vertical-align: top; border-bottom: 1px solid #f0f0f0; }
+  .fc-table tr:last-child td { border-bottom: none; }
+  .fc-table tr:hover td { background: #fafafa; }
+  code.cron-cmd {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    background: #f4f3ff; color: #7c3aed; padding: 2px 7px; border-radius: 6px; font-size: 12px; white-space: nowrap;
   }
 
-  .flow-page {
-    min-height: 100vh;
-    background: var(--bg);
-    padding: 32px 20px 56px;
+  /* ── Path catalogue ─────────────────────────── */
+  .fc-paths { display: grid; gap: 10px; }
+  .fc-path { border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; background: #fff; transition: box-shadow .15s; }
+  .fc-path:hover { box-shadow: 0 4px 16px rgba(148,138,252,.12); }
+  .fc-path summary {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px; cursor: pointer; list-style: none; user-select: none;
   }
+  .fc-path summary::-webkit-details-marker { display: none; }
+  .fc-path-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 28px; height: 28px; padding: 0 8px;
+    border-radius: 8px; font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .badge-happy  { background: #d1fae5; color: #065f46; }
+  .badge-warn   { background: #fef3c7; color: #78350f; }
+  .badge-fail   { background: #fee2e2; color: #7f1d1d; }
+  .badge-manual { background: #e0e7ff; color: #3730a3; }
+  .fc-path-title { font-size: 15px; font-weight: 600; color: #1a1b41; flex: 1; }
+  .fc-path-chevron { width: 18px; height: 18px; color: #9ca3af; flex-shrink: 0; transition: transform .2s; }
+  details[open] .fc-path-chevron { transform: rotate(90deg); }
+  .fc-path-body { padding: 0 18px 18px; border-top: 1px solid #f3f4f6; }
+  .fc-path-steps { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 8px; }
+  .fc-path-steps li {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 10px 14px; background: #f9fafb; border-radius: 10px;
+    font-size: 13px; color: #374151; line-height: 1.5;
+  }
+  .fc-step-n {
+    flex-shrink: 0; width: 20px; height: 20px; border-radius: 6px;
+    background: #ede9fe; color: #7c3aed; font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fc-event-tag {
+    display: inline-block; padding: 1px 7px; border-radius: 5px;
+    background: #ede9fe; color: #6d28d9; font-size: 11px;
+    font-family: 'SFMono-Regular', Consolas, monospace; margin-left: 2px;
+  }
+  .fc-state-tag {
+    display: inline-block; padding: 1px 7px; border-radius: 5px;
+    background: #f4f3ff; color: #4c1d95; font-size: 11px;
+    font-family: 'SFMono-Regular', Consolas, monospace; margin-left: 2px;
+  }
+  .fc-terminal-ok   { padding: 10px 14px; background: #d1fae5; border-radius: 10px; color: #065f46; font-size: 13px; font-weight: 600; margin-top: 8px; }
+  .fc-terminal-fail { padding: 10px 14px; background: #fee2e2; border-radius: 10px; color: #7f1d1d; font-size: 13px; font-weight: 600; margin-top: 8px; }
+  .fc-terminal-cancel { padding: 10px 14px; background: #f3f4f6; border-radius: 10px; color: #374151; font-size: 13px; font-weight: 600; margin-top: 8px; }
 
-  .flow-wrapper {
-    max-width: 1100px;
-    margin: 0 auto;
+  /* ── Narrative summary ─────────────────────── */
+  .fc-stories { margin-bottom: 64px; scroll-margin-top: 24px; }
+  .fc-stories-intro { font-size: 15px; color: #6b7280; line-height: 1.7; max-width: 760px; margin-bottom: 28px; }
+  .fc-stories-intro strong { color: #1a1b41; }
+  .fc-story-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+  .fc-story {
+    border-radius: 14px; padding: 18px 20px 16px;
+    border: 1px solid #e5e7eb; background: #fff;
+    display: flex; flex-direction: column; gap: 10px;
+    transition: box-shadow .15s, border-color .15s;
   }
-
-  .flow-header {
-    text-align: center;
-    margin-bottom: 28px;
+  .fc-story:hover { box-shadow: 0 4px 18px rgba(148,138,252,.10); border-color: #c4b8fd; }
+  .fc-story-head { display: flex; align-items: flex-start; gap: 12px; }
+  .fc-story-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; flex-shrink: 0; line-height: 1;
   }
-
-  .flow-header h1 {
-    margin: 0 0 10px;
-    font-size: clamp(28px, 4vw, 40px);
-    line-height: 1.1;
-    color: var(--text);
+  .icon-ok     { background: #d1fae5; }
+  .icon-warn   { background: #fef3c7; }
+  .icon-fail   { background: #fee2e2; }
+  .icon-manual { background: #e0e7ff; }
+  .fc-story-title { font-size: 14px; font-weight: 700; color: #1a1b41; line-height: 1.35; padding-top: 2px; }
+  .fc-story-body { font-size: 13px; color: #4b5563; line-height: 1.65; margin: 0; }
+  .fc-story-outcome {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600; padding: 4px 10px;
+    border-radius: 99px; align-self: flex-start; margin-top: 2px;
   }
-
-  .flow-header p {
-    margin: 0 auto;
-    max-width: 820px;
-    font-size: 16px;
-    line-height: 1.6;
-    color: var(--muted);
-  }
-
-  .legend {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 12px;
-    margin-top: 18px;
-  }
-
-  .legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    font-size: 14px;
-    color: var(--text);
-  }
-
-  .legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 999px;
-  }
-
-  .flow-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
-    gap: 24px;
-    align-items: start;
-  }
-
-  .panel {
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 24px;
-    padding: 24px;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
-  }
-
-  .panel h2 {
-    margin: 0 0 18px;
-    font-size: 22px;
-    color: var(--text);
-  }
-
-  .timeline {
-    display: grid;
-    gap: 14px;
-  }
-
-  .step {
-    position: relative;
-    background: #fff;
-    border: 2px solid var(--primary-500);
-    border-radius: 20px;
-    padding: 18px 18px 18px 72px;
-  }
-
-  .step.success {
-    border-color: var(--green-500);
-  }
-
-  .step.problem {
-    border-color: var(--secondary-500);
-  }
-
-  .step-number {
-    position: absolute;
-    left: 18px;
-    top: 18px;
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800;
-    font-size: 14px;
-    color: #fff;
-    background: var(--primary-500);
-  }
-
-  .step.success .step-number {
-    background: var(--green-500);
-  }
-
-  .step.problem .step-number {
-    background: var(--secondary-500);
-  }
-
-  .step h3 {
-    margin: 0 0 6px;
-    font-size: 18px;
-    line-height: 1.25;
-    color: var(--text);
-  }
-
-  .step p {
-    margin: 0;
-    color: var(--muted);
-    font-size: 15px;
-    line-height: 1.55;
-  }
-
-  .step-note {
-    margin-top: 10px;
-    font-size: 14px;
-    color: var(--text);
-    font-weight: 600;
-  }
-
-  .branch-title {
-    margin: 0 0 12px;
-    font-size: 18px;
-    color: var(--text);
-  }
-
-  .branch-group {
-    display: grid;
-    gap: 16px;
-  }
-
-  .branch-card {
-    background: #fff;
-    border-radius: 20px;
-    padding: 18px;
-    border: 2px solid var(--line);
-  }
-
-  .branch-card.success {
-    border-color: var(--green-500);
-  }
-
-  .branch-card.problem {
-    border-color: var(--secondary-500);
-  }
-
-  .branch-card h3 {
-    margin: 0 0 8px;
-    font-size: 18px;
-    line-height: 1.25;
-    color: var(--text);
-  }
-
-  .branch-card p {
-    margin: 0;
-    color: var(--muted);
-    font-size: 15px;
-    line-height: 1.55;
-  }
-
-  .mini-steps {
-    list-style: none;
-    padding: 0;
-    margin: 14px 0 0;
-    display: grid;
-    gap: 10px;
-  }
-
-  .mini-steps li {
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 12px 14px;
-    color: var(--text);
-    font-size: 14px;
-    line-height: 1.5;
-    background: #fff;
-  }
-
-  .state-box {
-    margin-top: 20px;
-    border: 1px solid var(--line);
-    border-radius: 18px;
-    padding: 16px;
-    background: #fff;
-  }
-
-  .state-box h3 {
-    margin: 0 0 10px;
-    font-size: 17px;
-    color: var(--text);
-  }
-
-  .state-list {
-    display: grid;
-    gap: 8px;
-  }
-
-  .state-item {
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: #f8fafc;
-    border: 1px solid var(--line);
-    font-size: 14px;
-    color: var(--text);
-  }
+  .outcome-ok     { background: #d1fae5; color: #065f46; }
+  .outcome-warn   { background: #fef3c7; color: #78350f; }
+  .outcome-fail   { background: #fee2e2; color: #7f1d1d; }
+  .outcome-manual { background: #e0e7ff; color: #3730a3; }
 
   @media (max-width: 900px) {
-    .flow-layout {
-      grid-template-columns: 1fr;
-    }
+    .fc-toc { display: none; }
+    .fc-main { padding: 24px 20px 60px; }
   }
 </style>
+{% endblock %}
 
-<div class="flow-page">
-  <div class="flow-wrapper">
-    <div class="flow-header">
+{% block body %}
+<div class="fc-page">
+
+  <!-- Sidebar TOC -->
+  <nav class="fc-toc" id="fc-toc">
+    <div class="fc-toc-logo"><span>Matching-Prozess</span></div>
+    <a href="#sec-summary"><span class="fc-toc-num" style="background:#1a1b41;color:#fff;font-size:10px;">&#9636;</span> Szenarien</a>
+    <a href="#sec-cron"><span class="fc-toc-num">1</span> Cron-Jobs</a>
+    <a href="#sec-paths"><span class="fc-toc-num">2</span> Pfad-Katalog</a>
+  </nav>
+
+  <main class="fc-main">
+
+    <!-- Hero -->
+    <div class="fc-hero">
+      <div class="fc-hero-badge">Technische Dokumentation</div>
       <h1>Matching-Prozess</h1>
+      <p>Vollständige Prozessdokumentation inklusive aller Zustände, Übergänge, Automatisierungsregeln und Sonderfälle. Jede Abzweigung ist nachvollziehbar.</p>
+      
+    </div>
 
-
-      <div class="legend">
-        <div class="legend-item">
-          <span class="legend-dot bg-primary-500"></span>
-          Regulärer Prozess
-        </div>
-        <div class="legend-item">
-          <span class="legend-dot bg-green-500"></span>
-          Erfolgreicher Abschluss
-        </div>
-        <div class="legend-item">
-          <span class="legend-dot bg-secondary-500"></span>
-          Abweichung / Klärungsfall
-        </div>
+      <!-- Narrative Summary -->
+    <section class="fc-stories" id="sec-summary">
+      <div class="fc-section-header">
+        <span class="fc-section-num" style="background:linear-gradient(135deg,#1a1b41,#948afc);">&#9636;</span>
+        <h2>Was kann passieren? Alle Szenarien im Überblick</h2>
       </div>
-    </div>
+      <p class="fc-stories-intro">
+        Ein Matching verbindet eine Coachee mit einem passenden Coach. Wir kontaktieren Coaches der Reihe nach &mdash; wer zuerst zusagt, bekommt den Auftrag. Danach führen sie ein Kennenlerngespräch, und die Coachee entscheidet, ob das Coaching beginnen kann.
+        <strong>Hier sind alle Wege, die ein Matching nehmen kann</strong> &mdash; vom Idealfall bis zum Sonderfall.
+      </p>
+      <div class="fc-story-grid">
 
-    <div class="flow-layout">
-      <section class="panel">
-        <h2>Matching-Prozess</h2>
-
-        <div class="timeline">
-          <div class="step">
-            <div class="step-number">01</div>
-            <h3>Matching anlegen</h3>
-            <p>
-              Für den/die TN wird ein neues Matching erstellt.
-            </p>
+        <div class="fc-story">
+          <div class="fc-story-head">
+            <div class="fc-story-icon icon-ok">&#127919;</div>
+            <div class="fc-story-title">Alles läuft reibungslos</div>
           </div>
-
-          <div class="step">
-            <div class="step-number">02</div>
-            <h3>Coach-Anfragen hinzufügen</h3>
-            <p>
-              Es werden 1 bis 3 Coaches in Prioritätsreihenfolge hinterlegt.
-            </p>
-          </div>
-
-          <div class="step">
-            <div class="step-number">03</div>
-            <h3>Automatisierung aktivieren</h3>
-            <p>
-              Erst danach kann das Matching gestartet werden.
-            </p>
-          </div>
-
-          <div class="step">
-            <div class="step-number">04</div>
-            <h3>Matching starten</h3>
-            <p>
-              Die erste Matching-Anfrage wird an den Coach mit der höchsten Priorität versendet.
-            </p>
-          </div>
-
-          <div class="step">
-            <div class="step-number">05</div>
-            <h3>Auf Coach-Antwort warten</h3>
-            <p>
-              Der Coach hat dann in der Regel ca. 48 h Stunden (je nach genauem Zeitpunkt der Anfrage) Zeit, um zuzusagen. Es wird automatisch eine Erinnerung zwei Stunden vor Ablauf der Frist versendet.
-            </p>
-            <div class="step-note">Wenn keine Zusage erfolgt, wird der nächste Coach angefragt.</div>
-          </div>
-
-          <div class="step">
-            <div class="step-number">06</div>
-            <h3>Coach sagt rechtzeitig zu</h3>
-            <p>
-              Der Coach wird als passender Match gesetzt und das Kennenlerngespräch wird angestoßen.
-            </p>
-          </div>
-
-          <div class="step">
-            <div class="step-number">07</div>
-            <h3>Kennenlerngespräch organisieren</h3>
-            <p>
-              Coach und TN erhalten die Informationen für das Kennenlernen.
-            </p>
-          </div>
-
-          <div class="step">
-            <div class="step-number">08</div>
-            <h3>Coach bestätigt das Kennenlerngespräch</h3>
-            <p>
-              Nach der Bestätigung wird die Rückmeldung des/der TN eingeholt.
-            </p>
-          </div>
-
-          <div class="step">
-            <div class="step-number">09</div>
-            <h3>TN gibt Rückmeldung</h3>
-            <p>
-              Jetzt entscheidet sich, ob das Coaching starten kann oder ob noch Klärung nötig ist.
-            </p>
-          </div>
-
-          <div class="step success">
-            <div class="step-number">10</div>
-            <h3>Coaching startet</h3>
-            <p>
-              Wenn der/die TN bestätigt, dass das Coaching starten kann,
-              wird das Matching erfolgreich abgeschlossen.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Wichtige Abzweigungen</h2>
-
-        <div class="branch-group">
-          <div class="branch-card problem">
-            <h3>Kein weiterer Coach verfügbar</h3>
-            <p>
-              Wenn ein Coach ablehnt oder nicht rechtzeitig antwortet, wird die nächste
-              hinterlegte Coach-Anfrage verwendet. Sind keine weiteren Coach-Anfragen
-              mehr in Vorbereitung vorhanden, endet das Matching mit dem Status
-              „Keinen Coach gefunden“.
-            </p>
-
-            <ul class="mini-steps">
-              <li>Coach lehnt ab oder antwortet nicht rechtzeitig</li>
-              <li>Nächsten Coach nach Priorität anfragen</li>
-              <li>Keine weiteren Coach-Anfragen mehr vorhanden</li>
-              <li>Matching endet ohne Coach</li>
-            </ul>
-          </div>
-
-          <div class="branch-card problem">
-            <h3>Klärung mit TN nötig</h3>
-            <p>
-              Wenn nach dem Kennenlerngespräch nicht bestätigt wird, dass das Coaching starten
-              kann, wechselt das Matching in den Klärungsstatus.
-            </p>
-
-            <ul class="mini-steps">
-              <li>Kennenlerngespräch wurde durchgeführt</li>
-              <li>TN bestätigt den Start nicht</li>
-              <li>Matching wechselt in „Klärung mit TN nötig“</li>
-              <li>BeginnerLuft wird informiert und der Coach erhält eine Info zur Klärung</li>
-            </ul>
-          </div>
-
-          <div class="branch-card success">
-            <h3>Erfolgreicher Abschluss</h3>
-            <p>
-              Wenn der/die TN nach dem Kennenlerngespräch bestätigt, dass das
-              Coaching starten kann, werden die Startinformationen versendet und das
-              Matching abgeschlossen.
-            </p>
-
-            <ul class="mini-steps">
-              <li>Kennenlerngespräch wurde bestätigt</li>
-              <li>TN stimmt dem Start zu</li>
-              <li>Startinformationen werden versendet</li>
-              <li>Matching abgeschlossen</li>
-            </ul>
-          </div>
+          <p class="fc-story-body">Der erste angefragte Coach sagt zu. Er führt das Kennenlerngespräch durch und bestätigt es im System. Die Coachee erhält daraufhin eine Rückmeldeanfrage, klickt auf &bdquo;Coaching kann starten&ldquo; &mdash; und das Matching ist abgeschlossen. Beide Seiten bekommen eine Bestätigung.</p>
+          <span class="fc-story-outcome outcome-ok">&#10003; Matching abgeschlossen</span>
         </div>
 
-        <div class="state-box">
-          <h3>Status im Verlauf</h3>
-          <div class="state-list">
-            <div class="state-item">In Vorbereitung</div>
-            <div class="state-item">Warten auf Coach-Antwort zu Matching-Anfrage</div>
-            <div class="state-item">Warten auf Coach-Antwort zu Kennenlerngespräch-Anfrage</div>
-            <div class="state-item">Warten auf TN-Antwort zu Kennenlerngespräch</div>
-            <div class="state-item">Klärung mit TN nötig</div>
-            <div class="state-item">Matching abgeschlossen</div>
-            <div class="state-item">Keinen Coach gefunden</div>
-            <div class="state-item">Matching abgebrochen</div>
+        <div class="fc-story">
+          <div class="fc-story-head">
+            <div class="fc-story-icon icon-warn">&#128581;</div>
+            <div class="fc-story-title">Erster Coach lehnt ab &mdash; der nächste sagt zu</div>
           </div>
+          <p class="fc-story-body">Ein Coach entscheidet sich gegen die Anfrage. Das System registriert die Ablehnung und schickt automatisch eine Anfrage an den nächsten Coach in der Liste. Dieser sagt zu, und der Prozess läuft ganz normal weiter.</p>
+          <span class="fc-story-outcome outcome-ok">&#10003; Matching abgeschlossen</span>
         </div>
-      </section>
-    </div>
-  </div>
+
+        <div class="fc-story">
+          <div class="fc-story-head">
+            <div class="fc-story-icon icon-warn">&#9200;</div>
+            <div class="fc-story-title">Coach antwortet nicht rechtzeitig</div>
+          </div>
+          <p class="fc-story-body">Ein Coach reagiert nicht auf die Anfrage. Kurz vor Fristablauf bekommt er automatisch eine Erinnerung. Antwortet er trotzdem nicht, gilt die Anfrage nach Ablauf der Frist als nicht beantwortet &mdash; und der nächste Coach in der Schlange bekommt seine Chance.</p>
+          <span class="fc-story-outcome outcome-ok">&#10003; Matching abgeschlossen</span>
+        </div>
+
+        <div class="fc-story">
+          <div class="fc-story-head">
+            <div class="fc-story-icon icon-fail">&#128461;</div>
+            <div class="fc-story-title">Alle angefragten Coaches haben abgesagt oder nicht reagiert</div>
+          </div>
+          <p class="fc-story-body">Alle Coaches in der Liste haben abgelehnt oder nicht geantwortet &mdash; das Matching gerät vorerst ins Stocken. Das Team wird per Slack informiert. Die Koordination kann neue Coaches hinzufügen und den Prozess fortsetzen, sobald weitere Optionen vorliegen.</p>
+          <span class="fc-story-outcome outcome-warn">&#8635; Pausiert &mdash; kann fortgesetzt werden</span>
+        </div>
+
+        <div class="fc-story">
+          <div class="fc-story-head">
+            <div class="fc-story-icon icon-warn">&#128336;</div>
+            <div class="fc-story-title">Coach meldet sich &mdash; aber zu spät</div>
+          </div>
+          <p class="fc-story-body">Ein Coach meldet sich, aber seine Antwort kommt nach Ablauf der Frist. Zu diesem Zeitpunkt wurde die nächste Person in der Liste bereits kontaktiert. Die verspätete Rückmeldung wird protokolliert, hat aber keinen Einfluss mehr auf den weiteren Ablauf.</p>
+          <span class="fc-story-outcome outcome-warn">&rarr; Verspätete Antwort, kein Einfluss</span>
+        </div>
+
+        <div class="fc-story">
+          <div class="fc-story-head">
+            <div class="fc-story-icon icon-warn">&#128140;</div>
+            <div class="fc-story-title">Coach braucht eine Erinnerung für die Gesprächsbestätigung</div>
+          </div>
+          <p class="fc-story-body">Nach dem Kennenlerngespräch wartet das System auf die Bestätigung des Coaches. Er hat die Nachricht übersehen &mdash; nach Fristablauf bekommt er eine Erinnerung und etwas mehr Zeit. Diesmal meldet er sich, und der Prozess läuft weiter wie gewohnt.</p>
+          <span class="fc-story-outcome outcome-ok">&#10003; Matching abgeschlossen</span>
+        </div>
+
+        <div class="fc-story">
+          <div class="fc-story-head">
+            <div class="fc-story-icon icon-fail">&#128680;</div>
+            <div class="fc-story-title">Coach bestätigt das Kennenlerngespräch trotz Erinnerung nicht</div>
+          </div>
+          <p class="fc-story-body">Auch auf die Erinnerung reagiert der Coach nicht. Das System benachrichtigt das Team direkt per Slack &mdash; eine menschliche Hand ist jetzt gefragt. Die Koordination entscheidet: weiter warten, den Coach persönlich ansprechen oder das Matching einem anderen Coach übergeben.</p>
+          <span class="fc-story-outcome outcome-fail">&#9888; Team-Eingriff erforderlich</span>
+        </div>
+
+        <div class="fc-story">
+          <div class="fc-story-head">
+            <div class="fc-story-icon icon-warn">&#128197;</div>
+            <div class="fc-story-title">Coachee möchte zuerst ein Klärungsgespräch</div>
+          </div>
+          <p class="fc-story-body">Nach dem Kennenlerngespräch ist die Coachee noch unsicher. Sie bucht über einen Calendly-Link einen Termin für ein kurzes Klärungsgespräch. Team und Coach werden benachrichtigt. Danach entscheidet sie, ob das Coaching starten kann.</p>
+          <span class="fc-story-outcome outcome-ok">&#10003; Matching abgeschlossen</span>
+        </div>
+
+        <div class="fc-story">
+          <div class="fc-story-head">
+            <div class="fc-story-icon icon-warn">&#128260;</div>
+            <div class="fc-story-title">Klärungsgespräch wird abgesagt und neu gebucht</div>
+          </div>
+          <p class="fc-story-body">Die Coachee bucht ein Klärungsgespräch, sagt es aber kurzfristig ab. Ihre ursprüngliche Antwortfrist wird automatisch wiederhergestellt. Sie kann danach erneut einen Termin buchen oder direkt ihre Zustimmung geben &mdash; ganz wie es ihr passt.</p>
+          <span class="fc-story-outcome outcome-warn">&rarr; Zurück zum Warten auf Rückmeldung</span>
+        </div>
+
+        <div class="fc-story">
+          <div class="fc-story-head">
+            <div class="fc-story-icon icon-fail">&#128276;</div>
+            <div class="fc-story-title">Coachee reagiert gar nicht</div>
+          </div>
+          <p class="fc-story-body">Die Coachee erhält die Rückmeldeanfrage, meldet sich aber nicht. Nach Fristablauf bekommt sie eine Erinnerungsmail und etwas mehr Zeit. Bleibt auch dann eine Antwort aus, wird das Team per Slack benachrichtigt und kümmert sich persönlich darum.</p>
+          <span class="fc-story-outcome outcome-fail">&#9888; Team-Eingriff erforderlich</span>
+        </div>
+
+        <div class="fc-story">
+          <div class="fc-story-head">
+            <div class="fc-story-icon icon-fail">&#128721;</div>
+            <div class="fc-story-title">Matching wird manuell abgebrochen</div>
+          </div>
+          <p class="fc-story-body">Manchmal ändert sich die Situation &mdash; etwa wenn eine Coachee das Programm verlässt. Die Koordination kann das Matching jederzeit und aus jedem Zustand heraus manuell abbrechen. Alle laufenden Anfragen werden gestoppt.</p>
+          <span class="fc-story-outcome outcome-fail">&#10007; Matching abgebrochen</span>
+        </div>
+
+        <div class="fc-story">
+          <div class="fc-story-head">
+            <div class="fc-story-icon icon-manual">&#127771;</div>
+            <div class="fc-story-title">Team weist Coach direkt zu</div>
+          </div>
+          <p class="fc-story-body">In besonderen Fällen &mdash; etwa wenn ein Coach bereits persönlich zugesagt hat oder eine schnelle Entscheidung nötig ist &mdash; kann das Team das Matching direkt einem Coach zuweisen, ohne den automatischen Anfrageprozess zu durchlaufen. Das Matching gilt sofort als abgeschlossen; Coach und Coachee werden manuell informiert.</p>
+          <span class="fc-story-outcome outcome-manual">&#10003; Direkt abgeschlossen (manuell)</span>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ── Section 5: Cron jobs ──────────────────── -->
+    <section class="fc-section" id="sec-cron">
+      <div class="fc-section-header">
+        <span class="fc-section-num">1</span>
+        <h2>Cron-Jobs &amp; Automatisierung</h2>
+      </div>
+      <p class="fc-section-desc">Alle sechs Management-Commands, die als Cronjobs laufen sollten (empfohlener Rhythmus: alle 15–30 min). Die Automatisierung greift nur bei <code>automation_enabled = True</code>.</p>
+
+      <div class="fc-table-wrap">
+        <table class="fc-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Command</th><th>Auslöser</th><th>Aktion</th><th>Event</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td><code class="cron-cmd">mark_rtc_deadline_as_passed</code></td>
+              <td>RTC <code>awaiting_reply</code>, <code>deadline_at &lt; now</code></td>
+              <td>RTC → <code>no_response_until_deadline</code>; Warteschlange rückt vor</td>
+              <td><code class="cron-cmd">RTC_TIMED_OUT</code></td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td><code class="cron-cmd">send_reminder_coach_request_notification</code></td>
+              <td>RTC <code>awaiting_reply</code>, Frist in &lt;2h, noch keine Erinnerung</td>
+              <td>Einmalige Erinnerung an Coach</td>
+              <td><code class="cron-cmd">RTC_REMINDER_SENT_TO_COACH</code></td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td><code class="cron-cmd">send_intro_call_reminder</code></td>
+              <td>MA <code>awaiting_intro_call_feedback_from_coach</code>, Frist überschritten, noch keine Erinnerung</td>
+              <td>Frist + 1 Arbeitstag; Erinnerung an Coach</td>
+              <td><code class="cron-cmd">INTRO_CALL_REMINDER_SENT_TO_COACH</code></td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td><code class="cron-cmd">notify_staff_of_intro_call_timeout</code></td>
+              <td>Selber State, Erinnerung bereits gesendet, Frist erneut überschritten</td>
+              <td>BL-Staff via Slack</td>
+              <td><code class="cron-cmd">INTRO_CALL_TIMED_OUT_STAFF_NOTIFIED</code></td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td><code class="cron-cmd">send_participant_intro_call_feedback_reminder</code></td>
+              <td>MA <code>awaiting_intro_call_feedback_from_participant</code>, TN-Frist überschritten</td>
+              <td>Frist + 1 Arbeitstag; Erinnerungs-E-Mail an TN</td>
+              <td><code class="cron-cmd">INTRO_CALL_FEEDBACK_REMINDER_SENT_TO_PARTICIPANT</code></td>
+            </tr>
+            <tr>
+              <td>6</td>
+              <td><code class="cron-cmd">notify_staff_of_participant_intro_call_feedback_timeout</code></td>
+              <td>Selber State, Erinnerung bereits gesendet, Frist erneut überschritten</td>
+              <td>BL-Staff via Slack</td>
+              <td><code class="cron-cmd">INTRO_CALL_FEEDBACK_PARTICIPANT_TIMED_OUT_STAFF_NOTIFIED</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Section 6: Path catalogue ────────────── -->
+    <section class="fc-section" id="sec-paths">
+      <div class="fc-section-header">
+        <span class="fc-section-num">2</span>
+        <h2>Pfad-Katalog</h2>
+      </div>
+      <p class="fc-section-desc">Alle 12 theoretisch möglichen Pfade durch den Matching-Prozess — zum Aufklappen.</p>
+
+      <div class="fc-paths">
+
+        <details class="fc-path" open>
+          <summary>
+            <span class="fc-path-badge badge-happy">1</span>
+            <span class="fc-path-title">Happy Path — erster Coach nimmt an, Kennenlerngespräch bestätigt, TN stimmt zu</span>
+            <svg class="fc-path-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </summary>
+          <div class="fc-path-body">
+            <ol class="fc-path-steps">
+              <li><span class="fc-step-n">1</span><span>Staff erstellt Matching → Event: <span class="fc-event-tag">CREATED</span></span></li>
+              <li><span class="fc-step-n">2</span><span>Staff fügt RTCs hinzu → Event: <span class="fc-event-tag">RTC_CREATED</span> ×N</span></li>
+              <li><span class="fc-step-n">3</span><span>Staff aktiviert Automatisierung → Event: <span class="fc-event-tag">AUTOMATION_ENABLED</span></span></li>
+              <li><span class="fc-step-n">4</span><span>Staff startet → State: <span class="fc-state-tag">in_preparation → awaiting_rtc_reply</span> → Event: <span class="fc-event-tag">STARTED</span></span></li>
+              <li><span class="fc-step-n">5</span><span>System sendet RTC → RTC: <span class="fc-state-tag">awaiting_reply</span> → Event: <span class="fc-event-tag">RTC_SENT_TO_COACH</span></span></li>
+              <li><span class="fc-step-n">6</span><span>Coach nimmt an → RTC: <span class="fc-state-tag">accepted</span> → Event: <span class="fc-event-tag">RTC_ACCEPTED</span></span></li>
+              <li><span class="fc-step-n">7</span><span>MA → <span class="fc-state-tag">awaiting_intro_call_feedback_from_coach</span>; matched_coach + Frist gesetzt</span></li>
+              <li><span class="fc-step-n">8</span><span>Kennenlerngespräch-Anfrage an Coach → Event: <span class="fc-event-tag">INTRO_CALL_REQUEST_SENT_TO_COACH</span></span></li>
+              <li><span class="fc-step-n">9</span><span>TN über Kennenlerngespräch informiert → Event: <span class="fc-event-tag">INTRO_CALL_INFO_SENT_TO_PARTICIPANT</span></span></li>
+              <li><span class="fc-step-n">10</span><span>Coach klickt Bestätigungs-Link → Event: <span class="fc-event-tag">INTRO_CALL_FEEDBACK_RECEIVED_FROM_COACH</span></span></li>
+              <li><span class="fc-step-n">11</span><span>MA → <span class="fc-state-tag">awaiting_intro_call_feedback_from_participant</span>; TN-Frist gesetzt</span></li>
+              <li><span class="fc-step-n">12</span><span>Feedback-Anfrage an TN → Event: <span class="fc-event-tag">INTRO_CALL_FEEDBACK_REQUESTED_FROM_PARTICIPANT</span></span></li>
+              <li><span class="fc-step-n">13</span><span>TN klickt "Coaching kann starten" → Event: <span class="fc-event-tag">COACHING_CAN_START_FEEDBACK_RECEIVED_FROM_PARTICIPANT</span></span></li>
+              <li><span class="fc-step-n">14</span><span>MA → <span class="fc-state-tag">matching_completed</span></span></li>
+              <li><span class="fc-step-n">15</span><span>Start-Info an TN → Event: <span class="fc-event-tag">COACHING_START_INFO_SENT_TO_PARTICIPANT</span></span></li>
+              <li><span class="fc-step-n">16</span><span>Start-Info an Coach → Event: <span class="fc-event-tag">COACHING_START_INFO_SENT_TO_COACH</span></span></li>
+            </ol>
+            <div class="fc-terminal-ok">🎉 Terminal: MATCHING_COMPLETED</div>
+          </div>
+        </details>
+
+        <details class="fc-path">
+          <summary>
+            <span class="fc-path-badge badge-warn">2</span>
+            <span class="fc-path-title">Coach lehnt ab → nächster Coach nimmt an</span>
+            <svg class="fc-path-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </summary>
+          <div class="fc-path-body">
+            <ol class="fc-path-steps">
+              <li><span class="fc-step-n">1–5</span><span>Wie Pfad 1, Schritte 1–5</span></li>
+              <li><span class="fc-step-n">6</span><span>Coach lehnt rechtzeitig ab → RTC: <span class="fc-state-tag">rejected</span> → Event: <span class="fc-event-tag">RTC_DECLINED</span> (on_time=True)</span></li>
+              <li><span class="fc-step-n">7</span><span>System prüft Warteschlange → nächster RTC → Event: <span class="fc-event-tag">RTC_SENT_TO_COACH</span></span></li>
+              <li><span class="fc-step-n">8</span><span>Nächster Coach nimmt an → weiter ab Pfad 1 Schritt 6</span></li>
+            </ol>
+            <div class="fc-terminal-ok">🎉 Terminal: MATCHING_COMPLETED</div>
+          </div>
+        </details>
+
+        <details class="fc-path">
+          <summary>
+            <span class="fc-path-badge badge-warn">3</span>
+            <span class="fc-path-title">Coach antwortet nicht (Timeout) → nächster Coach nimmt an</span>
+            <svg class="fc-path-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </summary>
+          <div class="fc-path-body">
+            <ol class="fc-path-steps">
+              <li><span class="fc-step-n">1–5</span><span>Wie Pfad 1, Schritte 1–5</span></li>
+              <li><span class="fc-step-n">5a</span><span>~2h vor Frist: CRON sendet Erinnerung → Event: <span class="fc-event-tag">RTC_REMINDER_SENT_TO_COACH</span></span></li>
+              <li><span class="fc-step-n">6</span><span>Frist abgelaufen → CRON markiert RTC: <span class="fc-state-tag">no_response_until_deadline</span> → Event: <span class="fc-event-tag">RTC_TIMED_OUT</span></span></li>
+              <li><span class="fc-step-n">7</span><span>Warteschlange rückt vor → nächster RTC → Event: <span class="fc-event-tag">RTC_SENT_TO_COACH</span></span></li>
+              <li><span class="fc-step-n">8</span><span>Nächster Coach nimmt an → weiter ab Pfad 1 Schritt 6</span></li>
+            </ol>
+            <div class="fc-terminal-ok">🎉 Terminal: MATCHING_COMPLETED</div>
+          </div>
+        </details>
+
+        <details class="fc-path">
+          <summary>
+            <span class="fc-path-badge badge-fail">4</span>
+            <span class="fc-path-title">Alle Coaches erschöpft → FEHLGESCHLAGEN → Staff fügt hinzu → Fortsetzen</span>
+            <svg class="fc-path-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </summary>
+          <div class="fc-path-body">
+            <ol class="fc-path-steps">
+              <li><span class="fc-step-n">1–5</span><span>Wie Pfad 1 (ggf. mehrere Ablehnungen / Timeouts)</span></li>
+              <li><span class="fc-step-n">6</span><span>Letzter Coach lehnt ab / Timeout → keine weiteren RTCs → Event: <span class="fc-event-tag">ALL_RTCS_DECLINED</span></span></li>
+              <li><span class="fc-step-n">7</span><span>MA → <span class="fc-state-tag">failed</span>; Automatisierung deaktiviert; Staff via Slack benachrichtigt</span></li>
+              <li><span class="fc-step-n">8</span><span>Staff fügt neue RTCs hinzu; reaktiviert Automatisierung</span></li>
+              <li><span class="fc-step-n">9</span><span>Staff klickt Fortsetzen → MA: <span class="fc-state-tag">failed → awaiting_rtc_reply</span> → Event: <span class="fc-event-tag">RESUMED</span></span></li>
+              <li><span class="fc-step-n">10</span><span>System sendet RTC an nächsten Coach → weiter ab Pfad 1 Schritt 6</span></li>
+            </ol>
+          </div>
+        </details>
+
+        <details class="fc-path">
+          <summary>
+            <span class="fc-path-badge badge-warn">5</span>
+            <span class="fc-path-title">Coach antwortet nach Frist (zu spät)</span>
+            <svg class="fc-path-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </summary>
+          <div class="fc-path-body">
+            <ol class="fc-path-steps">
+              <li><span class="fc-step-n">1–5</span><span>Wie Pfad 1</span></li>
+              <li><span class="fc-step-n">5a</span><span>Frist abgelaufen → CRON markiert RTC: <span class="fc-state-tag">no_response_until_deadline</span> → Event: <span class="fc-event-tag">RTC_TIMED_OUT</span>; Warteschlange rückt vor</span></li>
+              <li><span class="fc-step-n">6</span><span>Ursprünglicher Coach antwortet nachträglich → Event: <span class="fc-event-tag">RESPONDED_LATE_TO_RTC</span> (nur protokolliert — kein Zustandswechsel, Warteschlange läuft bereits weiter)</span></li>
+            </ol>
+          </div>
+        </details>
+
+        <details class="fc-path">
+          <summary>
+            <span class="fc-path-badge badge-warn">6</span>
+            <span class="fc-path-title">Kennenlerngespräch-Erinnerung greift → Coach bestätigt danach</span>
+            <svg class="fc-path-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </summary>
+          <div class="fc-path-body">
+            <ol class="fc-path-steps">
+              <li><span class="fc-step-n">1–9</span><span>Wie Pfad 1 (nach Coach-Zusage, nach Kennenlerngespräch-Anfrage)</span></li>
+              <li><span class="fc-step-n">10a</span><span><code>intro_call_deadline_at</code> überschritten → CRON sendet Erinnerung; Frist + 1 Arbeitstag → Event: <span class="fc-event-tag">INTRO_CALL_REMINDER_SENT_TO_COACH</span></span></li>
+              <li><span class="fc-step-n">10b</span><span>Coach bestätigt danach → weiter ab Pfad 1 Schritt 10</span></li>
+            </ol>
+            <div class="fc-terminal-ok">🎉 Terminal: MATCHING_COMPLETED</div>
+          </div>
+        </details>
+
+        <details class="fc-path">
+          <summary>
+            <span class="fc-path-badge badge-fail">7</span>
+            <span class="fc-path-title">Kennenlerngespräch-Staff-Eskalation (Coach ignoriert Erinnerung)</span>
+            <svg class="fc-path-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </summary>
+          <div class="fc-path-body">
+            <ol class="fc-path-steps">
+              <li><span class="fc-step-n">1</span><span>Nach Pfad 6 (Erinnerung wurde gesendet)</span></li>
+              <li><span class="fc-step-n">2</span><span>Verlängerte Frist überschritten → CRON benachrichtigt Staff via Slack → Event: <span class="fc-event-tag">INTRO_CALL_TIMED_OUT_STAFF_NOTIFIED</span></span></li>
+              <li><span class="fc-step-n">3</span><span><strong>Kein automatischer Zustandswechsel.</strong> Staff entscheidet: abwarten, abbrechen oder neuen Coach zuordnen.</span></li>
+            </ol>
+          </div>
+        </details>
+
+        <details class="fc-path">
+          <summary>
+            <span class="fc-path-badge badge-warn">8</span>
+            <span class="fc-path-title">TN bucht Klärungsgespräch via Calendly</span>
+            <svg class="fc-path-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </summary>
+          <div class="fc-path-body">
+            <ol class="fc-path-steps">
+              <li><span class="fc-step-n">1–12</span><span>Wie Pfad 1 (Feedback-Anfrage an TN wurde gesendet)</span></li>
+              <li><span class="fc-step-n">13</span><span>TN bucht Calendly-Slot → Webhook → <code>record_clarification_call_booked()</code>; TN-Frist gelöscht; <code>ClarificationCallBooking</code> erstellt</span></li>
+              <li><span class="fc-step-n">14</span><span>MA: <span class="fc-state-tag">awaiting_intro_call_feedback_from_participant → clarification_call_scheduled</span> → Event: <span class="fc-event-tag">CLARIFICATION_CALL_BOOKED</span></span></li>
+              <li><span class="fc-step-n">15</span><span>Staff via Slack informiert; Coach über bevorzugten Kanal informiert</span></li>
+              <li><span class="fc-step-n">16</span><span>Klärungsgespräch findet statt; TN klickt "Coaching kann starten" → weiter ab Pfad 1 Schritt 13</span></li>
+            </ol>
+            <div class="fc-terminal-ok">🎉 Terminal: MATCHING_COMPLETED</div>
+          </div>
+        </details>
+
+        <details class="fc-path">
+          <summary>
+            <span class="fc-path-badge badge-warn">9</span>
+            <span class="fc-path-title">TN sagt Klärungsgespräch ab (dann Neubuchung oder direkte Bestätigung)</span>
+            <svg class="fc-path-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </summary>
+          <div class="fc-path-body">
+            <ol class="fc-path-steps">
+              <li><span class="fc-step-n">1–15</span><span>Wie Pfad 8 (Buchung vorhanden, MA im State <code>clarification_call_scheduled</code>)</span></li>
+              <li><span class="fc-step-n">16</span><span>TN sagt ab → Webhook → <code>record_clarification_call_canceled()</code>; Booking.status = canceled; TN-Frist wiederhergestellt</span></li>
+              <li><span class="fc-step-n">17</span><span>MA: <span class="fc-state-tag">clarification_call_scheduled → awaiting_intro_call_feedback_from_participant</span> → Event: <span class="fc-event-tag">CLARIFICATION_CALL_CANCELED</span> (keine Benachrichtigungen)</span></li>
+              <li><span class="fc-step-n">18</span><span>TN kann: <strong>neu buchen</strong> (→ Pfad 8) oder <strong>direkt bestätigen</strong> (→ Pfad 1 Schritt 13)</span></li>
+            </ol>
+          </div>
+        </details>
+
+        <details class="fc-path">
+          <summary>
+            <span class="fc-path-badge badge-fail">10</span>
+            <span class="fc-path-title">TN antwortet nicht auf Feedback-Anfrage → Erinnerung + Staff-Eskalation</span>
+            <svg class="fc-path-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </summary>
+          <div class="fc-path-body">
+            <ol class="fc-path-steps">
+              <li><span class="fc-step-n">1–12</span><span>Wie Pfad 1 (Feedback-Anfrage an TN wurde gesendet)</span></li>
+              <li><span class="fc-step-n">13</span><span>TN-Frist überschritten → CRON sendet Erinnerung; Frist verlängert → Event: <span class="fc-event-tag">INTRO_CALL_FEEDBACK_REMINDER_SENT_TO_PARTICIPANT</span></span></li>
+              <li><span class="fc-step-n">14</span><span>Verlängerte Frist überschritten → CRON benachrichtigt Staff → Event: <span class="fc-event-tag">INTRO_CALL_FEEDBACK_PARTICIPANT_TIMED_OUT_STAFF_NOTIFIED</span></span></li>
+              <li><span class="fc-step-n">15</span><span><strong>Kein automatischer Zustandswechsel.</strong> Staff muss TN direkt kontaktieren.</span></li>
+            </ol>
+          </div>
+        </details>
+
+        <details class="fc-path">
+          <summary>
+            <span class="fc-path-badge badge-fail">11</span>
+            <span class="fc-path-title">Staff bricht Matching ab (jederzeit möglich)</span>
+            <svg class="fc-path-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </summary>
+          <div class="fc-path-body">
+            <p style="font-size:13px;color:#6b7280;margin:14px 0 10px;">Möglich aus: <code>in_preparation</code>, <code>awaiting_rtc_reply</code>, <code>awaiting_intro_call_feedback_from_coach</code>, <code>awaiting_intro_call_feedback_from_participant</code>, <code>clarification_call_scheduled</code>, <code>failed</code></p>
+            <ol class="fc-path-steps">
+              <li><span class="fc-step-n">1</span><span>Staff klickt Abbrechen in der Admin-UI</span></li>
+              <li><span class="fc-step-n">2</span><span>Automatisierung wird deaktiviert</span></li>
+              <li><span class="fc-step-n">3</span><span>MA → <span class="fc-state-tag">cancelled</span> → Event: <span class="fc-event-tag">CANCELLED</span></span></li>
+            </ol>
+            <div class="fc-terminal-fail">🚫 Terminal: CANCELLED</div>
+          </div>
+        </details>
+
+        <details class="fc-path">
+          <summary>
+            <span class="fc-path-badge badge-manual">12</span>
+            <span class="fc-path-title">Staff matcht manuell mit einem Coach (Override — überspringt Automatisierung)</span>
+            <svg class="fc-path-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </summary>
+          <div class="fc-path-body">
+            <p style="font-size:13px;color:#6b7280;margin:14px 0 10px;">Möglich aus jedem aktiven Status oder <code>failed</code>.</p>
+            <ol class="fc-path-steps">
+              <li><span class="fc-step-n">1</span><span>Staff nutzt "Manuell matchen"-Aktion, wählt Coach</span></li>
+              <li><span class="fc-step-n">2</span><span>Automatisierung deaktiviert; <code>matched_coach</code> gesetzt</span></li>
+              <li><span class="fc-step-n">3</span><span>MA → <span class="fc-state-tag">matching_completed</span> → Event: <span class="fc-event-tag">MANUALLY_MATCHED_TO_COACH</span></span></li>
+              <li><span class="fc-step-n">4</span><span>⚠ Keine automatischen Benachrichtigungen — Staff informiert Coach und TN manuell</span></li>
+            </ol>
+            <div class="fc-terminal-ok">🎉 Terminal: MATCHING_COMPLETED (manuelles Override)</div>
+          </div>
+        </details>
+
+      </div><!-- /.fc-paths -->
+    </section>
+
+  </main>
 </div>
+
 {% endblock %}
