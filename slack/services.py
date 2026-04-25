@@ -856,13 +856,6 @@ def send_intro_call_reminder_slack(matching_attempt):
                 },
             ]
         },
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": f"<{url_participant}|➡ Zum Profil von {participant.first_name}>"
-            },
-        },
     ]
 
     message = _blocks_to_text(blocks)
