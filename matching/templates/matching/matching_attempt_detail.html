@@ -220,10 +220,13 @@
           {{ matching_attempt.coach_requests.count }}
         </span>
       </h2>
-      {% if request.user.is_staff and matching_attempt.is_active or matching_attempt.state == 'failed' %}
-        {% url 'request_to_coach_create' matching_attempt.pk as create_request_url %}
-        {% include "components/_button.html" with button_text="+" button_variant="primary" button_size="sm" button_href=create_request_url button_class="sm:hidden" %}
-        {% include "components/_button.html" with button_text="+ Erstellen" button_variant="primary" button_size="sm" button_href=create_request_url button_class="hidden sm:inline-flex" %}
+      
+      {% if request.user.is_staff %}
+        {% if matching_attempt.is_active or matching_attempt.state == 'failed' %}
+          {% url 'request_to_coach_create' matching_attempt.pk as create_request_url %}
+          {% include "components/_button.html" with button_text="+" button_variant="primary" button_size="sm" button_href=create_request_url button_class="sm:hidden" %}
+          {% include "components/_button.html" with button_text="+ Erstellen" button_variant="primary" button_size="sm" button_href=create_request_url button_class="hidden sm:inline-flex" %}
+        {% endif %}
       {% endif %}
     </div>
 

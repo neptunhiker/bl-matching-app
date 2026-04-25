@@ -31,6 +31,7 @@ class SlackLog(models.Model):
 
     subject = models.CharField(max_length=255, verbose_name='Betreff')
     message = models.TextField(blank=True, verbose_name='Nachricht')
+    blocks = models.JSONField(blank=True, null=True, verbose_name='Slack Blocks')
 
     status = models.CharField(
         max_length=20,

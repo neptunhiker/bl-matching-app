@@ -155,11 +155,11 @@ class MatchingAttemptDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailVi
             and matching_attempt.coach_requests.count() > 0
             and matching_attempt.state in ["in_preparation"]
         )
-        
+        # there have to be outstanding coach requests that have not been rejected yet, otherwise resuming doesn't make sense
         context['show_resume_button'] = (
             self.request.user.is_staff
             and matching_attempt.automation_enabled
-            and matching_attempt.coach_requests.count() > 0
+            and matching_attempt.coach_requests.filter(~Q(state=RequestToCoach.State.REJECTED)).exists()
             and matching_attempt.state in ["failed"]
         )
 

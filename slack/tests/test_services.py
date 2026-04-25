@@ -132,20 +132,22 @@ class TestBlocksToText:
         result = _blocks_to_text(blocks)
         assert "Header" in result        # header has text.text → included
         assert "Section text" in result
-        assert "Click" not in result     # actions elements are not extracted
+        assert "Click" in result         # actions button labels are now extracted
         assert "Context text" in result
 
     def test_blocks_to_text_empty_list(self):
         assert _blocks_to_text([]) == ""
 
-    def test_blocks_to_text_actions_block_skipped(self):
+    def test_blocks_to_text_actions_button_label_included(self):
         blocks = [
             {
                 "type": "actions",
                 "elements": [{"type": "button", "text": {"type": "plain_text", "text": "OK"}}],
             }
         ]
-        assert _blocks_to_text(blocks) == ""
+        result = _blocks_to_text(blocks)
+        assert "OK" in result
+        assert "[ OK ]" == result
 
 
 # ── 3. _open_dm_channel ───────────────────────────────────────────────────────

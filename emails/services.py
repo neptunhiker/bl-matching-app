@@ -431,41 +431,6 @@ def send_coaching_start_info_email_to_participant(matching_attempt, triggered_by
     return matching_attempt
 
 @transaction.atomic
-def send_intro_call_feedback_request_email_to_participant(matching_attempt, triggered_by: str="system"):
-    """Send an email to the participant to request feedback about the intro call after receiving feedback from the coach."""
-    
-    matching_attempt = _get_locked_matching_attempt(matching_attempt)
-    
-    participant = matching_attempt.participant
-    
-    coach = matching_attempt.matched_coach
-    intro_call_feedback_url = generate_intro_call_feedback_url(matching_attempt)
-    
-    context = {
-        "recipient_name": participant.first_name,
-        "coach_name": coach,
-        "coach_first_name": coach.first_name,
-        "coach_email": coach.user.email,
-        "participant_first_name": participant.first_name,
-        "intro_call_feedback_url": intro_call_feedback_url,
-        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
-    }
-    
-    transaction.on_commit(
-        lambda: send_email(
-            to=participant.email,
-            subject=f"Wie war dein Kennenlerngespräch mit {coach.first_name}?",
-            template_name='emails/intro_call_feedback_request_to_participant.html',
-            context=context,
-            matching_attempt=matching_attempt,
-            sent_by=context["author"],
-            triggered_by=triggered_by
-            )
-    )
-        
-    return matching_attempt
-
-@transaction.atomic
 def send_clarification_call_booked_info_to_coach_email(matching_attempt, triggered_by: str = "system"):
     """Email to the coach when the participant has booked a Calendly clarification (Check In) call."""
 

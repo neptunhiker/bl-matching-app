@@ -17,7 +17,7 @@ from slack.models import SlackLog
 
 logger = logging.getLogger(__name__)
 
-def create_slack_log(to: User, subject: str, message: str, request_to_coach=None, matching_attempt=None, sent_by=SlackLog.SentBy.SYSTEM, status=SlackLog.Status.SENT, error_message=""):
+def create_slack_log(to: User, subject: str, message: str, request_to_coach=None, matching_attempt=None, sent_by=SlackLog.SentBy.SYSTEM, status=SlackLog.Status.SENT, error_message="", blocks=None):
 
     # Only request_to_coach or matching_attempt can be set, not both
     if request_to_coach and matching_attempt:
@@ -31,6 +31,7 @@ def create_slack_log(to: User, subject: str, message: str, request_to_coach=None
             to=to,
             subject=subject,
             message=message,
+            blocks=blocks,
             request_to_coach=request_to_coach,
             sent_by=sent_by,
             status=status,
@@ -41,6 +42,7 @@ def create_slack_log(to: User, subject: str, message: str, request_to_coach=None
             to=to,
             subject=subject,
             message=message,
+            blocks=blocks,
             matching_attempt=matching_attempt,
             sent_by=sent_by,
             status=status,
@@ -59,8 +61,9 @@ def _open_dm_channel(client: WebClient, user_id: str) -> str:
 def _blocks_to_text(blocks: list) -> str:
     """Convert Slack blocks to a plain-text string for logging.
 
-    Handles section blocks (block["text"]["text"]) and context blocks
-    (block["elements"][n]["text"]) so context elements are not silently dropped.
+    Handles section blocks (block["text"]["text"]), context blocks
+    (block["elements"][n]["text"]), and actions blocks (button labels)
+    so no interactive elements are silently dropped.
     """
     parts = []
     for block in blocks:
@@ -70,6 +73,12 @@ def _blocks_to_text(blocks: list) -> str:
             for element in block.get("elements", []):
                 if isinstance(element, dict) and "text" in element:
                     parts.append(element["text"])
+        elif block.get("type") == "actions":
+            for element in block.get("elements", []):
+                if isinstance(element, dict) and isinstance(element.get("text"), dict):
+                    label = element["text"].get("text", "")
+                    if label:
+                        parts.append(f"[ {label} ]")
     return "\n".join(parts)
 
 
@@ -189,6 +198,7 @@ def send_first_coach_request_slack(rtc):
             to=coach.user,
             subject=subject,
             message=message,
+            blocks=blocks,
             request_to_coach=rtc,
             sent_by=SlackLog.SentBy.SYSTEM,
         )
@@ -334,6 +344,7 @@ def send_reminder_coach_request_slack(rtc):
             to=coach.user,
             subject=subject,
             message=message,
+            blocks=blocks,
             request_to_coach=rtc,
             sent_by=SlackLog.SentBy.SYSTEM,
         )
@@ -476,6 +487,7 @@ def send_intro_call_request_slack(matching_attempt):
             to=coach.user,
             subject=subject,
             message=message,
+            blocks=blocks,
             matching_attempt=matching_attempt,
             sent_by=SlackLog.SentBy.SYSTEM,
         )
@@ -573,6 +585,7 @@ def send_coaching_starting_info_slack(matching_attempt):
             to=coach.user,
             subject=subject,
             message=message,
+            blocks=blocks,
             matching_attempt=matching_attempt,
             sent_by=SlackLog.SentBy.SYSTEM,
         )
@@ -670,6 +683,7 @@ def send_escalation_info_slack(matching_attempt):
             to=bl_contact.user,
             subject=subject,
             message=message,
+            blocks=blocks,
             matching_attempt=matching_attempt,
             sent_by=SlackLog.SentBy.SYSTEM,
         )
@@ -765,6 +779,7 @@ def send_all_rtcs_declined_info_slack(matching_attempt):
             to=bl_contact.user,
             subject=subject,
             message=message,
+            blocks=blocks,
             matching_attempt=matching_attempt,
             sent_by=SlackLog.SentBy.SYSTEM,
         )
@@ -860,6 +875,7 @@ def send_intro_call_reminder_slack(matching_attempt):
             to=coach.user,
             subject=subject,
             message=message,
+            blocks=blocks,
             matching_attempt=matching_attempt,
             sent_by=SlackLog.SentBy.SYSTEM,
         )
@@ -943,6 +959,7 @@ def send_intro_call_timeout_notification_to_staff_slack(matching_attempt):
             to=bl_contact.user,
             subject=subject,
             message=message,
+            blocks=blocks,
             matching_attempt=matching_attempt,
             sent_by=SlackLog.SentBy.SYSTEM,
         )
@@ -1064,6 +1081,7 @@ def send_clarification_call_booked_info_to_staff_slack(matching_attempt):
             to=bl_contact.user,
             subject=subject,
             message=message,
+            blocks=blocks,
             matching_attempt=matching_attempt,
             sent_by=SlackLog.SentBy.SYSTEM,
         )
@@ -1156,6 +1174,7 @@ def send_clarification_call_booked_info_to_coach_slack(matching_attempt):
             to=coach.user,
             subject=subject,
             message=message,
+            blocks=blocks,
             matching_attempt=matching_attempt,
             sent_by=SlackLog.SentBy.SYSTEM,
         )
@@ -1244,6 +1263,7 @@ def send_participant_intro_call_feedback_timeout_notification_to_staff_slack(mat
             to=bl_contact.user,
             subject=subject,
             message=message,
+            blocks=blocks,
             matching_attempt=matching_attempt,
             sent_by=SlackLog.SentBy.SYSTEM,
         )

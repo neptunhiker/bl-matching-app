@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Slack-Nachricht: {{ slack_log.subject }}{% endblock %}
 
@@ -117,39 +118,87 @@
 	{# ── Slack message preview ─────────────────────────────────────────── #}
 	<div class="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-200 overflow-hidden text-left">
 		<div class="px-6 sm:px-8 py-4 border-b border-neutral-100 flex items-center gap-2 text-left">
-			<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-primary-400 shrink-0" fill="none"
-					 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-				<path stroke-linecap="round" stroke-linejoin="round"
-							d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-			</svg>
-			<h2 class="text-sm font-semibold text-tertiary-700 text-left w-full">Slack-Nachricht</h2>
+			<img src="{% static 'icons/slack.svg' %}" alt="Slack" class="h-4 w-4 shrink-0" />
+			<h2 class="text-sm font-semibold text-tertiary-700 text-left flex-1">Slack-Nachricht</h2>
+			{% if slack_log.blocks %}
+			<span class="text-xs text-neutral-400 font-normal">Vorschau wie in Slack</span>
+			{% endif %}
 		</div>
-		<div class="p-2 sm:p-4 text-left">
-			<div class="font-mono text-sm text-left">
-				{# Render Slack formatting: *bold*, <url|text> as links #}
-          <div style="pointer-events: none; user-select: text;">
-            {% with msg=slack_log.message %}
-              {% filter force_escape|linebreaksbr %}
-                {{ msg|safe }}
-              {% endfilter %}
-            {% endwith %}
-						</div>
+
+		{% if slack_log.blocks %}
+		{# ── Rich block renderer ── #}
+		<div class="px-5 sm:px-8 py-5 space-y-3 font-sans text-sm" id="slack-blocks-renderer">
+
+			{% for block in slack_log.blocks %}
+
+			{% if block.type == "header" %}
+			<div class="font-bold text-base text-neutral-900 pt-1 pb-2 border-b border-neutral-100">
+				{{ block.text.text }}
 			</div>
-			<script>
-				// Enhance formatting after rendering (client-side)
-				(function() {
-					var container = document.currentScript.previousElementSibling;
-					if (!container) return;
-					// Bold: *text* → <strong>text</strong>
-					container.innerHTML = container.innerHTML.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
-					// Slack links: <url|text> → <a href="url">text</a>
-					container.innerHTML = container.innerHTML.replace(/&lt;(https?:\/\/[^|&]+)\|([^&]+)&gt;/g, '<a href="$1" class="text-primary-600 hover:text-primary-800 underline" target="_blank" rel="noopener">$2</a>');
-					// Slack links: <url> → <a href="url">url</a>
-					container.innerHTML = container.innerHTML.replace(/&lt;(https?:\/\/[^&]+)&gt;/g, '<a href="$1" class="text-primary-600 hover:text-primary-800 underline" target="_blank" rel="noopener">$1</a>');
-				})();
-			</script>
+
+			{% elif block.type == "section" %}
+			<div class="text-sm text-neutral-800 leading-relaxed whitespace-pre-line slack-mrkdwn">{{ block.text.text }}</div>
+
+			{% elif block.type == "actions" %}
+			<div class="flex flex-wrap gap-2 pt-1 pb-2">
+				{% for element in block.elements %}
+					{% if element.type == "button" %}
+						{% if element.style == "primary" %}
+						<span class="inline-flex items-center px-4 py-1.5 rounded-md text-sm font-semibold bg-green-500 text-white select-none cursor-default shadow-sm" title="Button (nur Vorschau)">{{ element.text.text }}</span>
+						{% elif element.style == "danger" %}
+						<span class="inline-flex items-center px-4 py-1.5 rounded-md text-sm font-semibold bg-red-500 text-white select-none cursor-default shadow-sm" title="Button (nur Vorschau)">{{ element.text.text }}</span>
+						{% else %}
+						<span class="inline-flex items-center px-4 py-1.5 rounded-md text-sm font-semibold bg-neutral-200 text-neutral-700 select-none cursor-default shadow-sm" title="Button (nur Vorschau)">{{ element.text.text }}</span>
+						{% endif %}
+					{% endif %}
+				{% endfor %}
+			</div>
+
+			{% elif block.type == "context" %}
+			<div class="text-xs text-neutral-400 leading-relaxed">
+				{% for element in block.elements %}
+				<span class="slack-mrkdwn">{{ element.text }}</span>
+				{% endfor %}
+			</div>
+
+			{% elif block.type == "divider" %}
+			<hr class="border-neutral-100">
+
+			{% endif %}
+			{% endfor %}
+
 		</div>
+
+		{% else %}
+		{# ── Fallback: plain text (no blocks stored) ── #}
+		<div class="p-4 sm:p-6 text-left">
+			<div class="font-mono text-sm text-neutral-700 whitespace-pre-wrap slack-mrkdwn-plain">{{ slack_log.message }}</div>
+		</div>
+		{% endif %}
+
 	</div>
+
+	<script>
+		(function () {
+			function applyMrkdwn(el) {
+				// Escape already done by Django autoescape, so work on innerHTML
+				var h = el.innerHTML;
+				// Bold: *text* → <strong>
+				h = h.replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>');
+				// Slack links: &lt;url|label&gt;
+				h = h.replace(/&lt;(https?:\/\/[^|&\s]+)\|([^&<]+)&gt;/g,
+					'<a href="$1" class="text-primary-600 hover:text-primary-800 underline" target="_blank" rel="noopener noreferrer">$2</a>');
+				// Slack links: &lt;url&gt;
+				h = h.replace(/&lt;(https?:\/\/[^&\s]+)&gt;/g,
+					'<a href="$1" class="text-primary-600 hover:text-primary-800 underline" target="_blank" rel="noopener noreferrer">$1</a>');
+				el.innerHTML = h;
+			}
+			document.querySelectorAll('.slack-mrkdwn').forEach(applyMrkdwn);
+
+			// Plain fallback: also apply mrkdwn
+			document.querySelectorAll('.slack-mrkdwn-plain').forEach(applyMrkdwn);
+		})();
+	</script>
 
 </div>
 {% endblock %}
