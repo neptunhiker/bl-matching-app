@@ -17,14 +17,13 @@
     {% csrf_token %}
     <div class="divide-y divide-neutral-100/60">
 
-      {% if form.user %}
       <div class="px-6 py-6">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {% include "profiles/_form_field.html" with field=form.user %}
+          {% include "profiles/_form_field.html" with field=form.first_name %}
+          {% include "profiles/_form_field.html" with field=form.last_name %}
+          {% include "profiles/_form_field.html" with field=form.email %}
         </div>
       </div>
-      {% endif %}
-
 
       <div class="px-6 py-6">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
