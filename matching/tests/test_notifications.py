@@ -26,7 +26,6 @@ def email_coach(db):
         first_name="Email",
         last_name="Coach",
         email="email_coach@example.com",
-        city="Hamburg",
         preferred_communication_channel=Coach.CommunicationChannel.EMAIL,
     )
 
@@ -38,7 +37,6 @@ def slack_coach(db):
         first_name="Slack",
         last_name="Coach",
         email="slack_coach@example.com",
-        city="Berlin",
         preferred_communication_channel=Coach.CommunicationChannel.SLACK,
         slack_user_id="U_COACH_SLACK",
     )

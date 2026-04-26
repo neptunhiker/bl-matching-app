@@ -12,8 +12,8 @@
       <p class="text-sm text-neutral-500 mt-1">{{ paginator.count }} Einträge insgesamt</p>
     </div>
     <div class="w-full sm:w-auto">
-      {% url 'coach_create' as coach_create_url %}
-      {% include "components/_button.html" with button_text="+ Neu anlegen" button_size="md" button_full_width=True button_class="sm:w-auto" button_href=coach_create_url %}
+      {% url 'get_coaches' as get_coaches_url %}
+      {% include "components/_button.html" with button_text="Coaches importieren" button_size="md" button_full_width=True button_class="sm:w-auto" button_href=get_coaches_url %}
     </div>
   </div>
 
@@ -58,7 +58,6 @@
       <thead>
         <tr class="bg-primary-50 text-tertiary-700">
           <th class="px-5 py-3 font-semibold text-left">Name</th>
-          <th class="px-5 py-3 font-semibold text-left">Stadt</th>
           <th class="px-5 py-3 font-semibold text-left">Status</th>
           <th class="px-5 py-3 font-semibold text-left">Sprachen</th>
           <th class="px-5 py-3 font-semibold text-left">Formate</th>
@@ -70,7 +69,6 @@
           <td class="px-5 py-3 font-medium text-tertiary-700">
             <a href="{% url 'coach_detail' coach.pk %}" class="hover:text-primary-600 transition-colors">{{ coach.full_name }}</a>
           </td>
-          <td class="px-5 py-3 text-neutral-600">{{ coach.city }}</td>
           <td class="px-5 py-3">
             {% if coach.status == Status.AVAILABLE %}
               {% include "components/_badge.html" with badge_text=coach.get_status_display badge_variant="success" %}
@@ -107,7 +105,7 @@
       <li class="py-3 flex items-center justify-between">
         <div class="flex-1 min-w-0">
           <a href="{% url 'coach_detail' coach.pk %}" class="block text-sm font-semibold text-tertiary-700 hover:text-primary-600 truncate">{{ coach.full_name }}</a>
-          <div class="text-xs text-neutral-600 truncate">{{ coach.email }} • {{ coach.city }}</div>
+          <div class="text-xs text-neutral-600 truncate">{{ coach.email }}</div>
           <div class="mt-2 flex flex-wrap gap-2">
             {% for lang in coach.languages.all %}
             <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">{{ lang.name }}</span>
@@ -193,5 +191,6 @@
   {% endif %}
 
 </div>
+
 
 {% endblock %}

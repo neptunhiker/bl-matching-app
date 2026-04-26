@@ -36,9 +36,6 @@
         {% if coach.maximum_capacity %}
           <span class="text-xs bg-neutral-100 border rounded-xl p-1">max. {{ coach.maximum_capacity }} Coachings</span>
         {% endif %}
-        {% if coach.city %}
-          <span class="text-xs bg-neutral-100 border rounded-xl p-1">{{ coach.city }}</span>
-        {% endif %}
         
       </div>
     </div>
@@ -111,16 +108,6 @@
 
     {# Text sections #}
     <div class="space-y-6">
-      <div class="bg-primary-50 rounded-lg px-4 py-4">
-        <p class="text-xs font-medium uppercase tracking-widest text-primary-600 mb-2">Biografie</p>
-        <p class="text-sm leading-7 text-neutral-800 whitespace-pre-wrap max-w-[68ch]">{{ coach.bio|default:"—" }}</p>
-      </div>
-
-      <div class="bg-primary-50 rounded-lg px-4 py-4">
-        <p class="text-xs font-medium uppercase tracking-widest text-primary-600 mb-2">Coaching-Stil</p>
-        <p class="text-sm leading-7 text-neutral-800 whitespace-pre-wrap max-w-[68ch]">{{ coach.coaching_style|default:"—" }}</p>
-      </div>
-
       <div class="bg-primary-50 rounded-lg px-4 py-4">
         <p class="text-xs font-medium uppercase tracking-widest text-primary-600 mb-2">Status-Kommentar</p>
         <p class="text-sm leading-7 text-neutral-800 whitespace-pre-wrap max-w-[68ch]">{{ coach.status_notes|default:"Kein Status-Kommentar hinterlegt." }}</p>

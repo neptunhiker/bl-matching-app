@@ -62,7 +62,6 @@ def coach_1(db):
         first_name="Chris",
         last_name="Coach",
         email="coach@example.com",
-        city="Berlin",
     )
 
 @pytest.fixture
@@ -71,7 +70,6 @@ def coach_2(db):
         first_name="Chloe",
         last_name="Koch",
         email="coach2@example.com",
-        city="Hamburg",
     )
     
 @pytest.fixture()

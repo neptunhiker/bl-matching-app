@@ -81,7 +81,6 @@ def slack_coach(db):
         first_name="Slack",
         last_name="Coach",
         email="slack_coach_integration@example.com",
-        city="Berlin",
         preferred_communication_channel=Coach.CommunicationChannel.SLACK,
         slack_user_id="U_COACH_S1",
         status=Coach.Status.AVAILABLE,
@@ -95,7 +94,6 @@ def email_coach(db):
         first_name="Email",
         last_name="Coach",
         email="email_coach_integration@example.com",
-        city="Hamburg",
         preferred_communication_channel=Coach.CommunicationChannel.EMAIL,
         status=Coach.Status.AVAILABLE,
     )

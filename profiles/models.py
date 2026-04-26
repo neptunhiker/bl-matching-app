@@ -39,15 +39,11 @@ class Coach(models.Model):
     first_name = models.CharField(max_length=150, verbose_name='Vorname')
     last_name = models.CharField(max_length=150, verbose_name='Nachname')
     email = models.EmailField(unique=True, verbose_name='E-Mail')
-    city = models.CharField(max_length=100, verbose_name='Stadt')
     languages = models.ManyToManyField(
         Language, related_name='coaches', blank=True, verbose_name='Sprachen'
     )
-    bio = models.TextField(blank=True, verbose_name='Biografie')
-    coaching_style = models.TextField(blank=True, verbose_name='Coaching-Stil', help_text='Coaching-Stil')
     linkedin_url = models.URLField(blank=True, verbose_name='LinkedIn Profil')
     website_url = models.URLField(blank=True, verbose_name='BeginnerLuft Website Profil')
-    profile_photo = models.ImageField(upload_to='coach_photos/', blank=True, null=True, verbose_name='Profilfoto')
     
     coaching_format_online = models.BooleanField(default=False, verbose_name='Online')
     coaching_format_presence = models.BooleanField(default=False, verbose_name='Präsenz')

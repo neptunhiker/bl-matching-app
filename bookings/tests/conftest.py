@@ -21,7 +21,6 @@ def matching_attempt_for_check_in(db):
         first_name="Check",
         last_name="InCoach",
         email="check_in_coach@example.com",
-        city="Berlin",
     )
     ma = MatchingAttempt.objects.create(
         participant=participant,

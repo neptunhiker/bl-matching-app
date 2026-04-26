@@ -257,32 +257,127 @@ class CoachDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
     
 
 
+_COACHING_HUB_API_URL = "https://coaching-hub.beginnerluft.de/api/v1/coaches/"
+
+
+def _fetch_coaches_from_api():
+    """
+    Call the Coaching Hub API and return a list of dicts with
+    keys first_name, last_name, email.
+
+    Handles both a bare list response and a paginated {"results": [...]} shape.
+    Raises requests.RequestException on network/HTTP errors.
+    """
+    api_key = os.environ.get("COACHING_HUB_API_KEY")
+    if not api_key:
+        raise ValueError("COACHING_HUB_API_KEY is not configured.")
+
+    headers = {"Authorization": f"Api-Key {api_key}"}
+    response = requests.get(_COACHING_HUB_API_URL, headers=headers, timeout=10)
+    response.raise_for_status()
+
+    data = response.json()
+    # Support both bare-list and paginated {"results": [...]} shapes
+    if isinstance(data, list):
+        return data
+    return data.get("results", [])
+
+
 @login_required
-def get_coaches(request):
-    API_URL = "https://coaching-hub.beginnerluft.de/api/v1/coaches/"
-    API_KEY = os.environ.get("COACHING_HUB_API_KEY")
-    if not API_KEY:
-        return HttpResponseServerError("API key not configured.")
-
-    headers = {"Authorization": f"Api-Key {API_KEY}"}
-
-    COACHING_HUB_API_URL = os.environ.get("COACHING_HUB_API_URL")
-    COACHING_HUB_API_KEY = os.environ.get("COACHING_HUB_API_KEY")
-    from django.http import JsonResponse, HttpResponseServerError
-
-    if not API_URL:
-        return HttpResponseServerError("API URL not configured.")
-    if not API_KEY:
-        return HttpResponseServerError("API key not configured.")
-
-    headers = {
-        "Authorization": f"Api-Key {API_KEY}",
-    }
+def coach_import_preview(request):
+    """GET — fetch coaches from the API, diff against the DB, show preview."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
 
     try:
-        response = requests.get(API_URL, headers=headers, timeout=10)
-        response.raise_for_status()  # Raises an error for non-2xx responses
-        coaches = response.json()
-        return JsonResponse(coaches, safe=False)
-    except requests.RequestException as e:
-        return HttpResponseServerError(f"Error fetching coaches: {e}")
+        api_coaches = _fetch_coaches_from_api()
+    except ValueError as exc:
+        return _render_preview_error(request, str(exc))
+    except requests.RequestException as exc:
+        return _render_preview_error(request, f"Die Coaching-Hub-API ist nicht erreichbar: {exc}")
+
+    # Normalise to only the fields we care about and skip malformed entries
+    cleaned = []
+    for item in api_coaches:
+        email = (item.get("email") or "").strip().lower()
+        first_name = (item.get("first_name") or "").strip()
+        last_name = (item.get("last_name") or "").strip()
+        if email:
+            cleaned.append({"email": email, "first_name": first_name, "last_name": last_name})
+
+    existing_emails = set(
+        Coach.objects.filter(email__in=[c["email"] for c in cleaned])
+        .values_list("email", flat=True)
+    )
+
+    new_coaches = [c for c in cleaned if c["email"] not in existing_emails]
+    duplicate_coaches = [c for c in cleaned if c["email"] in existing_emails]
+
+    from django.shortcuts import render
+    return render(request, "profiles/coach_import_preview.html", {
+        "new_coaches": new_coaches,
+        "duplicate_coaches": duplicate_coaches,
+    })
+
+
+def _render_preview_error(request, message):
+    from django.shortcuts import render
+    return render(request, "profiles/coach_import_preview.html", {
+        "api_error": message,
+        "new_coaches": [],
+        "duplicate_coaches": [],
+    })
+
+
+@login_required
+def coach_import_confirm(request):
+    """POST — re-validate submitted emails against the API, create new coaches."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied
+
+    if request.method != "POST":
+        from django.shortcuts import redirect
+        return redirect("get_coaches")
+
+    submitted_emails = {e.strip().lower() for e in request.POST.getlist("coach_emails") if e.strip()}
+
+    if not submitted_emails:
+        from django.contrib import messages
+        from django.shortcuts import redirect
+        messages.info(request, "Es wurden keine Coaches zum Importieren ausgewählt.")
+        return redirect("coach_list")
+
+    # Re-fetch from API to avoid trusting raw POST data for names
+    try:
+        api_coaches = _fetch_coaches_from_api()
+    except (ValueError, requests.RequestException) as exc:
+        from django.contrib import messages
+        from django.shortcuts import redirect
+        messages.error(request, f"Import fehlgeschlagen – API nicht erreichbar: {exc}")
+        return redirect("coach_list")
+
+    created_count = 0
+    for item in api_coaches:
+        email = (item.get("email") or "").strip().lower()
+        if email not in submitted_emails:
+            continue
+        _, created = Coach.objects.get_or_create(
+            email=email,
+            defaults={
+                "first_name": (item.get("first_name") or "").strip(),
+                "last_name": (item.get("last_name") or "").strip(),
+                "status": Coach.Status.ONBOARDING,
+            },
+        )
+        if created:
+            created_count += 1
+
+    from django.contrib import messages
+    from django.shortcuts import redirect
+    if created_count:
+        messages.success(request, f"{created_count} Coach{'es' if created_count != 1 else ''} wurde{'n' if created_count != 1 else ''} importiert.")
+    else:
+        messages.info(request, "Alle ausgewählten Coaches waren bereits vorhanden – nichts wurde importiert.")
+    return redirect("coach_list")

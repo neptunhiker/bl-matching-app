@@ -40,7 +40,6 @@ def coach(db):
         first_name="Carl",
         last_name="Coach",
         email="carl_coach@example.com",
-        city="Berlin",
     )
 
 

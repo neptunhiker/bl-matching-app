@@ -15,7 +15,6 @@ def coach_with_slack(db):
         first_name="Slack",
         last_name="Coach",
         email="coach_slack@example.com",
-        city="Berlin",
         slack_user_id="U_COACH",
     )
 
@@ -26,7 +25,6 @@ def coach_no_slack(db):
         first_name="NoSlack",
         last_name="Coach",
         email="coach_noslack@example.com",
-        city="Hamburg",
         slack_user_id="",
     )
 
