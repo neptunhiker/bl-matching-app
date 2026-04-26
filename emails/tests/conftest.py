@@ -35,18 +35,11 @@ def user(db):
     return User.objects.create(email="coach@example.com")
 
 @pytest.fixture
-def coach_user(db):
-    return User.objects.create_user(
-        email="carl_coach@example.com",
-        password="testpass123",
+def coach(db):
+    return Coach.objects.create(
         first_name="Carl",
         last_name="Coach",
-    )
-    
-@pytest.fixture
-def coach(db, coach_user):
-    return Coach.objects.create(
-        user=coach_user,
+        email="carl_coach@example.com",
         city="Berlin",
     )
 

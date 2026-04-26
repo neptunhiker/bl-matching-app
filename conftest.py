@@ -56,35 +56,21 @@ def plain_user(db):
     )
 
     
-@pytest.fixture()
-def coach_user_1():
-    return User.objects.create_user(
-        email="coach@example.com",
-        password="testpass123",
+@pytest.fixture
+def coach_1(db):
+    return Coach.objects.create(
         first_name="Chris",
         last_name="Coach",
-    )
-    
-@pytest.fixture()
-def coach_user_2():
-    return User.objects.create_user(
-        email="coach2@example.com",
-        password="testpass123",
-        first_name="Chloe",
-        last_name="Koch",
-    )
-    
-@pytest.fixture
-def coach_1(coach_user_1):
-    return Coach.objects.create(
-        user=coach_user_1,
+        email="coach@example.com",
         city="Berlin",
     )
-    
+
 @pytest.fixture
-def coach_2(coach_user_2):
+def coach_2(db):
     return Coach.objects.create(
-        user=coach_user_2,
+        first_name="Chloe",
+        last_name="Koch",
+        email="coach2@example.com",
         city="Hamburg",
     )
     

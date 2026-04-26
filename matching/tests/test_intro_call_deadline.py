@@ -73,10 +73,12 @@ def _create_event(attempt, event_type):
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def slack_coach(db, coach_user):
+def slack_coach(db):
     """A coach with Slack as preferred channel and a valid Slack user ID."""
     return Coach.objects.create(
-        user=coach_user,
+        first_name="Slack",
+        last_name="Coach",
+        email="slack_coach@example.com",
         city="Berlin",
         preferred_communication_channel=Coach.CommunicationChannel.SLACK,
         slack_user_id="U_COACH_TEST",
@@ -438,7 +440,7 @@ class TestSendIntroCallTimeoutNotificationToStaffSlack:
         _, kwargs = mock_slack_client.chat_postMessage.call_args
         blocks_text = " ".join(str(b) for b in kwargs["blocks"])
         coach = attempt_awaiting_intro_call.matched_coach
-        assert coach.user.first_name in blocks_text
+        assert coach.first_name in blocks_text
 
     def test_message_contains_participant_name(self, attempt_awaiting_intro_call, mock_slack_client):
         from slack.services import send_intro_call_timeout_notification_to_staff_slack
@@ -517,7 +519,7 @@ class TestAcceptOrDeclineSetsDeadline:
                 rtc=rtc_awaiting_reply,
                 accept=True,
                 response_time=timezone.now(),
-                responded_by_user=rtc_awaiting_reply.coach.user,
+                responded_by_user=None,
             )
 
         ma = _fresh(rtc_awaiting_reply.matching_attempt.pk)
@@ -531,7 +533,7 @@ class TestAcceptOrDeclineSetsDeadline:
                 rtc=rtc_awaiting_reply,
                 accept=False,
                 response_time=timezone.now(),
-                responded_by_user=rtc_awaiting_reply.coach.user,
+                responded_by_user=None,
             )
 
         ma = _fresh(rtc_awaiting_reply.matching_attempt.pk)

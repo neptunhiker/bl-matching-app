@@ -22,8 +22,8 @@ class TestBookingsDetailView:
         assert f"next={url}" in response.url
         
     @pytest.mark.django_db
-    def test_booking_detail_forbidden_for_logged_in_non_staff(self, client, coach_user_1, calendly_booking):
-        client.force_login(coach_user_1)
+    def test_booking_detail_forbidden_for_logged_in_non_staff(self, client, plain_user, calendly_booking):
+        client.force_login(plain_user)
 
         response = client.get(reverse("calendly_booking_detail", args=[calendly_booking.id]))
 
@@ -57,8 +57,8 @@ class TestBookingsListView:
         assert f"next={url}" in response.url
 
     @pytest.mark.django_db
-    def test_bookings_list_forbidden_for_logged_in_non_staff(self, client, coach_user_1):
-        client.force_login(coach_user_1)
+    def test_bookings_list_forbidden_for_logged_in_non_staff(self, client, plain_user):
+        client.force_login(plain_user)
 
         response = client.get(reverse("calendly_bookings_list"))
 

@@ -660,7 +660,7 @@ class TestSendClarificationCallBookedInfoToCoachSlack:
         log = SlackLog.objects.get()
         assert log.status == SlackLog.Status.SENT
         assert log.matching_attempt == matching_attempt_with_coach
-        assert log.to == matching_attempt_with_coach.matched_coach.user
+        assert log.to_coach == matching_attempt_with_coach.matched_coach
         assert log.sent_by == SlackLog.SentBy.SYSTEM
 
     def test_message_says_nothing_to_do(

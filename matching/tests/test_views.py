@@ -15,8 +15,8 @@ def test_matching_attempts_access_anonymous(client):
 
 
 @pytest.mark.django_db
-def test_matching_attempts_access_user(client, coach_user):
-    client.force_login(coach_user)
+def test_matching_attempts_access_user(client, plain_user):
+    client.force_login(plain_user)
     url = reverse('matching_attempts')
     r = client.get(url)
     assert r.status_code == 403
@@ -48,8 +48,8 @@ def test_matching_attempt_create_access_anonymous(client):
 
 
 @pytest.mark.django_db
-def test_matching_attempt_create_access_user(client, coach_user):
-    client.force_login(coach_user)
+def test_matching_attempt_create_access_user(client, plain_user):
+    client.force_login(plain_user)
     url = reverse('matching_attempt_create')
     r = client.get(url)
     assert r.status_code == 403
@@ -81,8 +81,8 @@ def test_matching_attempt_detail_access_anonymous(client, matching_attempt):
 
 
 @pytest.mark.django_db
-def test_matching_attempt_detail_access_user(client, coach_user, matching_attempt):
-    client.force_login(coach_user)
+def test_matching_attempt_detail_access_user(client, plain_user, matching_attempt):
+    client.force_login(plain_user)
     url = reverse('matching_attempt_detail', kwargs={'pk': matching_attempt.pk})
     r = client.get(url)
     assert r.status_code == 403
@@ -114,8 +114,8 @@ def test_start_matching_access_anonymous(client, matching_attempt):
 
 
 @pytest.mark.django_db
-def test_start_matching_access_user(client, coach_user, matching_attempt):
-    client.force_login(coach_user)
+def test_start_matching_access_user(client, plain_user, matching_attempt):
+    client.force_login(plain_user)
     url = reverse('matching_attempt_start', kwargs={'pk': matching_attempt.pk})
     r = client.post(url)
     assert r.status_code == 403
@@ -150,8 +150,8 @@ def test_toggle_automation_access_anonymous(client, matching_attempt):
 
 
 @pytest.mark.django_db
-def test_toggle_automation_access_user(client, coach_user, matching_attempt):
-    client.force_login(coach_user)
+def test_toggle_automation_access_user(client, plain_user, matching_attempt):
+    client.force_login(plain_user)
     url = reverse('matching_attempt_automation', kwargs={'pk': matching_attempt.pk})
     r = client.post(url, data={'action': 'enable'})
     assert r.status_code == 403
@@ -186,8 +186,8 @@ def test_request_to_coach_create_access_anonymous(client, matching_attempt):
 
 
 @pytest.mark.django_db
-def test_request_to_coach_create_access_user(client, coach_user, matching_attempt):
-    client.force_login(coach_user)
+def test_request_to_coach_create_access_user(client, plain_user, matching_attempt):
+    client.force_login(plain_user)
     url = reverse('request_to_coach_create', kwargs={'pk': matching_attempt.pk})
     r = client.get(url)
     assert r.status_code == 403
@@ -220,8 +220,8 @@ def test_request_to_coach_detail_access_anonymous(client, rtc):
 
 
 @pytest.mark.django_db
-def test_request_to_coach_detail_access_user(client, coach_user, rtc):
-    client.force_login(coach_user)
+def test_request_to_coach_detail_access_user(client, plain_user, rtc):
+    client.force_login(plain_user)
     url = reverse('request_to_coach_detail', kwargs={'pk': rtc.pk})
     r = client.get(url)
     assert r.status_code == 403
@@ -253,8 +253,8 @@ def test_coach_respond_public_anonymous(client):
 
 
 @pytest.mark.django_db
-def test_coach_respond_public_user(client, coach_user):
-    client.force_login(coach_user)
+def test_coach_respond_public_user(client, plain_user):
+    client.force_login(plain_user)
     url = reverse('coach_respond', kwargs={'token': 'invalid'})
     r = client.get(url)
     assert r.status_code == 200
@@ -315,8 +315,8 @@ def test_request_to_coach_edit_access_anonymous(client, rtc):
 
 
 @pytest.mark.django_db
-def test_request_to_coach_edit_access_user(client, coach_user, rtc):
-    client.force_login(coach_user)
+def test_request_to_coach_edit_access_user(client, plain_user, rtc):
+    client.force_login(plain_user)
     url = reverse('request_to_coach_edit', kwargs={'pk': rtc.pk})
     r = client.get(url)
     assert r.status_code == 403
@@ -348,8 +348,8 @@ def test_request_to_coach_delete_access_anonymous(client, rtc):
 
 
 @pytest.mark.django_db
-def test_request_to_coach_delete_access_user(client, coach_user, rtc):
-    client.force_login(coach_user)
+def test_request_to_coach_delete_access_user(client, plain_user, rtc):
+    client.force_login(plain_user)
     url = reverse('request_to_coach_delete', kwargs={'pk': rtc.pk})
     r = client.get(url)
     assert r.status_code == 403
@@ -383,8 +383,8 @@ def test_matching_attempt_delete_access_anonymous(client, matching_attempt):
 
 
 @pytest.mark.django_db
-def test_matching_attempt_delete_access_user(client, coach_user, matching_attempt):
-    client.force_login(coach_user)
+def test_matching_attempt_delete_access_user(client, plain_user, matching_attempt):
+    client.force_login(plain_user)
     url = reverse('matching_attempt_delete', kwargs={'pk': matching_attempt.pk})
     r = client.get(url)
     assert r.status_code == 403
@@ -418,8 +418,8 @@ def test_resume_matching_access_anonymous(client, matching_attempt):
 
 
 @pytest.mark.django_db
-def test_resume_matching_access_user(client, coach_user, matching_attempt):
-    client.force_login(coach_user)
+def test_resume_matching_access_user(client, plain_user, matching_attempt):
+    client.force_login(plain_user)
     url = reverse('matching_attempt_resume', kwargs={'pk': matching_attempt.pk})
     r = client.post(url)
     assert r.status_code == 403
@@ -455,8 +455,8 @@ def test_cancel_matching_access_anonymous(client, matching_attempt):
 
 
 @pytest.mark.django_db
-def test_cancel_matching_access_user(client, coach_user, matching_attempt):
-    client.force_login(coach_user)
+def test_cancel_matching_access_user(client, plain_user, matching_attempt):
+    client.force_login(plain_user)
     url = reverse('matching_attempt_cancel', kwargs={'pk': matching_attempt.pk})
     r = client.post(url)
     assert r.status_code == 403
@@ -494,8 +494,8 @@ def test_participant_respond_public_anonymous(client):
 
 
 @pytest.mark.django_db
-def test_participant_respond_public_user(client, coach_user):
-    client.force_login(coach_user)
+def test_participant_respond_public_user(client, plain_user):
+    client.force_login(plain_user)
     url = reverse('participant_respond', kwargs={'token': 'invalid'})
     r = client.get(url)
     assert r.status_code == 200
@@ -529,8 +529,8 @@ def test_confirm_intro_call_public_anonymous(client):
 
 
 @pytest.mark.django_db
-def test_confirm_intro_call_public_user(client, coach_user):
-    client.force_login(coach_user)
+def test_confirm_intro_call_public_user(client, plain_user):
+    client.force_login(plain_user)
     url = reverse('confirm_intro_call', kwargs={'token': 'invalid'})
     r = client.get(url)
     assert r.status_code == 200
@@ -564,8 +564,8 @@ def test_matching_event_detail_access_anonymous(client, matching_event):
 
 
 @pytest.mark.django_db
-def test_matching_event_detail_access_user(client, coach_user, matching_event):
-    client.force_login(coach_user)
+def test_matching_event_detail_access_user(client, plain_user, matching_event):
+    client.force_login(plain_user)
     url = reverse('matching_event_detail', kwargs={'pk': matching_event.pk})
     r = client.get(url)
     assert r.status_code == 403
@@ -599,8 +599,8 @@ def test_manual_override_access_anonymous(client, matching_attempt):
 
 
 @pytest.mark.django_db
-def test_manual_override_access_user(client, coach_user, matching_attempt):
-    client.force_login(coach_user)
+def test_manual_override_access_user(client, plain_user, matching_attempt):
+    client.force_login(plain_user)
     url = reverse('manual_override_matching', kwargs={'matching_attempt_pk': matching_attempt.pk})
     r = client.get(url)
     assert r.status_code == 403
@@ -634,8 +634,8 @@ def test_flow_chart_access_anonymous(client):
 
 
 @pytest.mark.django_db
-def test_flow_chart_access_user(client, coach_user):
-    client.force_login(coach_user)
+def test_flow_chart_access_user(client, plain_user):
+    client.force_login(plain_user)
     url = reverse('matching_flow_chart')
     r = client.get(url)
     assert r.status_code == 403

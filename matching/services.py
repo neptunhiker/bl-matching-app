@@ -118,8 +118,7 @@ def create_matching_event(
 
     # --- Validate triggered_by + user consistency ---
     if triggered_by == TriggeredByOptions.COACH:
-        if not triggered_by_user:
-            raise ValueError("Coach events require triggered_by_user")
+        pass  # Coaches no longer have User accounts; triggered_by_user is always None for coach events
 
     elif triggered_by == TriggeredByOptions.STAFF:
         if not triggered_by_user:

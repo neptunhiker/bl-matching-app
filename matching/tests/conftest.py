@@ -49,52 +49,30 @@ def superuser(db):
 
 
 @pytest.fixture
-def coach_user(db):
-    return User.objects.create_user(
-        email="carl_coach@example.com",
-        password="testpass123",
+def coach(db):
+    return Coach.objects.create(
         first_name="Carl",
         last_name="Coach",
-    )
-    
-@pytest.fixture
-def coach_user_2(db):
-    return User.objects.create_user(
-        email="carla_coacheressa@example.com",
-        password="testpass123",
-        first_name="Carla",
-        last_name="Coacheressa",
-    )
-    
-@pytest.fixture
-def coach_user_3(db):
-    return User.objects.create_user(
-        email="paul_mazzes@example.com",
-        password="testpass123",
-        first_name="Paul",
-        last_name="Mazzes",
-    )
-
-
-@pytest.fixture
-def coach(db, coach_user):
-    return Coach.objects.create(
-        user=coach_user,
+        email="carl_coach@example.com",
         city="Berlin",
     )
-    
+
 
 @pytest.fixture
-def coach_2(db, coach_user_2):
+def coach_2(db):
     return Coach.objects.create(
-        user=coach_user_2,
+        first_name="Carla",
+        last_name="Coacheressa",
+        email="carla_coacheressa@example.com",
         city="Milano",
     )
-    
+
 @pytest.fixture
-def coach_3(db, coach_user_3):
+def coach_3(db):
     return Coach.objects.create(
-        user=coach_user_3,
+        first_name="Paul",
+        last_name="Mazzes",
+        email="paul_mazzes@example.com",
         city="Hamburg",
     )
 

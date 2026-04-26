@@ -198,6 +198,6 @@ class TestSendIntroCallReminderEmailToCoach:
 
         mock_send_email.assert_called_once()
         call_kwargs = mock_send_email.call_args.kwargs
-        assert call_kwargs["to"] == coach.user.email
+        assert call_kwargs["to"] == coach.email
         assert call_kwargs["template_name"] == "emails/intro_call_reminder_to_coach.html"
         assert call_kwargs["matching_attempt"] == matching_attempt

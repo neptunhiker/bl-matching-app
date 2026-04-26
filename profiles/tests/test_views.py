@@ -12,18 +12,11 @@ class TestParticipantDetailViewTest:
         response = client.get(url)
         assert response.status_code == 302 
         assert response.url.startswith('/accounts/login/')
-    def test_no_access_for_coach_without_request(self, client, participant, coach_2):
-        client.force_login(coach_2.user)
+    def test_no_access_for_plain_user(self, client, participant, plain_user):
+        client.force_login(plain_user)
         url = reverse('participant_detail', kwargs={'pk': participant.pk})
         response = client.get(url)
         assert response.status_code == 403
-        
-    def test_access_for_coach_with_request(self, client, participant, coach_1, rtc):
-        client.force_login(coach_1.user)
-        url = reverse('participant_detail', kwargs={'pk': participant.pk})
-        response = client.get(url)
-        assert response.status_code == 200
-        assert "profiles/participant_detail_for_coach.html" in [t.name for t in response.templates]
         
     def test_access_for_staff_user(self, client, participant, staff_user):
         client.force_login(staff_user)
@@ -45,17 +38,13 @@ class TestParticipantDetailViewTest:
         response = client.get(url)
         assert response.status_code == 403
 
-    def test_access_for_coach_as_matched_coach(self, client, participant, coach_2, matching_attempt):
-        """Coach with matched_coach on MatchingAttempt (second access path in test_func)."""
-        matching_attempt.matched_coach = coach_2
-        matching_attempt.save()
-        client.force_login(coach_2.user)
+    def test_no_access_for_plain_user_alt(self, client, participant, plain_user):
+        client.force_login(plain_user)
         url = reverse('participant_detail', kwargs={'pk': participant.pk})
         response = client.get(url)
-        assert response.status_code == 200
-        assert "profiles/participant_detail_for_coach.html" in [t.name for t in response.templates]
-        
-        
+        assert response.status_code == 403
+
+
 class TestCoachDetailViewTest:
     
     @pytest.mark.django_db
@@ -64,14 +53,6 @@ class TestCoachDetailViewTest:
         response = client.get(url)
         assert response.status_code == 302
         assert response.url.startswith('/accounts/login/')
-        
-    @pytest.mark.django_db
-    def test_coach_detail_view_logged_in(self, client, coach_1):
-        client.force_login(coach_1.user)
-        url = reverse('coach_detail', kwargs={'pk': coach_1.pk})
-        response = client.get(url)
-        assert response.status_code == 200
-        assert "profiles/coach_detail.html" in [t.name for t in response.templates]
         
     @pytest.mark.django_db
     def test_coach_detail_view_logged_in_staff_member(self, client, staff_user, coach_1):
@@ -92,14 +73,6 @@ class TestCoachDetailViewTest:
     @pytest.mark.django_db
     def test_no_access_for_plain_user(self, client, coach_1, plain_user):
         client.force_login(plain_user)
-        url = reverse('coach_detail', kwargs={'pk': coach_1.pk})
-        response = client.get(url)
-        assert response.status_code == 403
-
-    @pytest.mark.django_db
-    def test_no_access_for_different_coach(self, client, coach_1, coach_2):
-        """A coach viewing another coach's detail page is denied."""
-        client.force_login(coach_2.user)
         url = reverse('coach_detail', kwargs={'pk': coach_1.pk})
         response = client.get(url)
         assert response.status_code == 403
@@ -126,8 +99,8 @@ class TestParticipantListView:
         client.force_login(plain_user)
         assert client.get(reverse('participant_list')).status_code == 403
 
-    def test_coach_forbidden(self, client, coach_1):
-        client.force_login(coach_1.user)
+    def test_coach_forbidden(self, client, plain_user):
+        client.force_login(plain_user)
         assert client.get(reverse('participant_list')).status_code == 403
 
     def test_staff_has_access(self, client, staff_user):
@@ -150,8 +123,8 @@ class TestParticipantCreateView:
         client.force_login(plain_user)
         assert client.get(reverse('participant_create')).status_code == 403
 
-    def test_coach_forbidden(self, client, coach_1):
-        client.force_login(coach_1.user)
+    def test_coach_forbidden(self, client, plain_user):
+        client.force_login(plain_user)
         assert client.get(reverse('participant_create')).status_code == 403
 
     def test_staff_has_access(self, client, staff_user):
@@ -187,8 +160,8 @@ class TestParticipantUpdateView:
         client.force_login(plain_user)
         assert client.get(reverse('participant_update', kwargs={'pk': participant.pk})).status_code == 403
 
-    def test_coach_forbidden(self, client, participant, coach_1):
-        client.force_login(coach_1.user)
+    def test_coach_forbidden(self, client, participant, plain_user):
+        client.force_login(plain_user)
         assert client.get(reverse('participant_update', kwargs={'pk': participant.pk})).status_code == 403
 
     def test_staff_has_access(self, client, participant, staff_user):
@@ -224,8 +197,8 @@ class TestParticipantDeleteView:
         client.force_login(plain_user)
         assert client.get(reverse('participant_delete', kwargs={'pk': participant.pk})).status_code == 403
 
-    def test_coach_forbidden(self, client, participant, coach_1):
-        client.force_login(coach_1.user)
+    def test_coach_forbidden(self, client, participant, plain_user):
+        client.force_login(plain_user)
         assert client.get(reverse('participant_delete', kwargs={'pk': participant.pk})).status_code == 403
 
     def test_staff_has_access(self, client, participant, staff_user):
@@ -248,8 +221,8 @@ class TestCoachListView:
         client.force_login(plain_user)
         assert client.get(reverse('coach_list')).status_code == 403
 
-    def test_coach_forbidden(self, client, coach_1):
-        client.force_login(coach_1.user)
+    def test_coach_forbidden(self, client, plain_user):
+        client.force_login(plain_user)
         assert client.get(reverse('coach_list')).status_code == 403
 
     def test_staff_has_access(self, client, staff_user):
@@ -262,7 +235,7 @@ class TestCoachListView:
 
     def test_search_filter_by_name(self, client, staff_user, coach_1):
         client.force_login(staff_user)
-        response = client.get(reverse('coach_list'), {'q': coach_1.user.first_name})
+        response = client.get(reverse('coach_list'), {'q': coach_1.first_name})
         assert response.status_code == 200
         assert coach_1 in response.context['coaches']
 
@@ -302,8 +275,8 @@ class TestCoachCreateView:
         client.force_login(plain_user)
         assert client.get(reverse('coach_create')).status_code == 403
 
-    def test_coach_forbidden(self, client, coach_1):
-        client.force_login(coach_1.user)
+    def test_coach_forbidden(self, client, plain_user):
+        client.force_login(plain_user)
         assert client.get(reverse('coach_create')).status_code == 403
 
     def test_staff_has_access(self, client, staff_user):
@@ -314,10 +287,12 @@ class TestCoachCreateView:
         client.force_login(superuser)
         assert client.get(reverse('coach_create')).status_code == 200
 
-    def test_form_invalid_when_slack_channel_has_no_slack_id(self, client, staff_user, plain_user):
+    def test_form_invalid_when_slack_channel_has_no_slack_id(self, client, staff_user):
         client.force_login(staff_user)
         data = {
-            'user': str(plain_user.pk),
+            'first_name': 'Test',
+            'last_name': 'Coach',
+            'email': 'test_coach@example.com',
             'city': 'Berlin',
             'status': 'onboarding',
             'preferred_communication_channel': 'slack',
@@ -326,10 +301,12 @@ class TestCoachCreateView:
         assert response.status_code == 200
         assert 'slack_user_id' in response.context['form'].errors
 
-    def test_form_valid_with_slack_channel_and_slack_id(self, client, staff_user, plain_user):
+    def test_form_valid_with_slack_channel_and_slack_id(self, client, staff_user):
         client.force_login(staff_user)
         data = {
-            'user': str(plain_user.pk),
+            'first_name': 'Test',
+            'last_name': 'Coach',
+            'email': 'test_coach2@example.com',
             'city': 'Berlin',
             'status': 'onboarding',
             'preferred_communication_channel': 'slack',
@@ -350,8 +327,8 @@ class TestCoachUpdateView:
         client.force_login(plain_user)
         assert client.get(reverse('coach_update', kwargs={'pk': coach_1.pk})).status_code == 403
 
-    def test_coach_forbidden(self, client, coach_1, coach_2):
-        client.force_login(coach_2.user)
+    def test_coach_forbidden(self, client, coach_1, plain_user):
+        client.force_login(plain_user)
         assert client.get(reverse('coach_update', kwargs={'pk': coach_1.pk})).status_code == 403
 
     def test_staff_has_access(self, client, coach_1, staff_user):
@@ -365,6 +342,9 @@ class TestCoachUpdateView:
     def test_form_invalid_when_slack_channel_has_no_slack_id(self, client, staff_user, coach_1):
         client.force_login(staff_user)
         data = {
+            'first_name': coach_1.first_name,
+            'last_name': coach_1.last_name,
+            'email': coach_1.email,
             'city': 'Berlin',
             'status': 'onboarding',
             'preferred_communication_channel': 'slack',
@@ -376,6 +356,9 @@ class TestCoachUpdateView:
     def test_form_valid_with_slack_channel_and_slack_id(self, client, staff_user, coach_1):
         client.force_login(staff_user)
         data = {
+            'first_name': coach_1.first_name,
+            'last_name': coach_1.last_name,
+            'email': coach_1.email,
             'city': 'Hamburg',
             'status': 'onboarding',
             'preferred_communication_channel': 'slack',
@@ -396,8 +379,8 @@ class TestCoachDeleteView:
         client.force_login(plain_user)
         assert client.get(reverse('coach_delete', kwargs={'pk': coach_1.pk})).status_code == 403
 
-    def test_coach_forbidden(self, client, coach_1, coach_2):
-        client.force_login(coach_2.user)
+    def test_coach_forbidden(self, client, coach_1, plain_user):
+        client.force_login(plain_user)
         assert client.get(reverse('coach_delete', kwargs={'pk': coach_1.pk})).status_code == 403
 
     def test_staff_has_access(self, client, coach_1, staff_user):

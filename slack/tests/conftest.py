@@ -11,24 +11,24 @@ from matching.models import MatchingAttempt, RequestToCoach
 
 @pytest.fixture
 def coach_with_slack(db):
-    user = User.objects.create_user(
-        email="coach_slack@example.com",
-        password="testpass123",
+    return Coach.objects.create(
         first_name="Slack",
         last_name="Coach",
+        email="coach_slack@example.com",
+        city="Berlin",
+        slack_user_id="U_COACH",
     )
-    return Coach.objects.create(user=user, city="Berlin", slack_user_id="U_COACH")
 
 
 @pytest.fixture
 def coach_no_slack(db):
-    user = User.objects.create_user(
-        email="coach_noslack@example.com",
-        password="testpass123",
+    return Coach.objects.create(
         first_name="NoSlack",
         last_name="Coach",
+        email="coach_noslack@example.com",
+        city="Hamburg",
+        slack_user_id="",
     )
-    return Coach.objects.create(user=user, city="Hamburg", slack_user_id="")
 
 
 @pytest.fixture

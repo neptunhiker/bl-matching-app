@@ -7,16 +7,9 @@ from bookings.models import CalendlyBooking
 @pytest.fixture
 def matching_attempt_for_check_in(db):
     """A MatchingAttempt in AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT with participant email ada@example.com."""
-    from accounts.models import User
     from profiles.models import Participant, Coach
     from matching.models import MatchingAttempt
 
-    coach_user = User.objects.create_user(
-        email="check_in_coach@example.com",
-        password="testpass123",
-        first_name="Check",
-        last_name="InCoach",
-    )
     participant = Participant.objects.create(
         first_name="Ada",
         last_name="Lovelace",
@@ -24,7 +17,12 @@ def matching_attempt_for_check_in(db):
         city="Berlin",
         start_date=datetime.date(2026, 6, 1),
     )
-    coach = Coach.objects.create(user=coach_user, city="Berlin")
+    coach = Coach.objects.create(
+        first_name="Check",
+        last_name="InCoach",
+        email="check_in_coach@example.com",
+        city="Berlin",
+    )
     ma = MatchingAttempt.objects.create(
         participant=participant,
         ue=48,

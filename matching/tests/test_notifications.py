@@ -20,20 +20,24 @@ _HANDLER_MODULE = "matching.handlers.notification_handlers"
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def email_coach(db, coach_user):
+def email_coach(db):
     """Coach who prefers email."""
     return Coach.objects.create(
-        user=coach_user,
+        first_name="Email",
+        last_name="Coach",
+        email="email_coach@example.com",
         city="Hamburg",
         preferred_communication_channel=Coach.CommunicationChannel.EMAIL,
     )
 
 
 @pytest.fixture
-def slack_coach(db, coach_user):
+def slack_coach(db):
     """Coach who prefers Slack and has a Slack user ID."""
     return Coach.objects.create(
-        user=coach_user,
+        first_name="Slack",
+        last_name="Coach",
+        email="slack_coach@example.com",
         city="Berlin",
         preferred_communication_channel=Coach.CommunicationChannel.SLACK,
         slack_user_id="U_COACH_SLACK",

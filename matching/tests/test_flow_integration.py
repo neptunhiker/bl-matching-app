@@ -75,10 +75,12 @@ def notifications():
 
 
 @pytest.fixture
-def slack_coach(db, coach_user):
+def slack_coach(db):
     """A coach who prefers Slack communication and has a Slack user ID."""
     return Coach.objects.create(
-        user=coach_user,
+        first_name="Slack",
+        last_name="Coach",
+        email="slack_coach_integration@example.com",
         city="Berlin",
         preferred_communication_channel=Coach.CommunicationChannel.SLACK,
         slack_user_id="U_COACH_S1",
@@ -87,10 +89,12 @@ def slack_coach(db, coach_user):
 
 
 @pytest.fixture
-def email_coach(db, coach_user):
+def email_coach(db):
     """A coach who prefers Email communication."""
     return Coach.objects.create(
-        user=coach_user,
+        first_name="Email",
+        last_name="Coach",
+        email="email_coach_integration@example.com",
         city="Hamburg",
         preferred_communication_channel=Coach.CommunicationChannel.EMAIL,
         status=Coach.Status.AVAILABLE,
@@ -196,7 +200,7 @@ def test_s1_full_happy_path_slack_coach(
         rtc=rtc,
         accept=True,
         response_time=timezone.now(),
-        responded_by_user=slack_coach.user,
+        responded_by_user=None,
     )
 
     ma = _fresh(MatchingAttempt, ma.pk)
@@ -218,7 +222,7 @@ def test_s1_full_happy_path_slack_coach(
         matching_attempt=ma,
         event_type=MatchingEvent.EventType.INTRO_CALL_FEEDBACK_RECEIVED_FROM_COACH,
         triggered_by=TriggeredByOptions.COACH,
-        triggered_by_user=slack_coach.user,
+        triggered_by_user=None,
     )
 
     ma = _fresh(MatchingAttempt, ma.pk)
@@ -310,7 +314,7 @@ def test_s1_full_happy_path_email_coach(
         rtc=rtc,
         accept=True,
         response_time=timezone.now(),
-        responded_by_user=email_coach.user,
+        responded_by_user=None,
     )
 
     notifications["send_intro_call_request_email"].assert_called_once()
@@ -323,7 +327,7 @@ def test_s1_full_happy_path_email_coach(
         matching_attempt=ma,
         event_type=MatchingEvent.EventType.INTRO_CALL_FEEDBACK_RECEIVED_FROM_COACH,
         triggered_by=TriggeredByOptions.COACH,
-        triggered_by_user=email_coach.user,
+        triggered_by_user=None,
     )
 
     notifications["send_feedback_request_email_after_intro_call_to_participant"].assert_called_once()
@@ -406,7 +410,7 @@ def test_s1_automation_disabled_after_rtc_sent_blocks_accept_chain(
         rtc=rtc,
         accept=True,
         response_time=timezone.now(),
-        responded_by_user=slack_coach.user,
+        responded_by_user=None,
     )
 
     # Gate must suppress intro-call notifications
