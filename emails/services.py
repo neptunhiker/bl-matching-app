@@ -149,7 +149,7 @@ def _send_request_email(
 
     transaction.on_commit(
         lambda: send_email(
-            to=rtc.coach.user.email,
+            to=rtc.coach.email,
             subject=subject,
             template_name=template_name,
             context=context,
@@ -214,7 +214,7 @@ def send_intro_call_request_email(matching_attempt):
     
     transaction.on_commit(
         lambda: send_email(
-            to=coach.user.email,
+            to=coach.email,
             subject=f"Vereinbare ein Kennenlerngespräch mit {participant.first_name}",
             template_name='emails/intro_call_request_to_coach.html',
             context=context,
@@ -247,7 +247,7 @@ def send_intro_call_reminder_email_to_coach(matching_attempt, triggered_by: str 
 
     transaction.on_commit(
         lambda: send_email(
-            to=coach.user.email,
+            to=coach.email,
             subject=f"Erinnerung: Vereinbare ein Kennenlerngespräch mit {participant.first_name}",
             template_name="emails/intro_call_reminder_to_coach.html",
             context=context,
@@ -305,7 +305,7 @@ def send_feedback_request_email_after_intro_call_to_participant(matching_attempt
         "recipient_name": participant.first_name,
         "coach": coach,
         "bl_contact": matching_attempt.bl_contact,
-        "coach_email": coach.user.email,
+        "coach_email": coach.email,
         "participant_first_name": participant.first_name,
         "start_coaching_url": start_coaching_url,
         "calendly_url": calendly_url,
@@ -382,7 +382,7 @@ def send_coaching_start_info_email_to_coach(matching_attempt, triggered_by: str=
     
     transaction.on_commit(
         lambda: send_email(
-            to=coach.user.email,
+            to=coach.email,
             subject=f"🤩 Dein Coaching mit {participant.first_name} kann starten",
             template_name='emails/info_coaching_start_to_coach.html',
             context=context,
@@ -410,7 +410,7 @@ def send_coaching_start_info_email_to_participant(matching_attempt, triggered_by
         "recipient_name": participant.first_name,
         "coach_name": coach,
         "coach_first_name": coach.first_name,
-        "coach_email": coach.user.email,
+        "coach_email": coach.email,
         "participant_first_name": participant.first_name,
         "start_date": start_date,
         "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
@@ -449,7 +449,7 @@ def send_clarification_call_booked_info_to_coach_email(matching_attempt, trigger
 
     transaction.on_commit(
         lambda: send_email(
-            to=coach.user.email,
+            to=coach.email,
             subject=f"ℹ️ Kurzes Update: {participant.first_name} hat ein Klärungsgespräch gebucht",
             template_name="emails/clarification_call_booked_info_to_coach.html",
             context=context,

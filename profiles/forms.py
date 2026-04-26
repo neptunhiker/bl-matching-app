@@ -45,7 +45,9 @@ class CoachForm(forms.ModelForm):
     class Meta:
         model = Coach
         fields = [
-            'user',
+            'first_name',
+            'last_name',
+            'email',
             'city',
             'languages',
             'bio',
@@ -64,6 +66,5 @@ class CoachForm(forms.ModelForm):
         ]
 
 class CoachUpdateForm(CoachForm):
-    class Meta(CoachForm.Meta):
-        exclude = ['user']
+    pass
 

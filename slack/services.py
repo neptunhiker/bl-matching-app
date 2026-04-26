@@ -17,7 +17,10 @@ from slack.models import SlackLog
 
 logger = logging.getLogger(__name__)
 
-def create_slack_log(to: User, subject: str, message: str, request_to_coach=None, matching_attempt=None, sent_by=SlackLog.SentBy.SYSTEM, status=SlackLog.Status.SENT, error_message="", blocks=None):
+def create_slack_log(to: User = None, to_coach=None, subject: str = "", message: str = "", request_to_coach=None, matching_attempt=None, sent_by=SlackLog.SentBy.SYSTEM, status=SlackLog.Status.SENT, error_message="", blocks=None):
+
+    if bool(to) == bool(to_coach):
+        raise ValueError("Exactly one of `to` (User) or `to_coach` (Coach) must be provided.")
 
     # Only request_to_coach or matching_attempt can be set, not both
     if request_to_coach and matching_attempt:
@@ -29,6 +32,7 @@ def create_slack_log(to: User, subject: str, message: str, request_to_coach=None
     if request_to_coach:
         slack_log = SlackLog.objects.create(
             to=to,
+            to_coach=to_coach,
             subject=subject,
             message=message,
             blocks=blocks,
@@ -40,6 +44,7 @@ def create_slack_log(to: User, subject: str, message: str, request_to_coach=None
     else:
         slack_log = SlackLog.objects.create(
             to=to,
+            to_coach=to_coach,
             subject=subject,
             message=message,
             blocks=blocks,
@@ -195,7 +200,7 @@ def send_first_coach_request_slack(rtc):
         client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
         logger.info(f"Successfully sent first coach request Slack to coach {coach}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message=message,
             blocks=blocks,
@@ -205,7 +210,7 @@ def send_first_coach_request_slack(rtc):
     except SlackApiError as e:
         logger.error(f"Slack API error sending first coach request to {coach}: {e}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message="",
             request_to_coach=rtc,
@@ -216,7 +221,7 @@ def send_first_coach_request_slack(rtc):
     except Exception as e:
         logger.error(f"Unexpected error sending first coach request to {coach}: {e}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message="",
             request_to_coach=rtc,
@@ -341,7 +346,7 @@ def send_reminder_coach_request_slack(rtc):
         client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
         logger.info(f"Successfully sent reminder coach request Slack to coach {coach}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message=message,
             blocks=blocks,
@@ -351,7 +356,7 @@ def send_reminder_coach_request_slack(rtc):
     except SlackApiError as e:
         logger.error(f"Slack API error sending reminder to coach {coach}: {e}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message="",
             request_to_coach=rtc,
@@ -362,7 +367,7 @@ def send_reminder_coach_request_slack(rtc):
     except Exception as e:
         logger.error(f"Unexpected error sending reminder to coach {coach}: {e}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message="",
             request_to_coach=rtc,
@@ -484,7 +489,7 @@ def send_intro_call_request_slack(matching_attempt):
         client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
         logger.info(f"Successfully sent intro call request Slack to coach {coach}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message=message,
             blocks=blocks,
@@ -494,7 +499,7 @@ def send_intro_call_request_slack(matching_attempt):
     except SlackApiError as e:
         logger.error(f"Slack API error sending intro call request to coach {coach}: {e}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message="",
             matching_attempt=matching_attempt,
@@ -505,7 +510,7 @@ def send_intro_call_request_slack(matching_attempt):
     except Exception as e:
         logger.error(f"Unexpected error sending intro call request to coach {coach}: {e}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message="",
             matching_attempt=matching_attempt,
@@ -582,7 +587,7 @@ def send_coaching_starting_info_slack(matching_attempt):
         client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
         logger.info(f"Successfully sent coaching starting info Slack to coach {coach}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message=message,
             blocks=blocks,
@@ -592,7 +597,7 @@ def send_coaching_starting_info_slack(matching_attempt):
     except SlackApiError as e:
         logger.error(f"Slack API error sending coaching starting info to coach {coach}: {e}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message="",
             matching_attempt=matching_attempt,
@@ -603,7 +608,7 @@ def send_coaching_starting_info_slack(matching_attempt):
     except Exception as e:
         logger.error(f"Unexpected error sending coaching starting info to coach {coach}: {e}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message="",
             matching_attempt=matching_attempt,
@@ -865,7 +870,7 @@ def send_intro_call_reminder_slack(matching_attempt):
         client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
         logger.info(f"Successfully sent intro call reminder Slack to coach {coach}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message=message,
             blocks=blocks,
@@ -875,7 +880,7 @@ def send_intro_call_reminder_slack(matching_attempt):
     except SlackApiError as e:
         logger.error(f"Slack API error sending intro call reminder to coach {coach}: {e}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message="",
             matching_attempt=matching_attempt,
@@ -886,7 +891,7 @@ def send_intro_call_reminder_slack(matching_attempt):
     except Exception as e:
         logger.error(f"Unexpected error sending intro call reminder to coach {coach}: {e}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message="",
             matching_attempt=matching_attempt,
@@ -1164,7 +1169,7 @@ def send_clarification_call_booked_info_to_coach_slack(matching_attempt):
         client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
         logger.info(f"Successfully sent clarification call booked Slack to coach {coach}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message=message,
             blocks=blocks,
@@ -1174,7 +1179,7 @@ def send_clarification_call_booked_info_to_coach_slack(matching_attempt):
     except SlackApiError as e:
         logger.error(f"Slack API error sending clarification call booked info to coach {coach}: {e}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message="",
             matching_attempt=matching_attempt,
@@ -1186,7 +1191,7 @@ def send_clarification_call_booked_info_to_coach_slack(matching_attempt):
     except Exception as e:
         logger.error(f"Unexpected error sending clarification call booked info to coach {coach}: {e}")
         create_slack_log(
-            to=coach.user,
+            to_coach=coach,
             subject=subject,
             message="",
             matching_attempt=matching_attempt,

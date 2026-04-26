@@ -11,13 +11,13 @@ class LanguageAdmin(admin.ModelAdmin):
 
 @admin.register(Coach)
 class CoachAdmin(admin.ModelAdmin):
-    list_display = ('user__last_name', 'user__first_name', 'city', 'status',
+    list_display = ('last_name', 'first_name', 'email', 'city', 'status',
                     'coaching_format_online', 'coaching_format_presence', 'coaching_format_hybrid', 'preferred_communication_channel')
     list_filter = ('status', 'languages',
                    'coaching_format_online', 'coaching_format_presence', 'coaching_format_hybrid')
-    search_fields = ('user__first_name', 'user__last_name', 'city', 'user__email', 'slack_user_id')
+    search_fields = ('first_name', 'last_name', 'email', 'city', 'slack_user_id')
     filter_horizontal = ('languages',)
-    ordering = ('user__last_name', 'user__first_name')
+    ordering = ('last_name', 'first_name')
 
 
 @admin.register(Participant)

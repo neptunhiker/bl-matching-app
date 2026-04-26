@@ -1,10 +1,4 @@
 import uuid
-from django.db import models
-from django.conf import settings
-
-from profiles.models import Coach
-
-import uuid
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -24,9 +18,20 @@ class SlackLog(models.Model):
 
     to = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
         related_name="received_slack_logs",
         verbose_name="Empfänger:in",
+    )
+
+    to_coach = models.ForeignKey(
+        'profiles.Coach',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='received_slack_logs',
+        verbose_name='Empfänger:in (Coach)',
     )
 
     subject = models.CharField(max_length=255, verbose_name='Betreff')
@@ -89,6 +94,12 @@ class SlackLog(models.Model):
         if bool(self.request_to_coach) == bool(self.matching_attempt):
             raise ValidationError(
                 "Exactly one of request_to_coach or matching_attempt must be set."
+            )
+
+        # Enforce exactly one recipient (XOR)
+        if bool(self.to_id) == bool(self.to_coach_id):
+            raise ValidationError(
+                "Exactly one of to (User) or to_coach (Coach) must be set."
             )
 
     def save(self, *args, **kwargs):

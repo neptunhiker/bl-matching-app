@@ -6,10 +6,10 @@ from .models import SlackLog
 
 @admin.register(SlackLog)
 class SlackLogAdmin(admin.ModelAdmin):
-    list_display = ('subject', 'to', 'status_badge', 'sent_at', 'sent_by')
+    list_display = ('subject', 'to', 'to_coach', 'status_badge', 'sent_at', 'sent_by')
     list_filter = ('status', 'sent_at')
-    search_fields = ('to', 'subject')
-    readonly_fields = ('id', 'to', 'subject', 'message', 'status', 'error_message', 'sent_at', 'sent_by')
+    search_fields = ('to__email', 'to_coach__email', 'subject')
+    readonly_fields = ('id', 'to', 'to_coach', 'subject', 'message', 'status', 'error_message', 'sent_at', 'sent_by')
     ordering = ('-sent_at',)
 
     def status_badge(self, obj):

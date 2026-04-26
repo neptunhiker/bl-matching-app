@@ -182,7 +182,7 @@ def trigger_resume_matching(matching_attempt, triggered_by_user):
     )
 
 
-def accept_or_decline_request_to_coach(rtc, accept: bool, response_time: datetime.datetime, responded_by_user: User):
+def accept_or_decline_request_to_coach(rtc, accept: bool, response_time: datetime.datetime, responded_by_user: User = None):
     from matching.models import MatchingEvent, TriggeredByOptions
     from matching.services import create_matching_event
         
