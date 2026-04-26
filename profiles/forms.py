@@ -65,6 +65,3 @@ class CoachForm(forms.ModelForm):
             'slack_user_id',
         ]
 
-class CoachUpdateForm(CoachForm):
-    pass
-
