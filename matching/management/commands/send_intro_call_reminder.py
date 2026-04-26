@@ -26,7 +26,7 @@ class Command(BaseCommand):
         pending = (
             MatchingAttempt.objects
             .eligible_for_intro_call_reminder()
-            .select_related("matched_coach__user", "participant")
+            .select_related("matched_coach", "participant")
             .order_by("intro_call_deadline_at")
         )[:self.MAX_PER_RUN]
 

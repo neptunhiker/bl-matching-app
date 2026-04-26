@@ -25,7 +25,7 @@ class Command(BaseCommand):
         pending = list(
             MatchingAttempt.objects
             .eligible_for_participant_intro_call_feedback_staff_escalation()
-            .select_related("matched_coach__user", "participant", "bl_contact")
+            .select_related("matched_coach", "participant", "bl_contact")
             .order_by("participant_intro_call_feedback_deadline_at")
             [:self.MAX_PER_RUN]
         )

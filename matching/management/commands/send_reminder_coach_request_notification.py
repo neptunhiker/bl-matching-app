@@ -24,7 +24,7 @@ class Command(BaseCommand):
         pending = (
             RequestToCoach.objects
             .eligible_for_reminder()
-            .select_related("coach__user", "matching_attempt__participant")
+            .select_related("coach", "matching_attempt__participant")
             .order_by("deadline_at")
         )[:self.MAX_PER_RUN]
 
