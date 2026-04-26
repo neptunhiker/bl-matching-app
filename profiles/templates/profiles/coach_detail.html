@@ -76,6 +76,9 @@
             <span class="text-sm text-neutral-700">E-Mail</span>
           {% endif %}
         </div>
+        {% if coach.slack_user_id %}
+        <p class="mt-1.5 text-xs text-neutral-400 font-mono">{{ coach.slack_user_id }}</p>
+        {% endif %}
       </div>
       <div>
         <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Sprachen</p>

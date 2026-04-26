@@ -14,7 +14,16 @@ CONFIRM_URL = reverse("coach_import_confirm")
 # ---------------------------------------------------------------------------
 
 API_RESPONSE = [
-    {"first_name": "Anna", "last_name": "Neu", "email": "anna.neu@example.com"},
+    {
+        "first_name": "Anna",
+        "last_name": "Neu",
+        "email": "anna.neu@example.com",
+        "preferred_communication_channel": "slack",
+        "slack_user_id": "U_ANNA",
+        "status": "available",
+        "status_notes": "Tolle Coachin",
+        "maximum_capacity": 3,
+    },
     {"first_name": "Chris", "last_name": "Coach", "email": "coach@example.com"},  # existing via coach_1
 ]
 
@@ -102,11 +111,36 @@ class TestCoachImportConfirmView:
         # coach_1 still only appears once
         assert Coach.objects.filter(email="coach@example.com").count() == 1
 
-    def test_new_coach_gets_onboarding_status(self, client, staff_user):
+    def test_new_coach_gets_api_status(self, client, staff_user):
+        """Status comes from the API value, not hardcoded ONBOARDING."""
         client.force_login(staff_user)
         with patch("profiles.views._fetch_coaches_from_api", return_value=API_RESPONSE):
             client.post(CONFIRM_URL, {"coach_emails": ["anna.neu@example.com"]})
         coach = Coach.objects.get(email="anna.neu@example.com")
+        assert coach.status == Coach.Status.AVAILABLE
+
+    def test_new_coach_fields_are_saved(self, client, staff_user):
+        """All additional fields from the API are persisted correctly."""
+        client.force_login(staff_user)
+        with patch("profiles.views._fetch_coaches_from_api", return_value=API_RESPONSE):
+            client.post(CONFIRM_URL, {"coach_emails": ["anna.neu@example.com"]})
+        coach = Coach.objects.get(email="anna.neu@example.com")
+        assert coach.preferred_communication_channel == Coach.CommunicationChannel.SLACK
+        assert coach.slack_user_id == "U_ANNA"
+        assert coach.status_notes == "Tolle Coachin"
+        assert coach.maximum_capacity == 3
+
+    def test_invalid_api_status_falls_back_to_onboarding(self, client, staff_user):
+        """Unknown status values from the API fall back to ONBOARDING."""
+        bad_response = [{
+            "first_name": "Bad", "last_name": "Status",
+            "email": "bad.status@example.com",
+            "status": "nicht_existierend",
+        }]
+        client.force_login(staff_user)
+        with patch("profiles.views._fetch_coaches_from_api", return_value=bad_response):
+            client.post(CONFIRM_URL, {"coach_emails": ["bad.status@example.com"]})
+        coach = Coach.objects.get(email="bad.status@example.com")
         assert coach.status == Coach.Status.ONBOARDING
 
     def test_idempotent_double_submit(self, client, staff_user):

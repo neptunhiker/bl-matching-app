@@ -283,6 +283,38 @@ def _fetch_coaches_from_api():
     return data.get("results", [])
 
 
+_VALID_STATUSES = {c[0] for c in Coach.Status.choices}
+_VALID_CHANNELS = {c[0] for c in Coach.CommunicationChannel.choices}
+
+
+def _parse_api_coach(item):
+    """Extract and validate all importable fields from a single API coach item."""
+    email = (item.get("email") or "").strip().lower()
+
+    raw_channel = (item.get("preferred_communication_channel") or "").strip().lower()
+    channel = raw_channel if raw_channel in _VALID_CHANNELS else Coach.CommunicationChannel.SLACK
+
+    raw_status = (item.get("status") or "").strip().lower()
+    status = raw_status if raw_status in _VALID_STATUSES else Coach.Status.ONBOARDING
+
+    raw_capacity = item.get("maximum_capacity")
+    try:
+        capacity = int(raw_capacity) if raw_capacity is not None else None
+    except (TypeError, ValueError):
+        capacity = None
+
+    return {
+        "email": email,
+        "first_name": (item.get("first_name") or "").strip(),
+        "last_name": (item.get("last_name") or "").strip(),
+        "preferred_communication_channel": channel,
+        "slack_user_id": (item.get("slack_user_id") or "").strip(),
+        "status": status,
+        "status_notes": (item.get("status_notes") or "").strip(),
+        "maximum_capacity": capacity,
+    }
+
+
 @login_required
 def coach_import_preview(request):
     """GET — fetch coaches from the API, diff against the DB, show preview."""
@@ -297,14 +329,7 @@ def coach_import_preview(request):
     except requests.RequestException as exc:
         return _render_preview_error(request, f"Die Coaching-Hub-API ist nicht erreichbar: {exc}")
 
-    # Normalise to only the fields we care about and skip malformed entries
-    cleaned = []
-    for item in api_coaches:
-        email = (item.get("email") or "").strip().lower()
-        first_name = (item.get("first_name") or "").strip()
-        last_name = (item.get("last_name") or "").strip()
-        if email:
-            cleaned.append({"email": email, "first_name": first_name, "last_name": last_name})
+    cleaned = [_parse_api_coach(item) for item in api_coaches if (item.get("email") or "").strip()]
 
     existing_emails = set(
         Coach.objects.filter(email__in=[c["email"] for c in cleaned])
@@ -360,15 +385,19 @@ def coach_import_confirm(request):
 
     created_count = 0
     for item in api_coaches:
-        email = (item.get("email") or "").strip().lower()
-        if email not in submitted_emails:
+        parsed = _parse_api_coach(item)
+        if parsed["email"] not in submitted_emails:
             continue
         _, created = Coach.objects.get_or_create(
-            email=email,
+            email=parsed["email"],
             defaults={
-                "first_name": (item.get("first_name") or "").strip(),
-                "last_name": (item.get("last_name") or "").strip(),
-                "status": Coach.Status.ONBOARDING,
+                "first_name": parsed["first_name"],
+                "last_name": parsed["last_name"],
+                "preferred_communication_channel": parsed["preferred_communication_channel"],
+                "slack_user_id": parsed["slack_user_id"],
+                "status": parsed["status"],
+                "status_notes": parsed["status_notes"],
+                "maximum_capacity": parsed["maximum_capacity"],
             },
         )
         if created:
