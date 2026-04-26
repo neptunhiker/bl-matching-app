@@ -77,7 +77,7 @@ def handle_rtc_reminder_sent_to_coach_event(event):
     coach = rtc.coach
 
     if coach.preferred_communication_channel == Coach.CommunicationChannel.SLACK:
-        logger.debug(f"Sending reminder coach request notification via Slack for RequestToCoach to coach {coach} (user: {coach.user})")
+        logger.debug(f"Sending reminder coach request notification via Slack for RequestToCoach to coach {coach}")
         send_reminder_coach_request_slack(rtc)
         
     elif coach.preferred_communication_channel == Coach.CommunicationChannel.EMAIL:

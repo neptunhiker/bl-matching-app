@@ -10,7 +10,6 @@ def _get_locked_request_to_coach(rtc: "RequestToCoach") -> "RequestToCoach":
         .select_for_update()
         .select_related(
             "coach",
-            "coach__user",
             "matching_attempt",
             "matching_attempt__participant",
         )

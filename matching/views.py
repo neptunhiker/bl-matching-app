@@ -109,12 +109,12 @@ class MatchingAttemptDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailVi
             .select_related(
                 'participant',
                 'bl_contact__user',
-                'matched_coach__user',
+                'matched_coach',
             )
             .prefetch_related(
                 Prefetch(
                     'coach_requests',
-                    queryset=RequestToCoach.objects.select_related('coach__user'),
+                    queryset=RequestToCoach.objects.select_related('coach'),
                 ),
                 'coach_requests__email_logs',
                 'coach_requests__slack_logs',
@@ -250,7 +250,7 @@ class RequestToCoachCreateView(LoginRequiredMixin, StaffRequiredMixin, View):
 
     def get(self, request, pk):
         matching_attempt = get_object_or_404(MatchingAttempt, pk=pk)
-        available_coaches = Coach.objects.available().select_related('user').order_by('user__last_name', 'user__first_name')
+        available_coaches = Coach.objects.available().order_by('last_name', 'first_name')
         return render(request, "matching/request_to_coach_form.html", {
             "matching_attempt": matching_attempt,
             "next_priority": self._next_priority(matching_attempt),
@@ -267,7 +267,7 @@ class RequestToCoachCreateView(LoginRequiredMixin, StaffRequiredMixin, View):
                 ('coach' if k == 'coach_id' else k): v[0]
                 for k, v in form.errors.items()
             }
-            available_coaches = Coach.objects.available().select_related('user').order_by('user__last_name', 'user__first_name')
+            available_coaches = Coach.objects.available().order_by('last_name', 'first_name')
             return render(request, "matching/request_to_coach_form.html", {
                 "pk": pk,
                 "matching_attempt": matching_attempt,
@@ -362,7 +362,7 @@ class MatchingAttemptListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
     # Maps the sort GET param to ORM order_by fields.
     # Default (created_at) is newest-first; toggling to -created_at gives oldest-first.
     # Note: Participant has direct last_name/first_name fields (no user FK).
-    #       Coach goes through user FK.
+    #       Coach also has direct last_name/first_name fields (no user FK).
     _SORT_MAP = {
         'created_at':   ['-created_at'],
         '-created_at':  ['created_at'],
@@ -370,8 +370,8 @@ class MatchingAttemptListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
         '-state':       ['-state'],
         'participant':  ['participant__last_name', 'participant__first_name'],
         '-participant': ['-participant__last_name', '-participant__first_name'],
-        'coach':        ['matched_coach__user__last_name', 'matched_coach__user__first_name'],
-        '-coach':       ['-matched_coach__user__last_name', '-matched_coach__user__first_name'],
+        'coach':        ['matched_coach__last_name', 'matched_coach__first_name'],
+        '-coach':       ['-matched_coach__last_name', '-matched_coach__first_name'],
         'bl_contact':   ['bl_contact__user__first_name', 'bl_contact__user__last_name'],
         '-bl_contact':  ['-bl_contact__user__first_name', '-bl_contact__user__last_name'],
     }
@@ -379,7 +379,7 @@ class MatchingAttemptListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
 
     def get_queryset(self):
         qs = MatchingAttempt.objects.select_related(
-            'participant', 'matched_coach__user', 'bl_contact__user'
+            'participant', 'matched_coach', 'bl_contact__user'
         )
 
         # --- filters ---
@@ -472,7 +472,7 @@ class CoachRespondView(View):
         # ── 1. Look up token ────────────────────────────────────────────────
         token_instance, already_used = consume_token(
             CoachActionToken.objects.select_related(
-                'request_to_coach__coach__user',
+                'request_to_coach__coach',
                 'request_to_coach__matching_attempt__participant',
             ),
             token,
@@ -519,7 +519,7 @@ class CoachRespondView(View):
             rtc=rtc,
             accept=is_accept,
             response_time=timezone.now(),
-            responded_by_user=coach.user,
+            responded_by_user=None,
         )
 
 
@@ -564,7 +564,7 @@ class ParticipantRespondView(View):
         # ── 1. Look up token ────────────────────────────────────────────────
         token_instance, already_used = consume_token(
             ParticipantActionToken.objects.select_related(
-                'matching_attempt__matched_coach__user',
+                'matching_attempt__matched_coach',
                 'matching_attempt__participant',
             ),
             token,
@@ -655,7 +655,7 @@ class ConfirmIntroCallView(View):
         # ── 1. Look up token ────────────────────────────────────────────────
         token_instance, already_used = consume_token(
             CoachActionToken.objects.select_related(
-                'matching_attempt__matched_coach__user',
+                'matching_attempt__matched_coach',
                 'matching_attempt__participant',
             ),
             token,
@@ -695,7 +695,7 @@ class ConfirmIntroCallView(View):
             matching_attempt=ma,
             event_type=MatchingEvent.EventType.INTRO_CALL_FEEDBACK_RECEIVED_FROM_COACH,
             triggered_by=TriggeredByOptions.COACH,
-            triggered_by_user=coach.user,
+            triggered_by_user=None,
         )
         
         return render(
@@ -775,7 +775,7 @@ class ManualOverrideMatchingView(LoginRequiredMixin, StaffRequiredMixin, View):
         matching_attempt = get_object_or_404(MatchingAttempt, pk=matching_attempt_pk)
         return render(request, 'matching/manual_matching_override.html', {
             "matching_attempt": matching_attempt,
-            "available_coaches": Coach.objects.available().select_related('user').order_by('user__last_name', 'user__first_name'),
+            "available_coaches": Coach.objects.available().order_by('last_name', 'first_name'),
         })
 
     def post(self, request, matching_attempt_pk):

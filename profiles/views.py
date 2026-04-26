@@ -7,7 +7,7 @@ from django.http import JsonResponse, HttpResponseServerError
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.urls import reverse_lazy
 
-from .forms import ParticipantForm, CoachForm, CoachUpdateForm
+from .forms import ParticipantForm, CoachForm
 from .models import Participant, Coach
 
 from matching.models import RequestToCoach, MatchingAttempt
@@ -40,33 +40,8 @@ class ParticipantDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView)
     context_object_name = 'participant'
     
     def test_func(self):
-        """Allow access if user is staff, or the coach is related to this participant.
-
-        Staff and superusers have full access. Coaches have access if they are the
-        matched coach for the participant or if they have a RequestToCoach for
-        the participant.
-        """
         user = self.request.user
-        if user.is_staff or user.is_superuser:
-            return True
-
-        coach = getattr(user, 'coach_profile', None)
-        if not coach:
-            return False
-
-        participant = self.get_object()
-        if MatchingAttempt.objects.filter(participant=participant, matched_coach=coach).exists():
-            return True
-
-        return RequestToCoach.objects.filter(
-            coach=coach, matching_attempt__participant=participant
-        ).exists()
-    
-    def get_template_names(self):
-        user = self.request.user
-        if user.is_staff or user.is_superuser:
-            return ["profiles/participant_detail.html"]
-        return ["profiles/participant_detail_for_coach.html"]
+        return (user.is_active and user.is_staff) or user.is_superuser
 
 
 class ParticipantCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateView):
@@ -174,16 +149,16 @@ class CoachListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
     context_object_name = 'coaches'
     paginate_by = 25
     def get_queryset(self):
-        qs = super().get_queryset().select_related('user').prefetch_related('languages')
+        qs = super().get_queryset().prefetch_related('languages')
 
         # text search (name / email)
         q = self.request.GET.get('q')
         if q:
             from django.db.models import Q
             qs = qs.filter(
-                Q(user__first_name__icontains=q) |
-                Q(user__last_name__icontains=q) |
-                Q(user__email__icontains=q)
+                Q(first_name__icontains=q) |
+                Q(last_name__icontains=q) |
+                Q(email__icontains=q)
             )
 
         # status filter
@@ -233,10 +208,7 @@ class CoachDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
 
     def test_func(self):
         user = self.request.user
-        if user.is_staff or user.is_superuser:
-            return True
-        coach = getattr(user, 'coach_profile', None)
-        return coach is not None and coach == self.get_object()
+        return (user.is_active and user.is_staff) or user.is_superuser
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -262,7 +234,7 @@ class CoachCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateView):
 
 class CoachUpdateView(LoginRequiredMixin, StaffRequiredMixin, UpdateView):
     model = Coach
-    form_class = CoachUpdateForm
+    form_class = CoachForm
     template_name = 'profiles/coach_form.html'
 
     def get_success_url(self):

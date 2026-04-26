@@ -10,7 +10,7 @@ from django.contrib import admin
 class CoachActionTokenAdmin(admin.ModelAdmin):
     list_display = ['short_token', 'request_to_coach', 'action', 'created_at', 'used_at']
     list_filter = ['action', 'used_at']
-    search_fields = ['token', 'request_to_coach__coach__user__email']
+    search_fields = ['token', 'request_to_coach__coach__email']
     readonly_fields = ['id', 'token', 'request_to_coach', 'action', 'created_at', 'used_at']
     ordering = ['-created_at']
 
@@ -42,7 +42,7 @@ class MatchingAttemptAdmin(admin.ModelAdmin):
 class RequestToCoachAdmin(admin.ModelAdmin):
     list_display = ['id', 'matching_attempt', 'coach', 'state', 'priority', 'deadline_at']
     list_filter = ['state', 'priority']
-    search_fields = ['matching_attempt__participant__first_name', 'matching_attempt__participant__last_name', 'matching_attempt__participant__email', 'coach__user__email']
+    search_fields = ['matching_attempt__participant__first_name', 'matching_attempt__participant__last_name', 'matching_attempt__participant__email', 'coach__email']
     ordering = ['-created_at']
     exclude = ['state']
     
