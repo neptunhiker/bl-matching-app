@@ -17,6 +17,32 @@ class Language(models.Model):
         return self.name
 
 
+class City(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, unique=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Stadt'
+        verbose_name_plural = 'Städte'
+
+    def __str__(self):
+        return self.name
+
+
+class Industry(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, unique=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Branche'
+        verbose_name_plural = 'Branchen'
+
+    def __str__(self):
+        return self.name
+
+
 class CoachQuerySet(models.QuerySet):
 
     def available(self):
@@ -36,15 +62,48 @@ class Coach(models.Model):
         SLACK = "slack", "Slack"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    coaching_hub_id = models.UUIDField(
+        unique=True, null=True, blank=True,
+        verbose_name='Coaching Hub ID',
+        help_text='Externe UUID aus dem Coaching Hub API.',
+    )
     first_name = models.CharField(max_length=150, verbose_name='Vorname')
     last_name = models.CharField(max_length=150, verbose_name='Nachname')
     email = models.EmailField(unique=True, verbose_name='E-Mail')
+    updated = models.DateTimeField(null=True, blank=True, verbose_name='Zuletzt aktualisiert (extern)')
+
+    summary = models.TextField(blank=True, verbose_name='Zusammenfassung')
+    own_coaching_room = models.BooleanField(default=False, verbose_name='Eigener Coaching-Raum')
+    preferred_coaching_location = models.CharField(max_length=100, blank=True, verbose_name='Bevorzugter Coaching-Ort')
+    coaching_focus = models.TextField(blank=True, verbose_name='Coaching-Fokus')
+    coaching_qualification = models.TextField(blank=True, verbose_name='Coaching-Qualifikation')
+    coaching_methods = models.TextField(blank=True, verbose_name='Coaching-Methoden')
+    education = models.TextField(blank=True, verbose_name='Ausbildung')
+    work_experience = models.TextField(blank=True, verbose_name='Berufserfahrung')
+
     languages = models.ManyToManyField(
         Language, related_name='coaches', blank=True, verbose_name='Sprachen'
     )
+    coaching_cities = models.ManyToManyField(
+        City, related_name='coaches', blank=True, verbose_name='Coaching-Städte'
+    )
+    industry_experience = models.ManyToManyField(
+        Industry, related_name='coaches', blank=True, verbose_name='Branchenerfahrung'
+    )
+
+    expert_for_job_applications = models.BooleanField(default=False, verbose_name='Job-Bewerbungen')
+    leadership_coaching = models.BooleanField(default=False, verbose_name='Führungscoaching')
+    intercultural_coaching = models.BooleanField(default=False, verbose_name='Interkulturelles Coaching')
+    high_profile_coaching = models.BooleanField(default=False, verbose_name='High-Profile Coaching')
+    coaching_with_language_barriers = models.BooleanField(default=False, verbose_name='Sprachbarrieren')
+    hr_experience = models.BooleanField(default=False, verbose_name='HR-Erfahrung')
+    therapeutic_experience = models.BooleanField(default=False, verbose_name='Therapeutische Erfahrung')
+    adhs_coaching = models.BooleanField(default=False, verbose_name='ADHS-Coaching')
+    lgbtq_coaching = models.BooleanField(default=False, verbose_name='LGBTQ+ Coaching')
+
     linkedin_url = models.URLField(blank=True, verbose_name='LinkedIn Profil')
     website_url = models.URLField(blank=True, verbose_name='BeginnerLuft Website Profil')
-    
+
     coaching_format_online = models.BooleanField(default=False, verbose_name='Online')
     coaching_format_presence = models.BooleanField(default=False, verbose_name='Präsenz')
     coaching_format_hybrid = models.BooleanField(default=False, verbose_name='Hybrid')
@@ -67,11 +126,11 @@ class Coach(models.Model):
         default=Status.ONBOARDING,
         verbose_name='Status',
     )
-    
+
     status_notes = models.TextField(blank=True, verbose_name='Status-Kommentar', help_text='Kommentar zum Status')
-    
+
     maximum_capacity = models.PositiveIntegerField(verbose_name='Maximale Kapazität', help_text='Maximale Anzahl von Teilnehmer:innen, die gleichzeitig betreut werden können', blank=True, null=True)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     
     objects = CoachQuerySet.as_manager()
