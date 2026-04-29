@@ -17,7 +17,7 @@
     </div>
   </div>
 
-  {% if coaches %}
+  {# Filter form — always shown #}
   <div class="px-6 pb-4 mb-6">
     <form method="get" class="flex flex-col gap-3">
 
@@ -97,6 +97,8 @@
 
     </form>
   </div>
+
+  {% if coaches %}
 
   {# Desktop: table for medium+ screens #}
   <div class="hidden md:block bg-white/70 rounded-2xl shadow-sm overflow-hidden border border-white/60 my-4">
@@ -212,6 +214,16 @@
     </ul>
   </div>
   
+
+  {% elif is_filtered %}
+  <div class="bg-white/70 rounded-2xl shadow-sm border border-white/60 px-8 py-16 text-center">
+    <p class="text-neutral-500 text-sm mb-4">Keine Coaches gefunden, die den gewählten Filtern entsprechen.</p>
+    <a href="{% url 'coach_list' %}"
+       class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
+              text-primary-600 border border-primary-300 hover:bg-primary-50 transition-colors">
+      Filter zurücksetzen
+    </a>
+  </div>
 
   {% else %}
   <div class="bg-white/70 rounded-2xl shadow-sm border border-white/60 px-8 py-16 text-center">

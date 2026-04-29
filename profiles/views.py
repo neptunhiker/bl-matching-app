@@ -248,6 +248,20 @@ class CoachListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
         context['selected_presence'] = bool(self.request.GET.get('format_presence'))
         context['selected_hybrid'] = bool(self.request.GET.get('format_hybrid'))
 
+        # True when any filter param is active (used to distinguish "no results" from "empty DB")
+        context['is_filtered'] = any([
+            self.request.GET.get('q'),
+            self.request.GET.get('status'),
+            self.request.GET.get('language'),
+            self.request.GET.get('city'),
+            self.request.GET.get('industry'),
+            self.request.GET.get('own_room'),
+            self.request.GET.get('format_online'),
+            self.request.GET.get('format_presence'),
+            self.request.GET.get('format_hybrid'),
+            *[self.request.GET.get(f'spec_{f}') for f, _ in _SPECIALISM_CHOICES],
+        ])
+
         return context
 
 
