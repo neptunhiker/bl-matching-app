@@ -127,9 +127,7 @@
       <a href="{% url 'coach_list' %}" class="text-sm text-neutral-500 hover:text-neutral-700 transition-colors">
         Abbrechen
       </a>
-      {% with total=new_coaches|length|add:updated_coaches|length %}
-      {% include "components/_button.html" with button_type="submit" button_text=total|stringformat:"s"|add:" Coaches synchronisieren" button_variant="primary" %}
-      {% endwith %}
+      {% include "components/_button.html" with button_type="submit" button_text=actionable_count|stringformat:"s"|add:" Coaches synchronisieren" button_variant="primary" %}
     </div>
 
   </form>

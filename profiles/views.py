@@ -491,6 +491,7 @@ def coach_import_preview(request):
         "new_coaches": new_coaches,
         "updated_coaches": updated_coaches,
         "unchanged_coaches": unchanged_coaches,
+        "actionable_count": len(new_coaches) + len(updated_coaches),
     })
 
 
