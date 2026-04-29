@@ -565,7 +565,7 @@ def send_coaching_starting_info_slack(matching_attempt):
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"Wichtig: Bitte denke daran, dass zwei Termine die Woche stattfinden müssen. Die einzige Ausnahme ist, wenn das Coaching offiziell an einem Freitag stattfindet."
+                    f"Wichtig: Bitte denke daran, dass zwei Termine die Woche stattfinden müssen."
                 )
             }
         },  
