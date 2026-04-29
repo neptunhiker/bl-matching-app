@@ -9,7 +9,7 @@
   <div class="flex items-center justify-between mb-8">
     <div>
       <h1 class="text-2xl font-semibold sm:text-3xl ">Coaches</h1>
-      <p class="text-sm text-neutral-500 mt-1">{{ paginator.count }} Einträge insgesamt</p>
+      <p class="text-sm text-neutral-500 mt-1">{{ coaches|length }} Einträge insgesamt</p>
     </div>
     <div class="w-full sm:w-auto">
       {% url 'get_coaches' as get_coaches_url %}
@@ -212,26 +212,6 @@
     </ul>
   </div>
   
-
-  {% if is_paginated %}
-  <div class="flex items-center justify-center gap-2 mt-6">
-    {% if page_obj.has_previous %}
-    <a href="{% if params %}?{{ params }}&page={{ page_obj.previous_page_number }}{% else %}?page={{ page_obj.previous_page_number }}{% endif %}"
-       class="px-4 py-2 rounded-lg text-sm border border-primary-200
-              text-primary-600 hover:bg-primary-50 transition-colors">
-      ← Zurück
-    </a>
-    {% endif %}
-    <span class="text-sm text-neutral-500">Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}</span>
-    {% if page_obj.has_next %}
-    <a href="{% if params %}?{{ params }}&page={{ page_obj.next_page_number }}{% else %}?page={{ page_obj.next_page_number }}{% endif %}"
-       class="px-4 py-2 rounded-lg text-sm border border-primary-200
-              text-primary-600 hover:bg-primary-50 transition-colors">
-      Weiter →
-    </a>
-    {% endif %}
-  </div>
-  {% endif %}
 
   {% else %}
   <div class="bg-white/70 rounded-2xl shadow-sm border border-white/60 px-8 py-16 text-center">

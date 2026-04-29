@@ -151,7 +151,6 @@ class CoachListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
     model = Coach
     template_name = 'profiles/coach_list.html'
     context_object_name = 'coaches'
-    paginate_by = 25
     def get_queryset(self):
         from django.db.models import Case, When, Value, IntegerField
         qs = super().get_queryset().prefetch_related(
@@ -248,12 +247,6 @@ class CoachListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
         context['selected_online'] = bool(self.request.GET.get('format_online'))
         context['selected_presence'] = bool(self.request.GET.get('format_presence'))
         context['selected_hybrid'] = bool(self.request.GET.get('format_hybrid'))
-
-        # preserve other GET params for pagination links
-        params = self.request.GET.copy()
-        if 'page' in params:
-            params.pop('page')
-        context['params'] = params.urlencode()
 
         return context
 
