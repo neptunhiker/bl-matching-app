@@ -13,14 +13,15 @@
     <span class="mx-2">/</span>
     <span class="text-tertiary-700">{{ coach.full_name }}</span>
   </nav>
+
 <div class="bg-white p-5 rounded-xl">
 
-  {# Page header #}
-  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-8 border-b border-neutral-100 ">
+  {# ── Page header ──────────────────────────────────────────────────────── #}
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-8 border-b border-neutral-100">
     <div>
       <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-2">Coach</p>
       <h1 class="text-3xl font-semibold tracking-tight text-neutral-900 leading-tight">
-        {{ coach.full_name }} 
+        {{ coach.full_name }}
       </h1>
       <p class="mt-1.5 text-sm text-neutral-500">{{ coach.email }}</p>
       <div class="mt-3 flex flex-wrap items-center gap-2">
@@ -36,7 +37,6 @@
         {% if coach.maximum_capacity %}
           <span class="text-xs bg-neutral-100 border rounded-xl p-1">max. {{ coach.maximum_capacity }} Coachings</span>
         {% endif %}
-        
       </div>
     </div>
 
@@ -60,13 +60,22 @@
     {% endif %}
   </div>
 
-  {# Body #}
+  {# ── Body ─────────────────────────────────────────────────────────────── #}
   <div class="mt-8 space-y-8">
 
-    {# Languages + Formats #}
-    <div class=" grid grid-cols-1 sm:grid-cols-3 gap-8">
+    {# Summary #}
+    {% if coach.summary %}
+    <div class="bg-primary-50 rounded-lg px-4 py-4">
+      <p class="text-xs font-medium uppercase tracking-widest text-primary-600 mb-2">Zusammenfassung</p>
+      <p class="text-sm leading-7 text-neutral-800 whitespace-pre-wrap max-w-[68ch]">{{ coach.summary }}</p>
+    </div>
+    {% endif %}
+
+    {# Communication · Languages · Formats · Location #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+
       <div>
-        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Kommunikation über</p>
+        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Kommunikation</p>
         <div class="flex items-center gap-2">
           {% if coach.preferred_communication_channel == 'slack' %}
             <img src="{% static 'icons/slack.svg' %}" alt="Slack" class="h-4 w-4" />
@@ -77,19 +86,21 @@
           {% endif %}
         </div>
         {% if coach.slack_user_id %}
-        <p class="mt-1.5 text-xs text-neutral-400 font-mono">{{ coach.slack_user_id }}</p>
+          <p class="mt-1.5 text-xs text-neutral-400 font-mono">{{ coach.slack_user_id }}</p>
         {% endif %}
       </div>
+
       <div>
         <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Sprachen</p>
         <div class="flex flex-wrap gap-1.5">
           {% for lang in coach.languages.all %}
             <span class="inline-flex items-center rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700">{{ lang.name }}</span>
           {% empty %}
-            <span class="text-sm text-neutral-400">Keine Sprachen hinterlegt.</span>
+            <span class="text-sm text-neutral-400">—</span>
           {% endfor %}
         </div>
       </div>
+
       <div>
         <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Formate</p>
         <div class="flex flex-wrap gap-1.5">
@@ -103,55 +114,211 @@
             <span class="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-600">Hybrid</span>
           {% endif %}
           {% if not coach.coaching_format_online and not coach.coaching_format_presence and not coach.coaching_format_hybrid %}
-            <span class="text-sm text-neutral-400">Keine Formate hinterlegt.</span>
+            <span class="text-sm text-neutral-400">—</span>
           {% endif %}
         </div>
       </div>
+
+      <div>
+        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Coaching-Ort</p>
+        {% if coach.preferred_coaching_location %}
+          <p class="text-sm text-neutral-700">{{ coach.preferred_coaching_location }}</p>
+        {% endif %}
+        {% if coach.own_coaching_room %}
+          <span class="inline-flex items-center gap-1 mt-1.5 text-xs text-green-700 bg-green-50 rounded-full px-2 py-0.5">
+            <svg class="h-3 w-3" viewBox="0 0 12 12" fill="currentColor"><circle cx="6" cy="6" r="6"/></svg>
+            Eigener Coaching-Raum
+          </span>
+        {% elif not coach.preferred_coaching_location %}
+          <span class="text-sm text-neutral-400">—</span>
+        {% endif %}
+      </div>
+
     </div>
 
-    {# Text sections #}
-    <div class="space-y-6">
-      <div class="bg-primary-50 rounded-lg px-4 py-4">
-        <p class="text-xs font-medium uppercase tracking-widest text-primary-600 mb-2">Status-Kommentar</p>
-        <p class="text-sm leading-7 text-neutral-800 whitespace-pre-wrap max-w-[68ch]">{{ coach.status_notes|default:"Kein Status-Kommentar hinterlegt." }}</p>
+    {# Coaching-Städte · Branchenerfahrung #}
+    {% if coach.coaching_cities.exists or coach.industry_experience.exists %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+
+      {% if coach.coaching_cities.exists %}
+      <div>
+        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Coaching-Städte</p>
+        <div class="flex flex-wrap gap-1.5">
+          {% for city in coach.coaching_cities.all %}
+            <span class="inline-flex items-center rounded-full bg-secondary-50 px-2.5 py-0.5 text-xs font-medium text-secondary-700">{{ city.name }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if coach.industry_experience.exists %}
+      <div>
+        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Branchenerfahrung</p>
+        <div class="flex flex-wrap gap-1.5">
+          {% for industry in coach.industry_experience.all %}
+            <span class="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-600">{{ industry.name }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+    {% endif %}
+
+    {# Schwerpunkte #}
+    {% with lc=coach.leadership_coaching ja=coach.expert_for_job_applications ic=coach.intercultural_coaching hp=coach.high_profile_coaching clb=coach.coaching_with_language_barriers hr=coach.hr_experience te=coach.therapeutic_experience ac=coach.adhs_coaching lg=coach.lgbtq_coaching %}
+    {% if lc or ja or ic or hp or clb or hr or te or ac or lg %}
+    <div>
+      <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Schwerpunkte</p>
+      <div class="flex flex-wrap gap-2">
+        {% if coach.leadership_coaching %}
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 px-3 py-1 text-xs font-medium text-primary-700">Führungscoaching</span>
+        {% endif %}
+        {% if coach.expert_for_job_applications %}
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 px-3 py-1 text-xs font-medium text-primary-700">Job-Bewerbungen</span>
+        {% endif %}
+        {% if coach.intercultural_coaching %}
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 px-3 py-1 text-xs font-medium text-primary-700">Interkulturelles Coaching</span>
+        {% endif %}
+        {% if coach.high_profile_coaching %}
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 px-3 py-1 text-xs font-medium text-primary-700">High-Profile Coaching</span>
+        {% endif %}
+        {% if coach.coaching_with_language_barriers %}
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 px-3 py-1 text-xs font-medium text-primary-700">Sprachbarrieren</span>
+        {% endif %}
+        {% if coach.hr_experience %}
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 px-3 py-1 text-xs font-medium text-primary-700">HR-Erfahrung</span>
+        {% endif %}
+        {% if coach.therapeutic_experience %}
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 px-3 py-1 text-xs font-medium text-primary-700">Therapeutische Erfahrung</span>
+        {% endif %}
+        {% if coach.adhs_coaching %}
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 px-3 py-1 text-xs font-medium text-primary-700">ADHS-Coaching</span>
+        {% endif %}
+        {% if coach.lgbtq_coaching %}
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-primary-100 px-3 py-1 text-xs font-medium text-primary-700">LGBTQ+ Coaching</span>
+        {% endif %}
       </div>
     </div>
+    {% endif %}
+    {% endwith %}
+
+    {# Qualifikation & Methoden #}
+    {% if coach.coaching_qualification or coach.coaching_methods or coach.coaching_focus %}
+    <div class="border-t border-neutral-100 pt-8">
+      <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-5">Qualifikation &amp; Methoden</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        {% if coach.coaching_qualification %}
+        <div>
+          <p class="text-xs font-semibold text-neutral-500 mb-1.5">Qualifikation</p>
+          <p class="text-sm text-neutral-800 leading-6 whitespace-pre-wrap">{{ coach.coaching_qualification }}</p>
+        </div>
+        {% endif %}
+        {% if coach.coaching_methods %}
+        <div>
+          <p class="text-xs font-semibold text-neutral-500 mb-1.5">Methoden</p>
+          <p class="text-sm text-neutral-800 leading-6 whitespace-pre-wrap">{{ coach.coaching_methods }}</p>
+        </div>
+        {% endif %}
+        {% if coach.coaching_focus %}
+        <div>
+          <p class="text-xs font-semibold text-neutral-500 mb-1.5">Fokus</p>
+          <p class="text-sm text-neutral-800 leading-6 whitespace-pre-wrap">{{ coach.coaching_focus }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# Erfahrung #}
+    {% if coach.education or coach.work_experience %}
+    <div class="border-t border-neutral-100 pt-8">
+      <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-5">Erfahrung</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {% if coach.education %}
+        <div>
+          <p class="text-xs font-semibold text-neutral-500 mb-1.5">Ausbildung</p>
+          <p class="text-sm text-neutral-800 leading-6 whitespace-pre-wrap">{{ coach.education }}</p>
+        </div>
+        {% endif %}
+        {% if coach.work_experience %}
+        <div>
+          <p class="text-xs font-semibold text-neutral-500 mb-1.5">Berufserfahrung</p>
+          <p class="text-sm text-neutral-800 leading-6 whitespace-pre-wrap">{{ coach.work_experience }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# Status-Kommentar #}
+    {% if coach.status_notes %}
+    <div class="bg-primary-50 rounded-lg px-4 py-4">
+      <p class="text-xs font-medium uppercase tracking-widest text-primary-600 mb-2">Status-Kommentar</p>
+      <p class="text-sm leading-7 text-neutral-800 whitespace-pre-wrap max-w-[68ch]">{{ coach.status_notes }}</p>
+    </div>
+    {% endif %}
 
     {# Links #}
+    {% if coach.linkedin_url or coach.website_url %}
     <dl class="border-t border-neutral-100 pt-8 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
+      {% if coach.linkedin_url %}
       <div>
         <dt class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-1.5">LinkedIn</dt>
         <dd class="text-sm">
-          {% if coach.linkedin_url %}
-            <a href="{{ coach.linkedin_url }}" target="_blank" rel="noopener noreferrer"
-               class="text-primary-600 hover:underline underline-offset-2 break-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
-              {{ coach.linkedin_url }}
-            </a>
-          {% else %}
-            <span class="text-neutral-400">—</span>
-          {% endif %}
+          <a href="{{ coach.linkedin_url }}" target="_blank" rel="noopener noreferrer"
+             class="text-primary-600 hover:underline underline-offset-2 break-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
+            {{ coach.linkedin_url }}
+          </a>
         </dd>
       </div>
+      {% endif %}
+      {% if coach.website_url %}
       <div>
         <dt class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-1.5">Website</dt>
         <dd class="text-sm">
-          {% if coach.website_url %}
-            <a href="{{ coach.website_url }}" target="_blank" rel="noopener noreferrer"
-               class="text-primary-600 hover:underline underline-offset-2 break-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
-              {{ coach.website_url }}
-            </a>
-          {% else %}
-            <span class="text-neutral-400">—</span>
-          {% endif %}
+          <a href="{{ coach.website_url }}" target="_blank" rel="noopener noreferrer"
+             class="text-primary-600 hover:underline underline-offset-2 break-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 rounded-sm">
+            {{ coach.website_url }}
+          </a>
         </dd>
       </div>
+      {% endif %}
     </dl>
+    {% endif %}
+
+    {# Staff-only metadata #}
+    {% if request.user.is_staff %}
+    <details class="border-t border-neutral-100 pt-6 group">
+      <summary class="text-xs font-medium uppercase tracking-widest text-neutral-300 cursor-pointer hover:text-neutral-500 transition-colors select-none list-none flex items-center gap-2">
+        <svg class="h-3 w-3 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2l4 4-4 4"/></svg>
+        Metadaten (intern)
+      </summary>
+      <dl class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8 text-xs">
+        <div>
+          <dt class="text-neutral-400 font-medium mb-0.5">Coaching Hub ID</dt>
+          <dd class="font-mono text-neutral-500 break-all">{{ coach.coaching_hub_id|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt class="text-neutral-400 font-medium mb-0.5">Interne ID</dt>
+          <dd class="font-mono text-neutral-500 break-all">{{ coach.pk }}</dd>
+        </div>
+        <div>
+          <dt class="text-neutral-400 font-medium mb-0.5">Zuletzt aktualisiert (extern)</dt>
+          <dd class="text-neutral-500">{{ coach.updated|date:"d.m.Y H:i"|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt class="text-neutral-400 font-medium mb-0.5">Angelegt am</dt>
+          <dd class="text-neutral-500">{{ coach.created_at|date:"d.m.Y H:i" }}</dd>
+        </div>
+      </dl>
+    </details>
+    {% endif %}
 
   </div>
 
-
   {# Footer #}
-  <div class="mt-10 ">
+  <div class="mt-10">
     <a href="{% url 'coach_list' %}"
        class="text-sm text-neutral-400 hover:text-neutral-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300 rounded-sm">
       ← Zurück zur Liste
