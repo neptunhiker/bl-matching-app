@@ -72,7 +72,7 @@
     {% endif %}
 
     {# Communication · Languages · Formats · Location #}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
 
       <div>
         <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Kommunikation</p>
@@ -102,25 +102,7 @@
       </div>
 
       <div>
-        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Formate</p>
-        <div class="flex flex-wrap gap-1.5">
-          {% if coach.coaching_format_online %}
-            <span class="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-600">Online</span>
-          {% endif %}
-          {% if coach.coaching_format_presence %}
-            <span class="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-600">Präsenz</span>
-          {% endif %}
-          {% if coach.coaching_format_hybrid %}
-            <span class="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-neutral-600">Hybrid</span>
-          {% endif %}
-          {% if not coach.coaching_format_online and not coach.coaching_format_presence and not coach.coaching_format_hybrid %}
-            <span class="text-sm text-neutral-400">—</span>
-          {% endif %}
-        </div>
-      </div>
-
-      <div>
-        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Coaching-Ort</p>
+        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-3">Format</p>
         {% if coach.preferred_coaching_location %}
           <p class="text-sm text-neutral-700">{{ coach.preferred_coaching_location }}</p>
         {% endif %}

@@ -211,13 +211,10 @@ class CoachListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
         if self.request.GET.get('own_room'):
             qs = qs.filter(own_coaching_room=True)
 
-        # coaching format filters
-        if self.request.GET.get('format_online'):
-            qs = qs.filter(coaching_format_online=True)
-        if self.request.GET.get('format_presence'):
-            qs = qs.filter(coaching_format_presence=True)
-        if self.request.GET.get('format_hybrid'):
-            qs = qs.filter(coaching_format_hybrid=True)
+        # coaching format filter (single-value: Online / Präsenz / Hybrid)
+        fmt = self.request.GET.get('format')
+        if fmt:
+            qs = qs.filter(preferred_coaching_location=fmt)
 
         return qs.distinct()
 
@@ -244,9 +241,8 @@ class CoachListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
             f for f, _ in _SPECIALISM_CHOICES if self.request.GET.get(f'spec_{f}')
         ]
         context['selected_own_room'] = bool(self.request.GET.get('own_room'))
-        context['selected_online'] = bool(self.request.GET.get('format_online'))
-        context['selected_presence'] = bool(self.request.GET.get('format_presence'))
-        context['selected_hybrid'] = bool(self.request.GET.get('format_hybrid'))
+        context['selected_format'] = self.request.GET.get('format', '')
+        context['format_choices'] = [('Online', 'Online'), ('Präsenz', 'Präsenz'), ('Hybrid', 'Hybrid')]
 
         # True when any filter param is active (used to distinguish "no results" from "empty DB")
         context['is_filtered'] = any([
@@ -256,9 +252,7 @@ class CoachListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
             self.request.GET.get('city'),
             self.request.GET.get('industry'),
             self.request.GET.get('own_room'),
-            self.request.GET.get('format_online'),
-            self.request.GET.get('format_presence'),
-            self.request.GET.get('format_hybrid'),
+            self.request.GET.get('format'),
             *[self.request.GET.get(f'spec_{f}') for f, _ in _SPECIALISM_CHOICES],
         ])
 

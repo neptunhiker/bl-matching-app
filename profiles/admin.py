@@ -26,12 +26,12 @@ class IndustryAdmin(admin.ModelAdmin):
 @admin.register(Coach)
 class CoachAdmin(admin.ModelAdmin):
     list_display = ('last_name', 'first_name', 'email', 'status',
-                    'coaching_format_online', 'coaching_format_presence', 'coaching_format_hybrid',
+                    'preferred_coaching_location',
                     'preferred_communication_channel', 'own_coaching_room')
     list_filter = (
         'status',
         'languages',
-        'coaching_format_online', 'coaching_format_presence', 'coaching_format_hybrid',
+        'preferred_coaching_location',
         'leadership_coaching', 'hr_experience', 'expert_for_job_applications',
         'intercultural_coaching', 'high_profile_coaching', 'coaching_with_language_barriers',
         'therapeutic_experience', 'adhs_coaching', 'lgbtq_coaching',

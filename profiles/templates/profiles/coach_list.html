@@ -54,18 +54,12 @@
           {% endfor %}
         </select>
 
-        <label class="text-sm inline-flex items-center gap-2">
-          <input type="checkbox" name="format_online" value="1" {% if selected_online %}checked{% endif %} />
-          Online
-        </label>
-        <label class="text-sm inline-flex items-center gap-2">
-          <input type="checkbox" name="format_presence" value="1" {% if selected_presence %}checked{% endif %} />
-          Präsenz
-        </label>
-        <label class="text-sm inline-flex items-center gap-2">
-          <input type="checkbox" name="format_hybrid" value="1" {% if selected_hybrid %}checked{% endif %} />
-          Hybrid
-        </label>
+        <select name="format" class="px-3 py-2 rounded-lg border border-neutral-200 text-sm">
+          <option value="">Alle Formate</option>
+          {% for val, label in format_choices %}
+          <option value="{{ val }}" {% if val == selected_format %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
         <label class="text-sm inline-flex items-center gap-2">
           <input type="checkbox" name="own_room" value="1" {% if selected_own_room %}checked{% endif %} />
           Eigener Raum
@@ -111,7 +105,7 @@
           <th class="px-5 py-3 font-semibold text-left">Name</th>
           <th class="px-5 py-3 font-semibold text-left">Status</th>
           <th class="px-5 py-3 font-semibold text-left">Sprachen</th>
-          <th class="px-5 py-3 font-semibold text-left">Formate</th>
+          <th class="px-5 py-3 font-semibold text-left">Format</th>
           <th class="px-5 py-3 font-semibold text-left">Schwerpunkte</th>
         </tr>
       </thead>
@@ -139,9 +133,11 @@
             {% endfor %}
           </td>
           <td class="px-5 py-3 text-neutral-600">
-            {% if coach.coaching_format_online %}<span class="inline-block px-2 py-0.5 mr-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Online</span>{% endif %}
-            {% if coach.coaching_format_presence %}<span class="inline-block px-2 py-0.5 mr-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Präsenz</span>{% endif %}
-            {% if coach.coaching_format_hybrid %}<span class="inline-block px-2 py-0.5 mr-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Hybrid</span>{% endif %}
+            {% if coach.preferred_coaching_location %}
+            <span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">{{ coach.preferred_coaching_location }}</span>
+            {% else %}
+            <span class="text-neutral-300">–</span>
+            {% endif %}
           </td>
           <td class="px-5 py-3 text-neutral-600">
             {% if coach.specialism_count %}
@@ -169,14 +165,8 @@
             {% for lang in coach.languages.all %}
             <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">{{ lang.name }}</span>
             {% endfor %}
-            {% if coach.coaching_format_online %}
-            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Online</span>
-            {% endif %}
-            {% if coach.coaching_format_presence %}
-            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Präsenz</span>
-            {% endif %}
-            {% if coach.coaching_format_hybrid %}
-            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Hybrid</span>
+            {% if coach.preferred_coaching_location %}
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">{{ coach.preferred_coaching_location }}</span>
             {% endif %}
             {% if coach.preferred_communication_channel %}
             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">

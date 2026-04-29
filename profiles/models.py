@@ -104,9 +104,6 @@ class Coach(models.Model):
     linkedin_url = models.URLField(blank=True, verbose_name='LinkedIn Profil')
     website_url = models.URLField(blank=True, verbose_name='BeginnerLuft Website Profil')
 
-    coaching_format_online = models.BooleanField(default=False, verbose_name='Online')
-    coaching_format_presence = models.BooleanField(default=False, verbose_name='Präsenz')
-    coaching_format_hybrid = models.BooleanField(default=False, verbose_name='Hybrid')
     preferred_communication_channel = models.CharField(
         max_length=20,
         choices=CommunicationChannel.choices,
