@@ -453,7 +453,7 @@ def send_intro_call_request_slack(matching_attempt):
                 "type": "button",
                 "text": {
                     "type": "plain_text",
-                    "text": "🚀 Kennenlerngespräch hat stattgefunden!"
+                    "text": "🚀 Coaching kann starten!"
                 },
                 "url": intro_call_feedback_url,
                 "style": "primary"
@@ -854,7 +854,7 @@ def send_intro_call_reminder_slack(matching_attempt):
                     "type": "button",
                     "text": {
                         "type": "plain_text",
-                        "text": "🚀 Kennenlerngespräch hat stattgefunden!"
+                        "text": "🚀 Coaching kann starten!"
                     },
                     "url": intro_call_feedback_url,
                     "style": "primary"
