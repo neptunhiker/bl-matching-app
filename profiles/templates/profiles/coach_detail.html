@@ -41,6 +41,7 @@
     </div>
 
     {% if request.user.is_staff %}
+      {% if not IS_PRODUCTION %}
       {% with next_url=request.GET.next|default:request.path %}
         <div class="flex items-center gap-1 shrink-0 pt-1">
           {% url 'coach_update' coach.pk as coach_update_url %}
@@ -57,6 +58,7 @@
           </a>
         </div>
       {% endwith %}
+      {% endif %}
     {% endif %}
   </div>
 
