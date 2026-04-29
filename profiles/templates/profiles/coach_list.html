@@ -78,14 +78,17 @@
       </div>
 
       {# — Schwerpunkte (specialism) filter — collapsible — #}
-      <details {% if selected_specialisms %}open{% endif %} class="text-sm">
-        <summary class="cursor-pointer select-none text-neutral-600 hover:text-neutral-800 transition-colors inline-flex items-center gap-1 w-fit list-none">
-          Schwerpunkte
+      <details {% if selected_specialisms %}open{% endif %} class="text-sm group">
+        <summary class="cursor-pointer select-none text-neutral-400 hover:text-neutral-600 transition-colors inline-flex items-center gap-1.5 w-fit list-none">
+          <svg class="w-3.5 h-3.5 transition-transform group-open:rotate-90" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+            <path d="M4.5 2.5l4 3.5-4 3.5V2.5z"/>
+          </svg>
+          <span class="text-xs tracking-wide uppercase">Schwerpunkte</span>
           {% if selected_specialisms %}
-          <span class="ml-1 px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-700 text-xs font-medium">{{ selected_specialisms|length }}</span>
+          <span class="px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-700 text-xs font-medium">{{ selected_specialisms|length }}</span>
           {% endif %}
         </summary>
-        <div class="mt-2 flex flex-wrap gap-3">
+        <div class="mt-2 flex flex-wrap gap-3 pl-5">
           {% for field, label in specialism_choices %}
           <label class="inline-flex items-center gap-1.5">
             <input type="checkbox" name="spec_{{ field }}" value="1" {% if field in selected_specialisms %}checked{% endif %} class="rounded" />
