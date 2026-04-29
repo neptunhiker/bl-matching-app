@@ -11,10 +11,12 @@
       <h1 class="text-2xl font-semibold sm:text-3xl ">Coaches</h1>
       <p class="text-sm text-neutral-500 mt-1">{{ coaches|length }} Einträge insgesamt</p>
     </div>
+    {% if not IS_STAGING %}
     <div class="w-full sm:w-auto">
       {% url 'get_coaches' as get_coaches_url %}
       {% include "components/_button.html" with button_text="Coaches importieren" button_size="md" button_full_width=True button_class="sm:w-auto" button_href=get_coaches_url %}
     </div>
+    {% endif %}
   </div>
 
   {# Filter form — always shown #}
