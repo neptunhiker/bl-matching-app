@@ -13,8 +13,13 @@ CONFIRM_URL = reverse("coach_import_confirm")
 # Helpers
 # ---------------------------------------------------------------------------
 
+ANNA_UUID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+CHRIS_UUID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+BAD_UUID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+
 API_RESPONSE = [
     {
+        "id": ANNA_UUID,
         "first_name": "Anna",
         "last_name": "Neu",
         "email": "anna.neu@example.com",
@@ -24,7 +29,7 @@ API_RESPONSE = [
         "status_notes": "Tolle Coachin",
         "maximum_capacity": 3,
     },
-    {"first_name": "Chris", "last_name": "Coach", "email": "coach@example.com"},  # existing via coach_1
+    {"id": CHRIS_UUID, "first_name": "Chris", "last_name": "Coach", "email": "coach@example.com"},  # existing via coach_1
 ]
 
 
@@ -56,8 +61,10 @@ class TestCoachImportPreviewView:
         ctx = response.context
         assert len(ctx["new_coaches"]) == 1
         assert ctx["new_coaches"][0]["email"] == "anna.neu@example.com"
-        assert len(ctx["duplicate_coaches"]) == 1
-        assert ctx["duplicate_coaches"][0]["email"] == "coach@example.com"
+        # coach_1 already exists and is unchanged → appears in unchanged_coaches
+        existing = ctx["unchanged_coaches"] + [e["parsed"] for e in ctx["updated_coaches"]]
+        assert len(existing) == 1
+        assert existing[0]["email"] == "coach@example.com"
 
     def test_all_new_when_no_existing_coaches(self, client, staff_user):
         client.force_login(staff_user)
@@ -65,7 +72,8 @@ class TestCoachImportPreviewView:
             response = client.get(PREVIEW_URL)
         ctx = response.context
         assert len(ctx["new_coaches"]) == 2
-        assert ctx["duplicate_coaches"] == []
+        assert ctx["unchanged_coaches"] == []
+        assert ctx["updated_coaches"] == []
 
     def test_api_error_renders_error_message(self, client, staff_user):
         import requests as req_module
@@ -103,7 +111,7 @@ class TestCoachImportConfirmView:
         with patch("profiles.views._fetch_coaches_from_api", return_value=API_RESPONSE):
             response = client.post(
                 CONFIRM_URL,
-                {"coach_emails": ["anna.neu@example.com", "coach@example.com"]},
+                {"hub_ids": [ANNA_UUID, CHRIS_UUID]},
             )
         assert response.status_code == 302
         assert response.url == reverse("coach_list")
@@ -115,7 +123,7 @@ class TestCoachImportConfirmView:
         """Status comes from the API value, not hardcoded ONBOARDING."""
         client.force_login(staff_user)
         with patch("profiles.views._fetch_coaches_from_api", return_value=API_RESPONSE):
-            client.post(CONFIRM_URL, {"coach_emails": ["anna.neu@example.com"]})
+            client.post(CONFIRM_URL, {"hub_ids": [ANNA_UUID]})
         coach = Coach.objects.get(email="anna.neu@example.com")
         assert coach.status == Coach.Status.AVAILABLE
 
@@ -123,7 +131,7 @@ class TestCoachImportConfirmView:
         """All additional fields from the API are persisted correctly."""
         client.force_login(staff_user)
         with patch("profiles.views._fetch_coaches_from_api", return_value=API_RESPONSE):
-            client.post(CONFIRM_URL, {"coach_emails": ["anna.neu@example.com"]})
+            client.post(CONFIRM_URL, {"hub_ids": [ANNA_UUID]})
         coach = Coach.objects.get(email="anna.neu@example.com")
         assert coach.preferred_communication_channel == Coach.CommunicationChannel.SLACK
         assert coach.slack_user_id == "U_ANNA"
@@ -133,20 +141,21 @@ class TestCoachImportConfirmView:
     def test_invalid_api_status_falls_back_to_onboarding(self, client, staff_user):
         """Unknown status values from the API fall back to ONBOARDING."""
         bad_response = [{
+            "id": BAD_UUID,
             "first_name": "Bad", "last_name": "Status",
             "email": "bad.status@example.com",
             "status": "nicht_existierend",
         }]
         client.force_login(staff_user)
         with patch("profiles.views._fetch_coaches_from_api", return_value=bad_response):
-            client.post(CONFIRM_URL, {"coach_emails": ["bad.status@example.com"]})
+            client.post(CONFIRM_URL, {"hub_ids": [BAD_UUID]})
         coach = Coach.objects.get(email="bad.status@example.com")
         assert coach.status == Coach.Status.ONBOARDING
 
     def test_idempotent_double_submit(self, client, staff_user):
-        """Posting the same emails twice must not create duplicates."""
+        """Posting the same hub_ids twice must not create duplicates."""
         client.force_login(staff_user)
-        payload = {"coach_emails": ["anna.neu@example.com"]}
+        payload = {"hub_ids": [ANNA_UUID]}
         with patch("profiles.views._fetch_coaches_from_api", return_value=API_RESPONSE):
             client.post(CONFIRM_URL, payload)
             client.post(CONFIRM_URL, payload)

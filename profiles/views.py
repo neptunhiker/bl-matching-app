@@ -244,6 +244,11 @@ class CoachListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
         context['selected_format'] = self.request.GET.get('format', '')
         context['format_choices'] = [('Online', 'Online'), ('Präsenz', 'Präsenz'), ('Hybrid', 'Hybrid')]
 
+        # Filter params without 'page' — used in pagination links to preserve active filters.
+        params = self.request.GET.copy()
+        params.pop('page', None)
+        context['params'] = params
+
         # True when any filter param is active (used to distinguish "no results" from "empty DB")
         context['is_filtered'] = any([
             self.request.GET.get('q'),
