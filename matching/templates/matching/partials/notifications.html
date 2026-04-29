@@ -58,7 +58,7 @@
             {% if n.type == 'email' %}{{ obj.subject }}{% else %}{{ obj.subject }}{% endif %}
           </p>
           <p class="text-xs text-neutral-400 mt-0.5">
-              An: {{ obj.to }}
+              An: {{ obj.to_coach|default:obj.to }}
           </p>
         </div>
 
