@@ -26,7 +26,7 @@
   </div>
   <a href="{% url 'coach_list' %}" class="text-sm text-neutral-500 hover:text-neutral-700 transition-colors">← Zurück zur Coach-Liste</a>
 
-  {% elif not new_coaches and not duplicate_coaches %}
+  {% elif not new_coaches and not updated_coaches and not unchanged_coaches %}
   {# ── Empty state — API returned zero coaches ──────────────────────────── #}
   <div class="bg-white/70 rounded-2xl shadow-sm border border-white/60 px-6 py-12 text-center">
     <p class="text-sm text-neutral-500">Der Coaching Hub hat keine Coaches zurückgegeben.</p>
@@ -36,21 +36,27 @@
   {% else %}
   {# ── Summary bar ─────────────────────────────────────────────────────── #}
   <div class="flex flex-wrap items-center gap-3 mb-6">
+    {% if new_coaches %}
     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary-100 text-primary-700">
       {{ new_coaches|length }} neu
     </span>
-    {% if duplicate_coaches %}
+    {% endif %}
+    {% if updated_coaches %}
+    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+      {{ updated_coaches|length }} mit Änderungen
+    </span>
+    {% endif %}
+    {% if unchanged_coaches %}
     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-500">
-      {{ duplicate_coaches|length }} bereits vorhanden
+      {{ unchanged_coaches|length }} unverändert
     </span>
     {% endif %}
   </div>
 
-  {% if not new_coaches %}
-  {# ── All duplicates — nothing to import ───────────────────────────────── #}
+  {% if not new_coaches and not updated_coaches %}
+  {# ── Nothing to sync ───────────────────────────────────────────────────── #}
   <div class="bg-white/70 rounded-2xl shadow-sm border border-white/60 px-6 py-10 text-center mb-6">
-    <p class="text-sm font-medium text-neutral-600">Alle Coaches sind bereits in der Datenbank vorhanden.</p>
-    <p class="text-xs text-neutral-400 mt-1">Es gibt nichts zu importieren.</p>
+    <p class="text-sm font-medium text-neutral-600">Alle Coaches sind aktuell – keine Änderungen vorhanden.</p>
   </div>
   <a href="{% url 'coach_list' %}" class="text-sm text-neutral-500 hover:text-neutral-700 transition-colors">← Zurück zur Coach-Liste</a>
 
@@ -59,9 +65,12 @@
   <form method="post" action="{% url 'coach_import_confirm' %}">
     {% csrf_token %}
 
-    {# Hidden inputs for each new coach email — server re-validates on confirm #}
+    {# Hidden inputs for each actionable coach's coaching_hub_id #}
     {% for coach in new_coaches %}
-    <input type="hidden" name="coach_emails" value="{{ coach.email }}">
+    <input type="hidden" name="hub_ids" value="{{ coach.coaching_hub_id }}">
+    {% endfor %}
+    {% for entry in updated_coaches %}
+    <input type="hidden" name="hub_ids" value="{{ entry.parsed.coaching_hub_id }}">
     {% endfor %}
 
     <div class="bg-white/70 rounded-2xl shadow-sm border border-white/60 overflow-hidden mb-6">
@@ -71,31 +80,41 @@
             <th class="px-5 py-3 font-semibold text-left">Name</th>
             <th class="px-5 py-3 font-semibold text-left">E-Mail</th>
             <th class="px-5 py-3 font-semibold text-left">Status</th>
+            <th class="px-5 py-3 font-semibold text-left">Änderungen</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-neutral-100">
 
           {% for coach in new_coaches %}
           <tr class="bg-white hover:bg-primary-50/30 transition-colors">
-            <td class="px-5 py-3 font-medium text-tertiary-800">
-              {{ coach.first_name }} {{ coach.last_name }}
-            </td>
+            <td class="px-5 py-3 font-medium text-tertiary-800">{{ coach.first_name }} {{ coach.last_name }}</td>
             <td class="px-5 py-3 text-neutral-600">{{ coach.email }}</td>
+            <td class="px-5 py-3">{% include "components/_badge.html" with badge_text="Neu" badge_variant="primary" %}</td>
+            <td class="px-5 py-3 text-neutral-400 text-xs">—</td>
+          </tr>
+          {% endfor %}
+
+          {% for entry in updated_coaches %}
+          <tr class="bg-amber-50/40 hover:bg-amber-50/70 transition-colors">
+            <td class="px-5 py-3 font-medium text-tertiary-800">{{ entry.parsed.first_name }} {{ entry.parsed.last_name }}</td>
+            <td class="px-5 py-3 text-neutral-600">{{ entry.parsed.email }}</td>
+            <td class="px-5 py-3">{% include "components/_badge.html" with badge_text="Aktualisieren" badge_variant="warning" %}</td>
             <td class="px-5 py-3">
-              {% include "components/_badge.html" with badge_text="Neu" badge_variant="primary" %}
+              <div class="flex flex-wrap gap-1">
+                {% for field, label in entry.changed %}
+                <span class="px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700">{{ label }}</span>
+                {% endfor %}
+              </div>
             </td>
           </tr>
           {% endfor %}
 
-          {% for coach in duplicate_coaches %}
-          <tr class="bg-neutral-50/60 opacity-60">
-            <td class="px-5 py-3 text-neutral-400 line-through">
-              {{ coach.first_name }} {{ coach.last_name }}
-            </td>
-            <td class="px-5 py-3 text-neutral-400 line-through">{{ coach.email }}</td>
-            <td class="px-5 py-3">
-              {% include "components/_badge.html" with badge_text="Bereits vorhanden" badge_variant="neutral" %}
-            </td>
+          {% for coach in unchanged_coaches %}
+          <tr class="opacity-40">
+            <td class="px-5 py-3 text-neutral-400">{{ coach.first_name }} {{ coach.last_name }}</td>
+            <td class="px-5 py-3 text-neutral-400">{{ coach.email }}</td>
+            <td class="px-5 py-3">{% include "components/_badge.html" with badge_text="Unverändert" badge_variant="neutral" %}</td>
+            <td class="px-5 py-3 text-neutral-400 text-xs">—</td>
           </tr>
           {% endfor %}
 
@@ -108,7 +127,9 @@
       <a href="{% url 'coach_list' %}" class="text-sm text-neutral-500 hover:text-neutral-700 transition-colors">
         Abbrechen
       </a>
-      {% include "components/_button.html" with button_type="submit" button_text=new_coaches|length|stringformat:"s"|add:" Coaches importieren" button_variant="primary" %}
+      {% with total=new_coaches|length|add:updated_coaches|length %}
+      {% include "components/_button.html" with button_type="submit" button_text=total|stringformat:"s"|add:" Coaches synchronisieren" button_variant="primary" %}
+      {% endwith %}
     </div>
 
   </form>

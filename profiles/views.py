@@ -7,8 +7,12 @@ from django.http import JsonResponse, HttpResponseServerError
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.urls import reverse_lazy
 
+import uuid as _uuid
+
+from django.utils.dateparse import parse_datetime
+
 from .forms import ParticipantForm, CoachForm
-from .models import Participant, Coach
+from .models import Participant, Coach, Language, City, Industry
 
 from matching.models import RequestToCoach, MatchingAttempt
 
@@ -259,11 +263,44 @@ class CoachDeleteView(LoginRequiredMixin, StaffRequiredMixin, DeleteView):
 
 _COACHING_HUB_API_URL = "https://coaching-hub.beginnerluft.de/api/v1/coaches/"
 
+# Scalar fields synced directly from the API onto the Coach model (no M2M).
+_COACH_SCALAR_FIELDS = [
+    "first_name", "last_name", "email", "updated",
+    "summary", "own_coaching_room", "preferred_coaching_location",
+    "coaching_focus", "coaching_qualification", "coaching_methods",
+    "education", "work_experience",
+    "expert_for_job_applications", "leadership_coaching", "intercultural_coaching",
+    "high_profile_coaching", "coaching_with_language_barriers", "hr_experience",
+    "therapeutic_experience", "adhs_coaching", "lgbtq_coaching",
+    "linkedin_url", "website_url",
+    "preferred_communication_channel", "slack_user_id",
+    "status", "status_notes", "maximum_capacity",
+]
+
+# Human-readable labels for changed-field display in the preview.
+_FIELD_LABELS = {
+    "first_name": "Vorname", "last_name": "Nachname", "email": "E-Mail",
+    "updated": "Aktualisiert", "summary": "Zusammenfassung",
+    "own_coaching_room": "Eigener Coaching-Raum",
+    "preferred_coaching_location": "Coaching-Ort",
+    "coaching_focus": "Fokus", "coaching_qualification": "Qualifikation",
+    "coaching_methods": "Methoden", "education": "Ausbildung",
+    "work_experience": "Berufserfahrung",
+    "expert_for_job_applications": "Job-Bewerbungen",
+    "leadership_coaching": "Führungscoaching",
+    "intercultural_coaching": "Interkulturelles Coaching",
+    "high_profile_coaching": "High-Profile", "coaching_with_language_barriers": "Sprachbarrieren",
+    "hr_experience": "HR-Erfahrung", "therapeutic_experience": "Therapeutische Erfahrung",
+    "adhs_coaching": "ADHS-Coaching", "lgbtq_coaching": "LGBTQ+ Coaching",
+    "linkedin_url": "LinkedIn", "website_url": "Website",
+    "preferred_communication_channel": "Kanal", "slack_user_id": "Slack ID",
+    "status": "Status", "status_notes": "Status-Kommentar", "maximum_capacity": "Max. Kapazität",
+}
+
 
 def _fetch_coaches_from_api():
     """
-    Call the Coaching Hub API and return a list of dicts with
-    keys first_name, last_name, email.
+    Call the Coaching Hub API and return a list of raw dicts.
 
     Handles both a bare list response and a paginated {"results": [...]} shape.
     Raises requests.RequestException on network/HTTP errors.
@@ -288,7 +325,13 @@ _VALID_CHANNELS = {c[0] for c in Coach.CommunicationChannel.choices}
 
 
 def _parse_api_coach(item):
-    """Extract and validate all importable fields from a single API coach item."""
+    """Extract and validate all importable fields from a single API coach item.
+
+    Scalar fields are keyed by their model field name.
+    M2M relations are returned under '_languages', '_coaching_cities',
+    '_industry_experience' as lists of name strings.
+    coaching_hub_id comes from item['id'] (UUID).
+    """
     email = (item.get("email") or "").strip().lower()
 
     raw_channel = (item.get("preferred_communication_channel") or "").strip().lower()
@@ -303,16 +346,112 @@ def _parse_api_coach(item):
     except (TypeError, ValueError):
         capacity = None
 
+    raw_hub_id = item.get("id") or ""
+    try:
+        coaching_hub_id = _uuid.UUID(str(raw_hub_id)) if raw_hub_id else None
+    except (ValueError, AttributeError):
+        coaching_hub_id = None
+
+    updated = parse_datetime(item["updated"]) if item.get("updated") else None
+
+    own_room_raw = (item.get("own_coaching_room") or "").strip().lower()
+    own_coaching_room = own_room_raw == "ja"
+
     return {
+        "coaching_hub_id": coaching_hub_id,
         "email": email,
         "first_name": (item.get("first_name") or "").strip(),
         "last_name": (item.get("last_name") or "").strip(),
+        "updated": updated,
+        "summary": (item.get("summary") or "").strip(),
+        "own_coaching_room": own_coaching_room,
+        "preferred_coaching_location": (item.get("preferred_coaching_location") or "").strip(),
+        "coaching_focus": (item.get("coaching_focus") or "").strip(),
+        "coaching_qualification": (item.get("coaching_qualification") or "").strip(),
+        "coaching_methods": (item.get("coaching_methods") or "").strip(),
+        "education": (item.get("education") or "").strip(),
+        "work_experience": (item.get("work_experience") or "").strip(),
+        "expert_for_job_applications": bool(item.get("expert_for_job_applications", False)),
+        "leadership_coaching": bool(item.get("leadership_coaching", False)),
+        "intercultural_coaching": bool(item.get("intercultural_coaching", False)),
+        "high_profile_coaching": bool(item.get("high_profile_coaching", False)),
+        "coaching_with_language_barriers": bool(item.get("coaching_with_language_barriers", False)),
+        "hr_experience": bool(item.get("hr_experience", False)),
+        "therapeutic_experience": bool(item.get("therapeutic_experience", False)),
+        "adhs_coaching": bool(item.get("adhs_coaching", False)),
+        "lgbtq_coaching": bool(item.get("lgbtq_coaching", False)),
+        "linkedin_url": (item.get("linkedin_url") or "").strip(),
+        "website_url": (item.get("website_url") or "").strip(),
         "preferred_communication_channel": channel,
         "slack_user_id": (item.get("slack_user_id") or "").strip(),
         "status": status,
         "status_notes": (item.get("status_notes") or "").strip(),
         "maximum_capacity": capacity,
+        # M2M — lists of name strings, resolved to model instances separately
+        "_languages": [n.strip() for n in (item.get("language") or []) if isinstance(n, str) and n.strip()],
+        "_coaching_cities": [n.strip() for n in (item.get("coaching_cities") or []) if isinstance(n, str) and n.strip()],
+        "_industry_experience": [n.strip() for n in (item.get("industry_experience") or []) if isinstance(n, str) and n.strip()],
     }
+
+
+def _resolve_m2m_names(model, names):
+    """Return a list of model instances, creating any that don't exist yet."""
+    instances = []
+    for name in names:
+        if name:
+            obj, _ = model.objects.get_or_create(name=name)
+            instances.append(obj)
+    return instances
+
+
+def _lookup_coach(parsed):
+    """Find an existing Coach for the parsed item, or return None.
+
+    Prefers coaching_hub_id lookup; falls back to email for records
+    created before coaching_hub_id was introduced.
+    """
+    if parsed["coaching_hub_id"]:
+        try:
+            return Coach.objects.get(coaching_hub_id=parsed["coaching_hub_id"])
+        except Coach.DoesNotExist:
+            pass
+    if parsed["email"]:
+        try:
+            return Coach.objects.get(email=parsed["email"])
+        except Coach.DoesNotExist:
+            pass
+    return None
+
+
+def _changed_scalar_fields(coach, parsed):
+    """Return list of (field_name, label) pairs that differ between DB and API."""
+    changed = []
+    for field in _COACH_SCALAR_FIELDS:
+        if field not in parsed:
+            continue
+        db_val = getattr(coach, field, None)
+        api_val = parsed[field]
+        if db_val != api_val:
+            changed.append((field, _FIELD_LABELS.get(field, field)))
+    return changed
+
+
+def _apply_parsed_to_coach(coach, parsed):
+    """Write all scalar fields from parsed dict onto a Coach instance and save."""
+    for field in _COACH_SCALAR_FIELDS:
+        if field in parsed:
+            setattr(coach, field, parsed[field])
+    # Always stamp the external ID when the API provides one.
+    if parsed.get("coaching_hub_id"):
+        coach.coaching_hub_id = parsed["coaching_hub_id"]
+    coach.save()
+
+
+def _set_m2m(coach, parsed):
+    """Set all M2M relations on coach from the parsed name lists."""
+    coach.languages.set(_resolve_m2m_names(Language, parsed.get("_languages", [])))
+    coach.coaching_cities.set(_resolve_m2m_names(City, parsed.get("_coaching_cities", [])))
+    coach.industry_experience.set(_resolve_m2m_names(Industry, parsed.get("_industry_experience", [])))
 
 
 @login_required
@@ -329,20 +468,29 @@ def coach_import_preview(request):
     except requests.RequestException as exc:
         return _render_preview_error(request, f"Die Coaching-Hub-API ist nicht erreichbar: {exc}")
 
-    cleaned = [_parse_api_coach(item) for item in api_coaches if (item.get("email") or "").strip()]
+    new_coaches = []
+    updated_coaches = []   # list of {"parsed": ..., "changed": [(field, label), ...]}
+    unchanged_coaches = []
 
-    existing_emails = set(
-        Coach.objects.filter(email__in=[c["email"] for c in cleaned])
-        .values_list("email", flat=True)
-    )
-
-    new_coaches = [c for c in cleaned if c["email"] not in existing_emails]
-    duplicate_coaches = [c for c in cleaned if c["email"] in existing_emails]
+    for item in api_coaches:
+        if not (item.get("email") or "").strip():
+            continue
+        parsed = _parse_api_coach(item)
+        existing = _lookup_coach(parsed)
+        if existing is None:
+            new_coaches.append(parsed)
+        else:
+            changed = _changed_scalar_fields(existing, parsed)
+            if changed:
+                updated_coaches.append({"parsed": parsed, "changed": changed})
+            else:
+                unchanged_coaches.append(parsed)
 
     from django.shortcuts import render
     return render(request, "profiles/coach_import_preview.html", {
         "new_coaches": new_coaches,
-        "duplicate_coaches": duplicate_coaches,
+        "updated_coaches": updated_coaches,
+        "unchanged_coaches": unchanged_coaches,
     })
 
 
@@ -351,13 +499,14 @@ def _render_preview_error(request, message):
     return render(request, "profiles/coach_import_preview.html", {
         "api_error": message,
         "new_coaches": [],
-        "duplicate_coaches": [],
+        "updated_coaches": [],
+        "unchanged_coaches": [],
     })
 
 
 @login_required
 def coach_import_confirm(request):
-    """POST — re-validate submitted emails against the API, create new coaches."""
+    """POST — re-fetch from API and upsert selected coaches."""
     if not (request.user.is_staff or request.user.is_superuser):
         from django.core.exceptions import PermissionDenied
         raise PermissionDenied
@@ -366,15 +515,18 @@ def coach_import_confirm(request):
         from django.shortcuts import redirect
         return redirect("get_coaches")
 
-    submitted_emails = {e.strip().lower() for e in request.POST.getlist("coach_emails") if e.strip()}
+    # hub_ids submitted from the preview form (new + updated coaches).
+    submitted_hub_ids = {
+        s.strip() for s in request.POST.getlist("hub_ids") if s.strip()
+    }
 
-    if not submitted_emails:
+    if not submitted_hub_ids:
         from django.contrib import messages
         from django.shortcuts import redirect
         messages.info(request, "Es wurden keine Coaches zum Importieren ausgewählt.")
         return redirect("coach_list")
 
-    # Re-fetch from API to avoid trusting raw POST data for names
+    # Re-fetch from API — never trust raw POST data for field values.
     try:
         api_coaches = _fetch_coaches_from_api()
     except (ValueError, requests.RequestException) as exc:
@@ -384,29 +536,36 @@ def coach_import_confirm(request):
         return redirect("coach_list")
 
     created_count = 0
+    updated_count = 0
+
     for item in api_coaches:
         parsed = _parse_api_coach(item)
-        if parsed["email"] not in submitted_emails:
+        hub_id_str = str(parsed["coaching_hub_id"]) if parsed["coaching_hub_id"] else None
+        if hub_id_str not in submitted_hub_ids:
             continue
-        _, created = Coach.objects.get_or_create(
-            email=parsed["email"],
-            defaults={
-                "first_name": parsed["first_name"],
-                "last_name": parsed["last_name"],
-                "preferred_communication_channel": parsed["preferred_communication_channel"],
-                "slack_user_id": parsed["slack_user_id"],
-                "status": parsed["status"],
-                "status_notes": parsed["status_notes"],
-                "maximum_capacity": parsed["maximum_capacity"],
-            },
-        )
-        if created:
+
+        existing = _lookup_coach(parsed)
+        if existing:
+            _apply_parsed_to_coach(existing, parsed)
+            _set_m2m(existing, parsed)
+            updated_count += 1
+        else:
+            if not parsed["email"]:
+                continue
+            coach = Coach(email=parsed["email"])
+            _apply_parsed_to_coach(coach, parsed)
+            _set_m2m(coach, parsed)
             created_count += 1
 
     from django.contrib import messages
     from django.shortcuts import redirect
+    parts = []
     if created_count:
-        messages.success(request, f"{created_count} Coach{'es' if created_count != 1 else ''} wurde{'n' if created_count != 1 else ''} importiert.")
+        parts.append(f"{created_count} neu importiert")
+    if updated_count:
+        parts.append(f"{updated_count} aktualisiert")
+    if parts:
+        messages.success(request, f"Import abgeschlossen: {', '.join(parts)}.")
     else:
-        messages.info(request, "Alle ausgewählten Coaches waren bereits vorhanden – nichts wurde importiert.")
+        messages.info(request, "Keine Änderungen vorgenommen.")
     return redirect("coach_list")
