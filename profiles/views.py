@@ -153,7 +153,25 @@ class CoachListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
     context_object_name = 'coaches'
     paginate_by = 25
     def get_queryset(self):
-        qs = super().get_queryset().prefetch_related('languages')
+        from django.db.models import Case, When, Value, IntegerField
+        qs = super().get_queryset().prefetch_related(
+            'languages', 'coaching_cities', 'industry_experience'
+        )
+
+        # annotate specialism count for display in the table
+        qs = qs.annotate(
+            specialism_count=(
+                Case(When(expert_for_job_applications=True, then=Value(1)), default=Value(0), output_field=IntegerField()) +
+                Case(When(leadership_coaching=True, then=Value(1)), default=Value(0), output_field=IntegerField()) +
+                Case(When(intercultural_coaching=True, then=Value(1)), default=Value(0), output_field=IntegerField()) +
+                Case(When(high_profile_coaching=True, then=Value(1)), default=Value(0), output_field=IntegerField()) +
+                Case(When(coaching_with_language_barriers=True, then=Value(1)), default=Value(0), output_field=IntegerField()) +
+                Case(When(hr_experience=True, then=Value(1)), default=Value(0), output_field=IntegerField()) +
+                Case(When(therapeutic_experience=True, then=Value(1)), default=Value(0), output_field=IntegerField()) +
+                Case(When(adhs_coaching=True, then=Value(1)), default=Value(0), output_field=IntegerField()) +
+                Case(When(lgbtq_coaching=True, then=Value(1)), default=Value(0), output_field=IntegerField())
+            )
+        )
 
         # text search (name / email)
         q = self.request.GET.get('q')
@@ -170,9 +188,31 @@ class CoachListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
         if status:
             qs = qs.filter(status=status)
 
-        # (language filtering removed)
+        # language filter
+        language = self.request.GET.get('language')
+        if language:
+            qs = qs.filter(languages__pk=language)
 
-        # coaching formats
+        # city filter
+        city = self.request.GET.get('city')
+        if city:
+            qs = qs.filter(coaching_cities__pk=city)
+
+        # industry filter
+        industry = self.request.GET.get('industry')
+        if industry:
+            qs = qs.filter(industry_experience__pk=industry)
+
+        # specialism filters (each checked box limits to coaches where that field is True)
+        for field, _ in _SPECIALISM_CHOICES:
+            if self.request.GET.get(f'spec_{field}'):
+                qs = qs.filter(**{field: True})
+
+        # own coaching room filter
+        if self.request.GET.get('own_room'):
+            qs = qs.filter(own_coaching_room=True)
+
+        # coaching format filters
         if self.request.GET.get('format_online'):
             qs = qs.filter(coaching_format_online=True)
         if self.request.GET.get('format_presence'):
@@ -180,7 +220,7 @@ class CoachListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
         if self.request.GET.get('format_hybrid'):
             qs = qs.filter(coaching_format_hybrid=True)
 
-        return qs
+        return qs.distinct()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -189,9 +229,22 @@ class CoachListView(LoginRequiredMixin, StaffRequiredMixin, ListView):
         context['statuses'] = Coach.Status.choices
         context['Status'] = Coach.Status
 
+        # filter option lists
+        context['languages'] = Language.objects.all()
+        context['cities'] = City.objects.all()
+        context['industries'] = Industry.objects.all()
+        context['specialism_choices'] = _SPECIALISM_CHOICES
+
         # selected values for form population
-        context['q'] = self.request.GET.get('q','')
-        context['selected_status'] = self.request.GET.get('status','')
+        context['q'] = self.request.GET.get('q', '')
+        context['selected_status'] = self.request.GET.get('status', '')
+        context['selected_language'] = self.request.GET.get('language', '')
+        context['selected_city'] = self.request.GET.get('city', '')
+        context['selected_industry'] = self.request.GET.get('industry', '')
+        context['selected_specialisms'] = [
+            f for f, _ in _SPECIALISM_CHOICES if self.request.GET.get(f'spec_{f}')
+        ]
+        context['selected_own_room'] = bool(self.request.GET.get('own_room'))
         context['selected_online'] = bool(self.request.GET.get('format_online'))
         context['selected_presence'] = bool(self.request.GET.get('format_presence'))
         context['selected_hybrid'] = bool(self.request.GET.get('format_hybrid'))
@@ -296,6 +349,19 @@ _FIELD_LABELS = {
     "preferred_communication_channel": "Kanal", "slack_user_id": "Slack ID",
     "status": "Status", "status_notes": "Status-Kommentar", "maximum_capacity": "Max. Kapazität",
 }
+
+# (field_name, human-readable label) for each boolean specialism on Coach.
+_SPECIALISM_CHOICES = [
+    ("expert_for_job_applications", "Job-Bewerbungen"),
+    ("leadership_coaching", "Führungscoaching"),
+    ("intercultural_coaching", "Interkulturelles Coaching"),
+    ("high_profile_coaching", "High-Profile"),
+    ("coaching_with_language_barriers", "Sprachbarrieren"),
+    ("hr_experience", "HR-Erfahrung"),
+    ("therapeutic_experience", "Therapeutische Erfahrung"),
+    ("adhs_coaching", "ADHS-Coaching"),
+    ("lgbtq_coaching", "LGBTQ+ Coaching"),
+]
 
 
 def _fetch_coaches_from_api():

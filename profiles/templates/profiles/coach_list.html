@@ -19,36 +19,82 @@
 
   {% if coaches %}
   <div class="px-6 pb-4 mb-6">
-    <form method="get" class="flex flex-wrap items-center gap-3">
-      <input type="search" name="q" value="{{ q }}" placeholder="Suche Name oder E‑Mail"
-             class="px-3 py-2 rounded-lg border border-neutral-200 text-sm w-64" />
+    <form method="get" class="flex flex-col gap-3">
 
-      <select name="status" class="px-3 py-2 rounded-lg border border-neutral-200 text-sm">
-        <option value="">Alle Status</option>
-        {% for val,label in statuses %}
-        <option value="{{ val }}" {% if val == selected_status %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
+      {# — Primary filter row — #}
+      <div class="flex flex-wrap items-center gap-3">
+        <input type="search" name="q" value="{{ q }}" placeholder="Suche Name oder E-Mail"
+               class="px-3 py-2 rounded-lg border border-neutral-200 text-sm w-64" />
 
-      {# language filter removed #}
+        <select name="status" class="px-3 py-2 rounded-lg border border-neutral-200 text-sm">
+          <option value="">Alle Status</option>
+          {% for val,label in statuses %}
+          <option value="{{ val }}" {% if val == selected_status %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
 
-      <label class="text-sm inline-flex items-center gap-2">
-        <input type="checkbox" name="format_online" value="1" {% if selected_online %}checked{% endif %} />
-        Online
-      </label>
-      <label class="text-sm inline-flex items-center gap-2">
-        <input type="checkbox" name="format_presence" value="1" {% if selected_presence %}checked{% endif %} />
-        Präsenz
-      </label>
-      <label class="text-sm inline-flex items-center gap-2">
-        <input type="checkbox" name="format_hybrid" value="1" {% if selected_hybrid %}checked{% endif %} />
-        Hybrid
-      </label>
+        <select name="language" class="px-3 py-2 rounded-lg border border-neutral-200 text-sm">
+          <option value="">Alle Sprachen</option>
+          {% for lang in languages %}
+          <option value="{{ lang.pk }}" {% if lang.pk|stringformat:"s" == selected_language %}selected{% endif %}>{{ lang.name }}</option>
+          {% endfor %}
+        </select>
 
-      <div class="ml-auto flex items-center gap-2">
-        <button type="submit" class="px-4 py-2 rounded-lg bg-primary-500 text-white text-sm">Filter</button>
-        <a href="{% url 'coach_list' %}" class="text-sm text-neutral-500">Zurücksetzen</a>
+        <select name="city" class="px-3 py-2 rounded-lg border border-neutral-200 text-sm">
+          <option value="">Alle Städte</option>
+          {% for city_obj in cities %}
+          <option value="{{ city_obj.pk }}" {% if city_obj.pk|stringformat:"s" == selected_city %}selected{% endif %}>{{ city_obj.name }}</option>
+          {% endfor %}
+        </select>
+
+        <select name="industry" class="px-3 py-2 rounded-lg border border-neutral-200 text-sm">
+          <option value="">Alle Branchen</option>
+          {% for ind in industries %}
+          <option value="{{ ind.pk }}" {% if ind.pk|stringformat:"s" == selected_industry %}selected{% endif %}>{{ ind.name }}</option>
+          {% endfor %}
+        </select>
+
+        <label class="text-sm inline-flex items-center gap-2">
+          <input type="checkbox" name="format_online" value="1" {% if selected_online %}checked{% endif %} />
+          Online
+        </label>
+        <label class="text-sm inline-flex items-center gap-2">
+          <input type="checkbox" name="format_presence" value="1" {% if selected_presence %}checked{% endif %} />
+          Präsenz
+        </label>
+        <label class="text-sm inline-flex items-center gap-2">
+          <input type="checkbox" name="format_hybrid" value="1" {% if selected_hybrid %}checked{% endif %} />
+          Hybrid
+        </label>
+        <label class="text-sm inline-flex items-center gap-2">
+          <input type="checkbox" name="own_room" value="1" {% if selected_own_room %}checked{% endif %} />
+          Eigener Raum
+        </label>
+
+        <div class="ml-auto flex items-center gap-2">
+          <button type="submit" class="px-4 py-2 rounded-lg bg-primary-500 text-white text-sm">Filter</button>
+          <a href="{% url 'coach_list' %}" class="text-sm text-neutral-500">Zurücksetzen</a>
+        </div>
       </div>
+
+      {# — Schwerpunkte (specialism) filter — collapsible — #}
+      <details {% if selected_specialisms %}open{% endif %} class="text-sm">
+        <summary class="cursor-pointer select-none text-neutral-600 hover:text-neutral-800 transition-colors inline-flex items-center gap-1 w-fit list-none">
+          Schwerpunkte
+          {% if selected_specialisms %}
+          <span class="ml-1 px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-700 text-xs font-medium">{{ selected_specialisms|length }}</span>
+          {% endif %}
+        </summary>
+        <div class="mt-2 flex flex-wrap gap-3">
+          {% for field, label in specialism_choices %}
+          <label class="inline-flex items-center gap-1.5">
+            <input type="checkbox" name="spec_{{ field }}" value="1" {% if field in selected_specialisms %}checked{% endif %} class="rounded" />
+            <span>{{ label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </details>
+
     </form>
   </div>
 
@@ -61,6 +107,7 @@
           <th class="px-5 py-3 font-semibold text-left">Status</th>
           <th class="px-5 py-3 font-semibold text-left">Sprachen</th>
           <th class="px-5 py-3 font-semibold text-left">Formate</th>
+          <th class="px-5 py-3 font-semibold text-left">Schwerpunkte</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-neutral-100">
@@ -90,6 +137,13 @@
             {% if coach.coaching_format_online %}<span class="inline-block px-2 py-0.5 mr-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Online</span>{% endif %}
             {% if coach.coaching_format_presence %}<span class="inline-block px-2 py-0.5 mr-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Präsenz</span>{% endif %}
             {% if coach.coaching_format_hybrid %}<span class="inline-block px-2 py-0.5 mr-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-700">Hybrid</span>{% endif %}
+          </td>
+          <td class="px-5 py-3 text-neutral-600">
+            {% if coach.specialism_count %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-700">{{ coach.specialism_count }}</span>
+            {% else %}
+            <span class="text-neutral-300">–</span>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
