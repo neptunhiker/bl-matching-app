@@ -762,16 +762,6 @@ def send_all_rtcs_declined_info_slack(matching_attempt):
                 "text": f"👉 Bitte schau Dir schnellstmöglich das <{url_matching_attempt}|➡ Matching> an und nimm Kontakt mit {participant.first_name} auf."
             }
         },
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": (
-                    f"🔎 *Teilnehmerdetails*\n\n"
-                    f"<{url_participant}|➡ Zum Profil von {participant.first_name}>"
-                )
-            },
-        },
     ]
 
     message = _blocks_to_text(blocks)
