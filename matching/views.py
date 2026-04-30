@@ -646,17 +646,13 @@ class ConfirmIntroCallView(View):
     -------------
     1. Look up token in DB
     2. If token not found → render invalid token page
-    3. If token already used (used_at set) → render already used page
-    4. If MatchingAttempt already in a terminal state → render already used page with previous status
-    5. Otherwise, log a INTRO_CALL_FEEDBACK_RECEIVED_FROM_COACH event and render success page
+    2a. If MatchingAttempt is cancelled → render matching cancelled page (checked
+        before already_used so repeat clicks also show cancelled, not already-used)
+    2b. If token already used (used_at set) → render already used page
+    3. If MatchingAttempt already completed → render already used page with previous status
+    4. Otherwise, log a INTRO_CALL_FEEDBACK_RECEIVED_FROM_COACH event and render success page
 
     Note: this view does not transition MatchingAttempt state. It only records the event."""
-
-
-    # States that mean that the matching has been completed already
-    TERMINAL_STATES = {
-        MatchingAttempt.State.MATCHING_COMPLETED,
-    }
 
 
     def get(self, request, token):
@@ -682,7 +678,14 @@ class ConfirmIntroCallView(View):
             'participant_first_name': participant.first_name,
         }
 
-        # ── 2. Token already consumed ────────────────────────────────────────
+        # ── 2a. Matching was cancelled ───────────────────────────────────────
+        # Checked before `already_used` so that every click — including repeat
+        # clicks on an already-consumed token — consistently shows the
+        # cancelled page rather than the generic "already answered" page.
+        if ma.state == MatchingAttempt.State.CANCELLED:
+            return render(request, 'matching/response_matching_cancelled.html', base_context)
+
+        # ── 2b. Token already consumed ───────────────────────────────────────
         if already_used:
             return render(
                 request,
@@ -690,8 +693,8 @@ class ConfirmIntroCallView(View):
                 {**base_context},
             )
 
-        # ── 3. MatchingAttempt already in a terminal state ────────────────────
-        if ma.state in MatchingAttempt.TERMINAL_STATES:
+        # ── 3. Matching already completed ────────────────────────────────────
+        if ma.state == MatchingAttempt.State.MATCHING_COMPLETED:
             return render(
                 request,
                 'matching/response_already_used.html',
