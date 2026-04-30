@@ -696,6 +696,10 @@ class ConfirmIntroCallView(View):
             event_type=MatchingEvent.EventType.INTRO_CALL_FEEDBACK_RECEIVED_FROM_COACH,
             triggered_by=TriggeredByOptions.COACH,
             triggered_by_user=None,
+            payload={
+                "coach_id": str(coach.id),
+                "coach_name": coach.full_name,
+            },
         )
         
         return render(

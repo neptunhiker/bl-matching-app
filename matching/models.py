@@ -537,6 +537,7 @@ class RequestToCoach(models.Model):
             payload={
                 "rtc_id": str(self.id),
                 "coach_id": str(self.coach_id) if self.coach_id is not None else None,
+                "coach_name": str(self.coach),
                 "deadline_at": self.deadline_at.isoformat(),
             }
         )

@@ -214,6 +214,7 @@ def accept_or_decline_request_to_coach(rtc, accept: bool, response_time: datetim
                 payload={
                     "rtc_id": str(rtc.id),
                     "coach_id": str(rtc.coach_id) if rtc.coach_id is not None else None,
+                    "coach_name": str(rtc.coach),
                     "response_time": response_time.isoformat(),
                     "on_time": on_time,
                     "deadline_at": rtc.deadline_at.isoformat(),
@@ -229,6 +230,7 @@ def accept_or_decline_request_to_coach(rtc, accept: bool, response_time: datetim
             payload={
                 "rtc_id": str(rtc.id),
                 "coach_id": str(rtc.coach_id) if rtc.coach_id is not None else None,
+                "coach_name": str(rtc.coach),
                 "response_time": response_time.isoformat(),
                 "on_time": on_time,
                 "deadline_at": rtc.deadline_at.isoformat(),
