@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Matching abgebrochen{% endblock %}
+
+{% block body %}
+<div class="max-w-lg mx-auto px-4 py-16 text-center">
+
+  <div class="flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full bg-neutral-100">
+    <img src="{% static 'icons/warning.svg' %}" class="w-8 h-8 text-neutral-400" alt="Abgebrochen" />
+  </div>
+
+  <h1 class="text-2xl font-bold text-neutral-800 mb-3">Matching abgebrochen</h1>
+  <p class="text-neutral-600">
+    Dieser Link ist nicht mehr gültig, weil das Matching-Verfahren abgebrochen wurde.
+  </p>
+
+  <p class="mt-6 text-sm text-neutral-400">
+    Falls du Fragen hast, melde dich gerne beim BeginnerLuft-Team.
+  </p>
+
+</div>
+{% endblock %}
