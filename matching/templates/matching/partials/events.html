@@ -75,6 +75,8 @@
                 {% else %}{{ u.email }}{% endif %}
               {% endwith %}
             </p>
+          {% elif e.payload.coach_name %}
+            <p class="text-xs text-neutral-400">{{ e.payload.coach_name }}</p>
           {% elif e.payload.participant %}
             <p class="text-xs text-neutral-400">
               {{ e.payload.participant }}

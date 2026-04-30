@@ -29,6 +29,8 @@
 							{% with user=matching_event.triggered_by_user %}
 								&nbsp;|&nbsp;{{ user.get_full_name|default:user }}
 							{% endwith %}
+						{% elif matching_event.payload.coach_name %}
+							&nbsp;|&nbsp;{{ matching_event.payload.coach_name }}
 						{% endif %}
 					</p>
 				</div>
