@@ -554,8 +554,10 @@ class ParticipantRespondView(View):
     Decision tree
     -------------
     1. Token not found in DB          → participant_response_invalid.html
-    2. Token already used (used_at set) → participant_response_already_used.html
-    3. MatchingAttempt already resolved  → participant_response_already_used.html
+    2a. MatchingAttempt is cancelled  → response_matching_cancelled.html (checked before
+        already_used so repeat clicks also show cancelled, not already-used)
+    2b. Token already used (used_at set) → response_already_used.html
+    3. MatchingAttempt already completed → participant_response_already_used.html
        (participant replied via a different email's token — e.g. accepted email 1,
        then clicked the decline link in the reminder email)
     4. Determine on-time vs. late:
@@ -590,7 +592,14 @@ class ParticipantRespondView(View):
             'participant': participant,
         }
 
-        # ── 2. Token already consumed ────────────────────────────────────────
+        # ── 2a. Matching was cancelled ───────────────────────────────────────
+        # Checked before `already_used` so that every click — including repeat
+        # clicks on an already-consumed token — consistently shows the
+        # cancelled page rather than the generic "already answered" page.
+        if matching_attempt.state == MatchingAttempt.State.CANCELLED:
+            return render(request, 'matching/response_matching_cancelled.html', base_context)
+
+        # ── 2b. Token already consumed ───────────────────────────────────────
         if already_used:
             return render(
                 request,
