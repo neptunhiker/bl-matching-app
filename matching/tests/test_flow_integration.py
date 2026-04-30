@@ -221,6 +221,10 @@ def test_s1_full_happy_path_slack_coach(
         event_type=MatchingEvent.EventType.INTRO_CALL_FEEDBACK_RECEIVED_FROM_COACH,
         triggered_by=TriggeredByOptions.COACH,
         triggered_by_user=None,
+        payload={
+            "coach_id": str(ma.matched_coach_id),
+            "coach_name": ma.matched_coach.full_name,
+        },
     )
 
     ma = _fresh(MatchingAttempt, ma.pk)
@@ -326,6 +330,10 @@ def test_s1_full_happy_path_email_coach(
         event_type=MatchingEvent.EventType.INTRO_CALL_FEEDBACK_RECEIVED_FROM_COACH,
         triggered_by=TriggeredByOptions.COACH,
         triggered_by_user=None,
+        payload={
+            "coach_id": str(ma.matched_coach_id),
+            "coach_name": ma.matched_coach.full_name,
+        },
     )
 
     notifications["send_feedback_request_email_after_intro_call_to_participant"].assert_called_once()
