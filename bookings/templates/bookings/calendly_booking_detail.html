@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% load tz %}
 
-{% block title %}{{ booking.invitee_name|default:booking.invitee_email }} – Buchung{% endblock %}
+{% block title %}{{ booking.invitee_name|default:booking.invitee_email }} – Erstgespräch{% endblock %}
 
 {% block body %}
 {% include "components/_layout.html" with layout_mode="start" layout_outer_class="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14" %}
 
   {# Breadcrumb #}
   <nav class="text-xs text-neutral-400 mb-6">
-    <a href="{% url 'calendly_bookings_list' %}" class="hover:text-primary-500 transition-colors">Calendly Buchungen</a>
+    <a href="{% url 'calendly_bookings_list' %}" class="hover:text-primary-500 transition-colors">Calendly Erstgespräche</a>
     <span class="mx-2">/</span>
     <span class="text-tertiary-700">{{ booking.invitee_name|default:booking.invitee_email }}</span>
   </nav>
@@ -32,7 +32,7 @@
     {# Page header #}
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-8 border-b border-neutral-100">
       <div>
-        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-2">Calendly Buchung</p>
+        <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-2">Calendly Erstgespräch</p>
         <h1 class="text-3xl font-semibold tracking-tight text-neutral-900 leading-tight">
           {{ booking.invitee_name|default:booking.invitee_email }}
         </h1>

@@ -32,7 +32,7 @@
         <li><a href="{% url 'matching_attempts' %}" class="px-4 py-2 rounded-lg text-sm text-tertiary-700 hover:bg-white/30 hover:text-tertiary-900 transition-colors">Matchings</a></li>
         <li><a href="{% url 'participant_list' %}" class="px-4 py-2 rounded-lg text-sm text-tertiary-700 hover:bg-white/30 hover:text-tertiary-900 transition-colors">Teilnehmer:innen</a></li>
         <li><a href="{% url 'coach_list' %}" class="px-4 py-2 rounded-lg text-sm text-tertiary-700 hover:bg-white/30 hover:text-tertiary-900 transition-colors">Coaches</a></li>
-        <li><a href="{% url 'calendly_bookings_list' %}" class="px-4 py-2 rounded-lg text-sm text-tertiary-700 hover:bg-white/30 hover:text-tertiary-900 transition-colors">Buchungen</a></li>
+        <li><a href="{% url 'calendly_bookings_list' %}" class="px-4 py-2 rounded-lg text-sm text-tertiary-700 hover:bg-white/30 hover:text-tertiary-900 transition-colors">Erstgespräche</a></li>
         <li><a href="https://coaching-hub.beginnerluft.de" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-lg text-sm text-tertiary-700 hover:bg-white/30 hover:text-tertiary-900 transition-colors">Coaching&#8209;Hub ↗</a></li>
         <li class="relative ml-2" id="user-menu-container">
           <button id="user-menu-btn"
@@ -99,7 +99,7 @@
       <li><a href="{% url 'matching_attempts' %}" class="flex items-center py-3 text-sm text-tertiary-700 hover:text-primary-600 transition-colors">Matchings</a></li>
       <li><a href="{% url 'participant_list' %}" class="flex items-center py-3 text-sm text-tertiary-700 hover:text-primary-600 transition-colors">Teilnehmer:innen</a></li>
       <li><a href="{% url 'coach_list' %}" class="flex items-center py-3 text-sm text-tertiary-700 hover:text-primary-600 transition-colors">Coaches</a></li>
-      <li><a href="{% url 'calendly_bookings_list' %}" class="flex items-center py-3 text-sm text-tertiary-700 hover:text-primary-600 transition-colors">Buchungen</a></li>
+      <li><a href="{% url 'calendly_bookings_list' %}" class="flex items-center py-3 text-sm text-tertiary-700 hover:text-primary-600 transition-colors">Erstgespräche</a></li>
       <li><a href="https://coaching-hub.beginnerluft.de" target="_blank" rel="noopener noreferrer" class="flex items-center py-3 text-sm text-tertiary-700 hover:text-secondary-600 transition-colors">Coaching&#8209;Hub ↗</a></li>
       {% if user.is_superuser %}<li><a href="{% url 'admin:index' %}" class="flex items-center py-3 text-sm text-tertiary-700 hover:text-tertiary-900 transition-colors">Admin</a></li>{% endif %}
       <li>

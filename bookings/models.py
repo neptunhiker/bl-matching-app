@@ -53,8 +53,8 @@ class CalendlyBooking(models.Model):
         super().save(*args, **kwargs)
         
     class Meta:
-        verbose_name = "Calendly Buchung"
-        verbose_name_plural = "Calendly Buchungen"
+        verbose_name = "Calendly Erstgespräch"
+        verbose_name_plural = "Calendly Erstgespräche"
         ordering = ["-created_at"]
 
     def __str__(self):
