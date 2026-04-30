@@ -907,7 +907,7 @@ def send_intro_call_timeout_notification_to_staff_slack(matching_attempt):
     coach = matching_attempt.matched_coach
     participant = matching_attempt.participant
     bl_contact = matching_attempt.bl_contact
-    url_participant = settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk})
+    url_matching_attempt = settings.SITE_URL.rstrip("/") + reverse("matching_attempt_detail", kwargs={"pk": matching_attempt.pk})
     deadline = matching_attempt.intro_call_deadline_at
     user_id = bl_contact.slack_user_id if bl_contact else None
 
@@ -943,6 +943,13 @@ def send_intro_call_timeout_notification_to_staff_slack(matching_attempt):
                     f"*Teilnehmer:in:* {participant}\n"
                     f"*Coach:* {coach}\n\n"
                 )
+            },
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"<{url_matching_attempt}|➡ Zum Matching>",
             },
         },
     ]
@@ -994,8 +1001,8 @@ def send_clarification_call_booked_info_to_staff_slack(matching_attempt):
     participant = matching_attempt.participant
     bl_contact = matching_attempt.bl_contact
 
-    url_participant = settings.SITE_URL.rstrip("/") + reverse(
-        "participant_detail", kwargs={"pk": participant.pk}
+    url_matching_attempt = settings.SITE_URL.rstrip("/") + reverse(
+        "matching_attempt_detail", kwargs={"pk": matching_attempt.pk}
     )
 
     user_id = bl_contact.slack_user_id
@@ -1065,7 +1072,7 @@ def send_clarification_call_booked_info_to_staff_slack(matching_attempt):
         "type": "section",
         "text": {
             "type": "mrkdwn",
-            "text": f"🔎 *Profil*\n<{url_participant}|➡ Zum Profil von {participant.first_name}>",
+            "text": f"<{url_matching_attempt}|➡ Zum Matching>",
         },
     })
 
@@ -1208,7 +1215,7 @@ def send_participant_intro_call_feedback_timeout_notification_to_staff_slack(mat
     coach = matching_attempt.matched_coach
     participant = matching_attempt.participant
     bl_contact = matching_attempt.bl_contact
-    url_participant = settings.SITE_URL.rstrip("/") + reverse("participant_detail", kwargs={"pk": participant.pk})
+    url_matching_attempt = settings.SITE_URL.rstrip("/") + reverse("matching_attempt_detail", kwargs={"pk": matching_attempt.pk})
     user_id = bl_contact.slack_user_id if bl_contact else None
 
     if not user_id:
@@ -1244,9 +1251,16 @@ def send_participant_intro_call_feedback_timeout_notification_to_staff_slack(mat
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"*Teilnehmer:in:* <{url_participant}|{participant}>\n"
+                    f"*Teilnehmer:in:* {participant}\n"
                     f"*Coach:* {coach}\n"
                 ),
+            },
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"<{url_matching_attempt}|➡ Zum Matching>",
             },
         },
     ]
