@@ -466,6 +466,7 @@ class CoachRespondView(View):
     TERMINAL_STATES = {
         RequestToCoach.State.ACCEPTED,
         RequestToCoach.State.REJECTED,
+        RequestToCoach.State.CANCELLED,
     }
 
     def get(self, request, token):
@@ -492,7 +493,14 @@ class CoachRespondView(View):
             'coach': coach,
         }
 
-        # ── 2. Token already consumed ────────────────────────────────────────
+        # ── 2a. Parent MatchingAttempt is cancelled ──────────────────────────
+        # Checked before `already_used` so that every click — including repeat
+        # clicks on an already-consumed token — consistently shows the
+        # cancelled page rather than the generic "already answered" page.
+        if rtc.matching_attempt.state == MatchingAttempt.State.CANCELLED:
+            return render(request, 'matching/response_matching_cancelled.html', base_context)
+
+        # ── 2b. Token already consumed ───────────────────────────────────────
         if already_used:
             return render(
                 request,
