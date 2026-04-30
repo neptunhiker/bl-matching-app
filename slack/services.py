@@ -1006,7 +1006,7 @@ def send_clarification_call_booked_info_to_staff_slack(matching_attempt):
         .first()
     )
 
-    subject = f"📅 {participant.first_name} hat ein Klärungsgespräch gebucht"
+    subject = f"🔥 {participant.first_name} hat ein Klärungsgespräch gebucht"
 
     # Build start-time block content
     if booking and booking.start_time:
