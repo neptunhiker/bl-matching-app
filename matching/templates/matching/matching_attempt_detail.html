@@ -383,7 +383,7 @@
       <div class="space-y-4 px-6 py-6">
         
 
-        {% if (matching_attempt.is_active or matching_attempt.state == 'failed') and not matching_attempt.matched_coach %}
+        {% if matching_attempt.is_active and not matching_attempt.matched_coach or matching_attempt.state == 'failed' and not matching_attempt.matched_coach %}
         <a
           href="{% url 'manual_override_matching' matching_attempt.pk %}"
           class="group flex w-full items-start gap-4 rounded-2xl  bg-stone-200 px-5 py-4 text-left transition duration-200 hover:-translate-y-0.5 border-2 hover:border-green-600"
