@@ -795,8 +795,17 @@ class ManualOverrideMatchingView(LoginRequiredMixin, StaffRequiredMixin, View):
     POST /matching/<pk>/manual_matching_override/
     """
 
+    def _is_allowed(self, matching_attempt):
+        allowed_states = MatchingAttempt.ACTIVESTATES + [MatchingAttempt.State.FAILED]
+        return (
+            matching_attempt.state in allowed_states
+            and matching_attempt.matched_coach is None
+        )
+
     def get(self, request, matching_attempt_pk):
         matching_attempt = get_object_or_404(MatchingAttempt, pk=matching_attempt_pk)
+        if not self._is_allowed(matching_attempt):
+            return redirect(reverse("matching_attempt_detail", kwargs={"pk": matching_attempt_pk}))
         return render(request, 'matching/manual_matching_override.html', {
             "matching_attempt": matching_attempt,
             "available_coaches": Coach.objects.available().order_by('last_name', 'first_name'),
@@ -804,6 +813,8 @@ class ManualOverrideMatchingView(LoginRequiredMixin, StaffRequiredMixin, View):
 
     def post(self, request, matching_attempt_pk):
         matching_attempt = get_object_or_404(MatchingAttempt, pk=matching_attempt_pk)
+        if not self._is_allowed(matching_attempt):
+            return redirect(reverse("matching_attempt_detail", kwargs={"pk": matching_attempt_pk}))
         coach_id = request.POST.get("coach_id")
         coach = get_object_or_404(Coach, pk=coach_id)
         services.manually_match_participant_to_coach(matching_attempt, coach, triggered_by_user=request.user)

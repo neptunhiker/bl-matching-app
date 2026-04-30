@@ -383,6 +383,7 @@
       <div class="space-y-4 px-6 py-6">
         
 
+        {% if (matching_attempt.is_active or matching_attempt.state == 'failed') and not matching_attempt.matched_coach %}
         <a
           href="{% url 'manual_override_matching' matching_attempt.pk %}"
           class="group flex w-full items-start gap-4 rounded-2xl  bg-stone-200 px-5 py-4 text-left transition duration-200 hover:-translate-y-0.5 border-2 hover:border-green-600"
@@ -407,8 +408,34 @@
             </p>
           </div>
         </a>
+        {% else %}
+        <div class="group flex w-full items-start gap-4 rounded-2xl bg-stone-200 px-5 py-4 text-left opacity-50 cursor-not-allowed border-2 border-transparent">
+          <div class="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-stone-100">
+            <span class="h-5 w-5 text-green-500">
+              {% include 'components/icons/heart.html' %}
+            </span>
+          </div>
 
-<form
+          <div class="flex-1">
+            <div class="flex items-center justify-between gap-3">
+              <span class="font-semibold">
+                Coach manuell matchen
+              </span>
+            </div>
+            <p class="mt-1 text-sm leading-5">
+              Weise diesem Matching direkt einen bestimmten Coach zu.
+            </p>
+            {% if matching_attempt.matched_coach %}
+            <p class="mt-1.5 text-xs text-amber-600">Diesem Matching ist bereits ein Coach zugewiesen.</p>
+            {% else %}
+            <p class="mt-1.5 text-xs text-neutral-400">Das Matching wurde abgebrochen.</p>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if matching_attempt.state != 'matching_completed' and matching_attempt.state != 'cancelled' %}
+        <form
           method="post"
           action="{% url 'matching_attempt_cancel' matching_attempt.pk %}"
           onsubmit="return confirm('Bist du sicher, dass Sie das Matching abbrechen möchten?');"
@@ -441,6 +468,7 @@
             </div>
           </button>
         </form>
+        {% endif %}
 
       </div>
     </div>

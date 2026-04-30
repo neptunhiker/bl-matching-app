@@ -315,7 +315,11 @@ class MatchingAttempt(models.Model):
     def cancel_matching(self):
         pass
     
-    @transition(field=state, source="*", target=State.MATCHING_COMPLETED)
+    @transition(
+        field=state,
+        source=ACTIVESTATES + [State.FAILED],
+        target=State.MATCHING_COMPLETED,
+    )
     def manually_match_with_coach(self, coach: Coach):
         self.matched_coach = coach
         
