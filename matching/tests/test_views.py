@@ -1086,6 +1086,110 @@ def test_confirm_intro_call_valid(client, coach_action_token_confirm_intro_call,
     ).exists()
 
 
+# ── Cancelled-matching token guards ──────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_coach_respond_cancelled_matching(client, coach_action_token_accept, monkeypatch):
+    """First click on an accept token whose parent MatchingAttempt is cancelled
+    must show the cancelled page and must NOT call accept_or_decline_request_to_coach."""
+    import matching.services as svc
+    from matching.models import MatchingAttempt
+    monkeypatch.setattr(svc, 'accept_or_decline_request_to_coach', lambda *a, **k: (_ for _ in ()).throw(AssertionError('should not be called')))
+    ma = coach_action_token_accept.request_to_coach.matching_attempt
+    MatchingAttempt.objects.filter(pk=ma.pk).update(state=MatchingAttempt.State.CANCELLED)
+    url = reverse('coach_respond', kwargs={'token': coach_action_token_accept.token})
+    r = client.get(url)
+    assert r.status_code == 200
+    assert 'matching/response_matching_cancelled.html' in [t.name for t in r.templates]
+
+
+@pytest.mark.django_db
+def test_coach_respond_cancelled_matching_already_used(client, coach_action_token_accept):
+    """Repeat click (token already consumed) on a cancelled matching must still
+    show the cancelled page — not the generic 'already answered' page."""
+    from django.utils import timezone as tz
+    from matching.models import MatchingAttempt
+    ma = coach_action_token_accept.request_to_coach.matching_attempt
+    MatchingAttempt.objects.filter(pk=ma.pk).update(state=MatchingAttempt.State.CANCELLED)
+    coach_action_token_accept.used_at = tz.now()
+    coach_action_token_accept.save()
+    url = reverse('coach_respond', kwargs={'token': coach_action_token_accept.token})
+    r = client.get(url)
+    assert r.status_code == 200
+    assert 'matching/response_matching_cancelled.html' in [t.name for t in r.templates]
+    assert 'matching/response_already_used.html' not in [t.name for t in r.templates]
+
+
+@pytest.mark.django_db
+def test_confirm_intro_call_cancelled_matching(client, coach_action_token_confirm_intro_call):
+    """First click on a confirm-intro-call token whose MatchingAttempt is cancelled
+    must show the cancelled page and must NOT create an event."""
+    from matching.models import MatchingAttempt, MatchingEvent
+    ma = coach_action_token_confirm_intro_call.matching_attempt
+    MatchingAttempt.objects.filter(pk=ma.pk).update(state=MatchingAttempt.State.CANCELLED)
+    url = reverse('confirm_intro_call', kwargs={'token': coach_action_token_confirm_intro_call.token})
+    r = client.get(url)
+    assert r.status_code == 200
+    assert 'matching/response_matching_cancelled.html' in [t.name for t in r.templates]
+    assert not MatchingEvent.objects.filter(
+        matching_attempt=ma,
+        event_type=MatchingEvent.EventType.INTRO_CALL_FEEDBACK_RECEIVED_FROM_COACH,
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_confirm_intro_call_cancelled_matching_already_used(client, coach_action_token_confirm_intro_call):
+    """Repeat click (token already consumed) on a cancelled matching must still
+    show the cancelled page — not the generic 'already answered' page."""
+    from django.utils import timezone as tz
+    from matching.models import MatchingAttempt
+    ma = coach_action_token_confirm_intro_call.matching_attempt
+    MatchingAttempt.objects.filter(pk=ma.pk).update(state=MatchingAttempt.State.CANCELLED)
+    coach_action_token_confirm_intro_call.used_at = tz.now()
+    coach_action_token_confirm_intro_call.save()
+    url = reverse('confirm_intro_call', kwargs={'token': coach_action_token_confirm_intro_call.token})
+    r = client.get(url)
+    assert r.status_code == 200
+    assert 'matching/response_matching_cancelled.html' in [t.name for t in r.templates]
+    assert 'matching/response_already_used.html' not in [t.name for t in r.templates]
+
+
+@pytest.mark.django_db
+def test_participant_respond_cancelled_matching(client, participant_action_token_start, monkeypatch):
+    """First click on a start-coaching token whose MatchingAttempt is cancelled
+    must show the cancelled page and must NOT call the matching service."""
+    import matching.services as svc
+    from matching.models import MatchingAttempt
+    monkeypatch.setattr(
+        svc,
+        'continue_matching_after_participant_responded_to_intro_call_feedback',
+        lambda *a, **k: (_ for _ in ()).throw(AssertionError('should not be called')),
+    )
+    ma = participant_action_token_start.matching_attempt
+    MatchingAttempt.objects.filter(pk=ma.pk).update(state=MatchingAttempt.State.CANCELLED)
+    url = reverse('participant_respond', kwargs={'token': participant_action_token_start.token})
+    r = client.get(url)
+    assert r.status_code == 200
+    assert 'matching/response_matching_cancelled.html' in [t.name for t in r.templates]
+
+
+@pytest.mark.django_db
+def test_participant_respond_cancelled_matching_already_used(client, participant_action_token_start):
+    """Repeat click (token already consumed) on a cancelled matching must still
+    show the cancelled page — not the generic 'already answered' page."""
+    from django.utils import timezone as tz
+    from matching.models import MatchingAttempt
+    ma = participant_action_token_start.matching_attempt
+    MatchingAttempt.objects.filter(pk=ma.pk).update(state=MatchingAttempt.State.CANCELLED)
+    participant_action_token_start.used_at = tz.now()
+    participant_action_token_start.save()
+    url = reverse('participant_respond', kwargs={'token': participant_action_token_start.token})
+    r = client.get(url)
+    assert r.status_code == 200
+    assert 'matching/response_matching_cancelled.html' in [t.name for t in r.templates]
+    assert 'matching/response_already_used.html' not in [t.name for t in r.templates]
+
+
 # ── MatchingAttemptCreateView: uncovered branches ────────────────────────────
 
 @pytest.mark.django_db
