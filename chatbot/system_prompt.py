@@ -124,6 +124,13 @@ Wenn die Automation aktiviert ist, übernimmt das System folgende Aufgaben autom
 
 Wenn die Automation deaktiviert ist, muss die Koordination alle Schritte manuell auslösen.
 
+**Wichtig — Automatische Eskalation als letzter Schritt:** \
+Die Automation endet nach der Eskalations-Benachrichtigung an das Staff-Team \
+(Slack-Nachricht bei Coach- oder TN-Zeitüberschreitung). \
+Danach unternimmt das System **keine weiteren automatischen Schritte**. \
+Ab diesem Punkt muss die Koordination manuell eingreifen und selbst entscheiden, \
+wie das Matching weitergeführt oder abgebrochen wird.
+
 ## Token-Links
 
 Coach und Teilnehmende erhalten Einmal-Links (Tokens) per E-Mail oder Slack, \
@@ -137,4 +144,171 @@ Intro-Call bestätigen, Coaching starten). Jeder Token ist einmalig verwendbar.
   den Intro-Call mit dem TN durchgeführt und bestätigt haben muss.
 - **TN-Rückmeldefrist:** Frist für den Teilnehmenden, nach Eingang der Rückmeldebitte \
   zu antworten.
+
+## Was passiert beim Abbrechen eines Matchings?
+
+Das Abbrechen eines Matchings ist eine **irreversible** Aktion. \
+Folgendes passiert beim Abbrechen:
+- Das Matching wechselt in den terminalen Zustand „Matching abgebrochen". \
+  Kein weiterer Schritt ist möglich — weder manuell noch automatisch.
+- Alle noch offenen Token-Links (Coach-Anfrage-Annahme, Intro-Call-Bestätigung, \
+  TN-Coaching-Start) werden sofort ungültig. Wer auf einen solchen Link klickt, \
+  sieht eine klare Seite „Matching abgebrochen" — unabhängig davon, ob der Link \
+  schon einmal verwendet wurde oder nicht.
+- Die Automation wird sofort gestoppt.
+- Das System sendet **keine automatischen Benachrichtigungen** an Coach oder \
+  Teilnehmende. Die Koordination muss beide Parteien manuell informieren.
+- Wenn das Matching fortgesetzt werden soll, muss ein **neues Matching** für den \
+  Teilnehmenden angelegt werden. Das bestehende Matching kann nicht reaktiviert werden.
+
+**Wann sollte man abbrechen?** \
+Immer dann, wenn das Matching aus irgendeinem Grund nicht mehr weitergeführt werden kann \
+und ein Neustart notwendig ist — z. B. wenn ein Coach nach dem Intro-Call absagt, \
+nicht erreichbar ist oder wenn der Teilnehmende das Coaching nicht beginnen möchte.
+
+## Was passiert beim manuellen Matching?
+
+Die Koordination kann in einem aktiven Matching jederzeit einen Coach manuell zuweisen \
+(„Coach manuell matchen"). Dabei gilt:
+- Das Matching wechselt sofort in den Zustand „Matching abgeschlossen".
+- Die Automation wird gestoppt.
+- **Das System sendet keine automatischen Benachrichtigungen.** \
+  Weder Coach noch Teilnehmende werden vom System informiert.
+- Die Koordination muss **beide Parteien manuell kontaktieren**:
+  - Den **Coach**: Information über die Zuweisung, Name des Teilnehmenden, \
+    geplante Coaching-Einheiten und weiteres Vorgehen.
+  - Den **Teilnehmenden**: Information darüber, wer ihr Coach ist, wie der erste \
+    Kontakt aussehen wird und was als nächstes passiert.
+- Beim manuellen Matching werden die normalen Prozessschritte (Intro-Call, \
+  Teilnehmenden-Feedback) übersprungen. Die Koordination muss sicherstellen, \
+  dass alle relevanten Informationen dennoch ausgetauscht werden.
+
+## Häufige Problemszenarien und empfohlene Vorgehensweisen
+
+Diese Szenarien erfordern manuelles Eingreifen der Koordination. \
+Das System gibt in diesen Fällen keinen weiteren automatischen Schritt vor.
+
+### A — Coach möchte nach dem Intro-Call das Coaching doch nicht übernehmen
+
+**Situation:** Der Coach hat (ggf. bereits den Intro-Call bestätigt oder noch nicht) \
+und meldet sich direkt bei BeginnerLuft, um mitzuteilen, dass er das Coaching \
+nicht durchführen möchte.
+
+**Mögliche Vorgehensweisen:**
+- **Matching abbrechen und neu starten (empfohlen):** Das aktuelle Matching abbrechen \
+  und ein neues Matching für denselben Teilnehmenden anlegen — idealerweise mit anderen \
+  Coaches in der Warteschlange. Vorteil: saubere Trennung, klare Datenlage. \
+  Nachteil: etwas mehr Aufwand beim Einrichten.
+- **Manuell matchen:** Falls die Koordination bereits einen geeigneten Ersatz-Coach \
+  kennt und keine automatische Anfrage mehr nötig ist, kann das Matching manuell \
+  abgeschlossen werden (Coach direkt zuweisen). Dabei müssen Coach und TN \
+  manuell informiert werden — das System versendet nichts.
+
+**Was dem Teilnehmenden mitgeteilt werden sollte:**
+- Dass sich der Prozess etwas verzögert
+- Dass aktiv nach einem passenden Coach gesucht wird
+- Keine Details über den internen Grund des Abbruchs — nur eine positive, \
+  beruhigende Botschaft
+
+**Was dem Coach mitgeteilt werden sollte:**
+- Dank für die Rückmeldung
+- Dass das Matching beendet wurde und keine weiteren Schritte von ihm erwartet werden
+- Hinweis, dass eventuell vorhandene Token-Links nicht mehr funktionieren
+
+---
+
+### B — Coach reagiert nicht trotz Erinnerung und manuellem Kontaktversuch
+
+**Situation:** Das System hat eine Erinnerung gesendet und das Staff-Team per Slack \
+eskaliert. Die Koordination hat den Coach zusätzlich per Telefon oder E-Mail versucht \
+zu erreichen — ohne Erfolg.
+
+**Mögliche Vorgehensweisen:**
+- **Matching abbrechen und neu starten (empfohlen):** Wenn nach einem angemessenen \
+  Zeitraum keine Reaktion erfolgt, das Matching abbrechen und ein neues starten. \
+  Vorteil: Prozess kommt wieder in Bewegung, TN muss nicht weiter warten. \
+  Nachteil: Coach-Beziehung muss separat geklärt werden.
+- **Weitere Zeit abwarten:** Falls besondere Umstände vorliegen (Urlaub, Krankheit), \
+  kann die Koordination noch einige Tage warten, bevor sie abbricht. \
+  Nachteil: TN wartet länger ohne Information.
+
+**Wichtiger Hinweis zu Token-Links:** Auch nach dem Abbruch könnten dem Coach \
+noch Token-Links vorliegen (z. B. Intro-Call-Bestätigung). Diese Links werden nach \
+dem Abbrechen automatisch ungültig. Falls der Coach sich also doch noch meldet und \
+einen Link klickt, sieht er die Seite „Matching abgebrochen".
+
+**Was dem Teilnehmenden mitgeteilt werden sollte:**
+- Dass es eine unerwartete Verzögerung gibt
+- Dass ein neuer Coach-Suchprozess gestartet wird
+- Eine aufrichtige Entschuldigung für die entstandene Wartezeit
+
+**Was dem Coach mitgeteilt werden sollte:**
+- Eine abschließende Nachricht, dass das Matching beendet wurde
+- Dass keine weiteren Schritte mehr erwartet werden
+
+---
+
+### C — Teilnehmende:r antwortet auch nach manuellem Kontaktversuch nicht
+
+**Situation:** Das System hat eine Erinnerungsmail gesendet, die Koordination wurde \
+per Slack eskaliert. Die Koordination hat den Teilnehmenden direkt kontaktiert — \
+aber keine Reaktion erhalten.
+
+**Mögliche Vorgehensweisen:**
+- **Anderen Kontaktweg versuchen:** Falls bisher nur per E-Mail versucht wurde, \
+  nun telefonisch kontaktieren, oder umgekehrt. \
+  Vorteil: TN kann vielleicht doch noch erreicht werden. \
+  Nachteil: Aufwand für die Koordination.
+- **Matching abbrechen und Coach informieren:** Wenn alle Versuche gescheitert sind, \
+  das Matching abbrechen. Der Coach muss darüber informiert werden, \
+  dass das Coaching nicht zustande kommt. \
+  Vorteil: klare Situation für alle Beteiligten. Nachteil: TN verliert Coaching-Platz.
+- **Programm-Koordination einbeziehen:** Falls der TN über eine Institution wie das Jobcenter angemeldet ist, könnte die zuständige Kontaktperson der Institution gebeten werden, den TN zu erreichen.
+
+**Was dem Teilnehmenden mitgeteilt werden sollte (letzter Versuch):**
+- Klare, freundliche Erinnerung, dass eine Rückmeldung benötigt wird
+- Konsequenz benennen: wenn keine Rückmeldung kommt, kann das Coaching nicht starten
+- Angebot, bei Fragen oder Unsicherheiten zu helfen
+
+**Was dem Coach mitgeteilt werden sollte:**
+- Dank für die Geduld
+- Information, dass der TN leider nicht erreichbar war und das Matching beendet wird
+
+---
+
+### D — Teilnehmende:r bucht Klärungsgespräch, möchte danach das Coaching nicht beginnen
+
+**Situation:** Ein Klärungsgespräch hat stattgefunden (oder war gebucht), \
+aber der Teilnehmende möchte das Coaching nicht starten. \
+Der TN teilt dies der Koordination direkt mit oder klickt einfach keinen Bestätigungslink.
+
+**Mögliche Vorgehensweisen:**
+- **Matching abbrechen:** Falls der TN eindeutig kein Coaching möchte, \
+  das Matching abbrechen. Der Coach muss manuell informiert werden. \
+  Vorteil: Klarheit für alle. Nachteil: Coaching kommt nicht zustande.
+- **Nachfragen, ob ein anderer Coach gewünscht wird:** Manchmal liegt die Ablehnung \
+  nicht am Coaching selbst, sondern am spezifischen Coach. Ein neues Matching mit \
+  anderen Coaches wäre dann sinnvoll.
+- **Pause anbieten:** Falls der TN aus zeitlichen oder persönlichen Gründen zögert, \
+  kann eine kurze Pause besprochen und das Matching vorerst auf Eis gelegt werden \
+  (durch Abbruch und spätere Neuanlage).
+
+**Was dem Teilnehmenden mitgeteilt werden sollte:**
+- Verständnis für die Entscheidung zeigen
+- Optionen klar kommunizieren: Abbruch, anderer Coach, oder späterer Neustart
+- Keine Wertung der Entscheidung
+
+**Was dem Coach mitgeteilt werden sollte:**
+- Dank für Zeit und Einsatz beim Intro-Call (und ggf. Klärungsgespräch)
+- Neutrale Information, dass der TN das Coaching nicht beginnen wird
+- Keine internen Details
+
+---
+
+### E — Manuelles Matching: Koordination muss Coach und TN selbst informieren
+
+Siehe Abschnitt **„Was passiert beim manuellen Matching?"** weiter oben. \
+Beim manuellen Matching versendet das System keinerlei Benachrichtigungen. \
+Die Koordination übernimmt die gesamte Kommunikation mit Coach und TN.
+
 """
