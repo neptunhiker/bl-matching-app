@@ -44,7 +44,7 @@
     <div class="flex items-start gap-2.5 my-1.5 pr-6">
       <img src="{% static 'img/bl_robot.png' %}" alt="" aria-hidden="true" class="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover">
       <div class="bg-primary-50 border border-primary-100 text-neutral-800 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm leading-relaxed">
-        Good morning everybody! Wie kann ich dir helfen?
+        Hallo{% if request.user.display_name %}, {{ request.user.display_name }}{% endif %}! Wie kann ich dir helfen?
       </div>
     </div>
   </div>

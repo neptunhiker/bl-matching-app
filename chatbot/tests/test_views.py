@@ -194,3 +194,48 @@ class TestChatViewErrorHandling:
         assert response.status_code == 200
         assert b"data-is-error=\"true\"" in response.content
         assert "unerwarteter Fehler".encode() in response.content
+
+
+# ---------------------------------------------------------------------------
+# Group 4 — Nickname / display_name injection
+# ---------------------------------------------------------------------------
+
+@pytest.mark.django_db
+class TestChatViewDisplayNameInjection:
+
+    @patch("chatbot.views.openai.OpenAI")
+    def test_system_prompt_contains_first_name_when_no_nickname(
+        self, mock_openai_cls, client, staff_user
+    ):
+        """When no nickname is set, the system prompt should reference first_name."""
+        mock_openai_cls.return_value.chat.completions.create.return_value = (
+            _make_fake_response("OK")
+        )
+        client.force_login(staff_user)
+        _post(client)
+        call_args = mock_openai_cls.return_value.chat.completions.create.call_args
+        system_content = call_args.kwargs["messages"][0]["content"]
+        assert "Staff" in system_content  # first_name of staff_user fixture
+
+    @patch("chatbot.views.openai.OpenAI")
+    def test_system_prompt_contains_nickname_when_set(
+        self, mock_openai_cls, client, db
+    ):
+        """When a nickname is set, the system prompt should reference the nickname."""
+        user = User.objects.create_user(
+            email="nick@example.com",
+            password="pass",
+            first_name="Stephanie",
+            nickname="Steph",
+            is_staff=True,
+            is_active=True,
+        )
+        mock_openai_cls.return_value.chat.completions.create.return_value = (
+            _make_fake_response("OK")
+        )
+        client.force_login(user)
+        _post(client)
+        call_args = mock_openai_cls.return_value.chat.completions.create.call_args
+        system_content = call_args.kwargs["messages"][0]["content"]
+        assert "Steph" in system_content
+        assert "Stephanie" not in system_content  # nickname takes precedence
