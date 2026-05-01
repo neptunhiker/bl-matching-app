@@ -889,3 +889,29 @@ class MatchingEvent(models.Model):
         
     def __str__(self):
          return f"{self.get_event_type_display()} - {self.matching_attempt} - {self.created_at}"
+
+class MatchingNote(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    matching_attempt = models.ForeignKey(
+        MatchingAttempt,
+        on_delete=models.CASCADE,
+        related_name="notes",
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="matching_notes",
+    )
+    body = models.TextField(verbose_name="Notiz")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Notiz"
+        verbose_name_plural = "Notizen"
+
+    def __str__(self):
+        return f"Notiz von {self.author} – {self.matching_attempt_id}"
