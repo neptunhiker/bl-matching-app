@@ -30,6 +30,7 @@ urlpatterns = [
     path('emails/', include('emails.urls')),
     path('matching/', include('matching.urls')),
     path('slack/', include('slack.urls')),
+    path('chatbot/', include('chatbot.urls')),
     path('', login_required(TemplateView.as_view(template_name='landing.html')), name='landing'),
 ]
 

@@ -1,0 +1,19 @@
+{% load static %}
+<div class="flex items-start gap-2.5 my-1.5 pr-6"
+     data-reply="{{ reply }}"
+     data-is-error="{{ is_error|lower }}">
+  <img src="{% static 'img/bl_robot.png' %}"
+       alt=""
+       aria-hidden="true"
+       class="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover">
+  <div class="{% if is_error %}bg-red-50 border border-red-200 text-red-700{% else %}bg-primary-50 border border-primary-100 text-neutral-800{% endif %} rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm leading-relaxed break-words max-w-full
+    [&_p]:mb-2 [&_p:last-child]:mb-0
+    [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:mb-2 [&_ul:last-child]:mb-0
+    [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:mb-2 [&_ol:last-child]:mb-0
+    [&_li]:mb-0.5
+    [&_strong]:font-semibold
+    [&_em]:italic
+    [&_h1]:font-bold [&_h1]:text-base [&_h1]:mb-1
+    [&_h2]:font-semibold [&_h2]:text-sm [&_h2]:mb-1
+    [&_h3]:font-semibold [&_h3]:text-sm [&_h3]:mb-1">{{ reply_html|safe }}</div>
+</div>

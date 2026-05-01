@@ -514,5 +514,8 @@
   </script>
 {% endif %}
 
+{% if request.user.is_staff %}
+  {% include "chatbot/widget.html" %}
+{% endif %}
 
 {% endblock %}

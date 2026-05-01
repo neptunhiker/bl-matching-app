@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     'emails.apps.EmailsConfig',
     'matching.apps.MatchingConfig',
     'slack.apps.SlackConfig',
+    'chatbot.apps.ChatbotConfig',
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -237,6 +238,11 @@ SYSTEM_EMAIL_NAME = "Dein BeginnerLuft Team"
 # SLACK
 SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN', '')
 SLACK_SIGNING_SECRET = os.environ.get('SLACK_SIGNING_SECRET', '')
+
+# IONOS AI
+IONOS_TOKEN = os.environ.get('IONOS_TOKEN_VALUE', '')
+IONOS_BASE_URL = 'https://openai.inference.de-txl.ionos.com/v1'
+IONOS_MODEL = 'meta-llama/Llama-3.3-70B-Instruct'
 
 _LOGS_DIR = BASE_DIR / 'logs'
 _LOGS_DIR.mkdir(exist_ok=True)
