@@ -18,7 +18,10 @@ from .views import (
     MatchingEventDetailView,
     ParticipantRespondView,
     CancelMatchingView,
-    ManualOverrideMatchingView
+    ManualOverrideMatchingView,
+    MatchingNoteCreateView,
+    MatchingNoteDeleteView,
+    MatchingNoteUpdateView,
 )
 
 
@@ -42,6 +45,9 @@ urlpatterns = [
     path('matching_event/<uuid:pk>/', MatchingEventDetailView.as_view(), name='matching_event_detail'),
     path('matching/<uuid:pk>/cancel/', CancelMatchingView.as_view(), name='matching_attempt_cancel'),
     path('matching/<uuid:matching_attempt_pk>/manual-override/', ManualOverrideMatchingView.as_view(), name='manual_override_matching'),
+    path('matching/<uuid:pk>/notes/add/', MatchingNoteCreateView.as_view(), name='matching_note_create'),
+    path('note/<uuid:pk>/delete/', MatchingNoteDeleteView.as_view(), name='matching_note_delete'),
+    path('note/<uuid:pk>/edit/', MatchingNoteUpdateView.as_view(), name='matching_note_edit'),
 ]
 
 

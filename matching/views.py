@@ -1,5 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.core.exceptions import PermissionDenied
 from django.db.models import Max, Q, Prefetch
+from django.http import HttpResponseForbidden
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
@@ -16,11 +18,11 @@ from urllib.parse import urlparse
 
 
 from profiles.models import Coach, BeginnerLuftStaff
-from .models import CoachActionToken, MatchingAttempt, RequestToCoach, MatchingEvent, TriggeredByOptions, ParticipantActionToken
+from .models import CoachActionToken, MatchingAttempt, MatchingNote, RequestToCoach, MatchingEvent, TriggeredByOptions, ParticipantActionToken
 from .tokens import consume_token
 from . import services
 from matching import services
-from matching.forms import RequestToCoachForm, RequestToCoachUpdateForm
+from matching.forms import MatchingNoteForm, RequestToCoachForm, RequestToCoachUpdateForm
 from matching.utils import build_notifications, get_standard_extension_deadline
 from django.utils import dateparse
 import json
@@ -120,6 +122,7 @@ class MatchingAttemptDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailVi
                 'coach_requests__slack_logs',
                 'email_logs',
                 'slack_logs',
+                Prefetch('notes', queryset=MatchingNote.objects.select_related('author')),
             )
             .get(pk=self.kwargs['pk'])
         )
@@ -148,7 +151,9 @@ class MatchingAttemptDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailVi
         context['notifications'] = build_notifications(all_emails, all_slack)
 
         context['events'] = matching_attempt.matching_events.select_related('triggered_by_user').order_by('-created_at')
-        
+        context['notes'] = matching_attempt.notes.select_related('author').all()
+        context['note_form'] = MatchingNoteForm()
+
         context['show_start_button'] = (
             self.request.user.is_staff
             and matching_attempt.automation_enabled
@@ -819,3 +824,54 @@ class ManualOverrideMatchingView(LoginRequiredMixin, StaffRequiredMixin, View):
         coach = get_object_or_404(Coach, pk=coach_id)
         services.manually_match_participant_to_coach(matching_attempt, coach, triggered_by_user=request.user)
         return redirect(reverse("matching_attempt_detail", kwargs={"pk": matching_attempt_pk}))
+
+class MatchingNoteCreateView(LoginRequiredMixin, StaffRequiredMixin, View):
+    http_method_names = ["post"]
+
+    def post(self, request, pk):
+        matching_attempt = get_object_or_404(MatchingAttempt, pk=pk)
+        form = MatchingNoteForm(request.POST)
+        if form.is_valid():
+            note = form.save(commit=False)
+            note.matching_attempt = matching_attempt
+            note.author = request.user
+            note.save()
+            form = MatchingNoteForm()
+        notes = matching_attempt.notes.select_related("author").all()
+        return render(request, "matching/partials/notes.html", {
+            "notes": notes,
+            "matching_attempt": matching_attempt,
+            "form": form,
+        })
+
+
+class MatchingNoteDeleteView(LoginRequiredMixin, StaffRequiredMixin, View):
+    http_method_names = ["post"]
+
+    def post(self, request, pk):
+        note = get_object_or_404(MatchingNote, pk=pk)
+        if note.author != request.user:
+            return HttpResponseForbidden()
+        matching_attempt = note.matching_attempt
+        note.delete()
+        notes = matching_attempt.notes.select_related("author").all()
+        return render(request, "matching/partials/notes.html", {
+            "notes": notes,
+            "matching_attempt": matching_attempt,
+            "form": MatchingNoteForm(),
+        })
+
+
+class MatchingNoteUpdateView(LoginRequiredMixin, StaffRequiredMixin, UpdateView):
+    model = MatchingNote
+    form_class = MatchingNoteForm
+    template_name = "matching/note_edit.html"
+
+    def get_object(self, queryset=None):
+        obj = super().get_object(queryset)
+        if obj.author != self.request.user:
+            raise PermissionDenied
+        return obj
+
+    def get_success_url(self):
+        return reverse("matching_attempt_detail", kwargs={"pk": self.object.matching_attempt_id})
