@@ -1,5 +1,6 @@
 {# Notes (Notizen) partial: expects `notes`, `matching_attempt`, `form` in context #}
 {% load tz %}
+{% load static %}
 
 <div id="notes-section">
 <section class="mb-4">
@@ -37,19 +38,24 @@
           </div>
 
           {% if request.user == note.author %}
-          <div class="flex items-center gap-2 shrink-0 mt-0.5">
+          <div class="flex items-center gap-3 shrink-0">
             <a href="{% url 'matching_note_edit' note.pk %}"
-               class="text-xs text-neutral-400 hover:text-primary-600 transition-colors">
-              Bearbeiten
+               class="text-neutral-400 hover:text-primary-600 transition-colors"
+               title="Bearbeiten">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
+                <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
+              </svg>
             </a>
             <form hx-post="{% url 'matching_note_delete' note.pk %}"
                   hx-target="#notes-section"
                   hx-swap="outerHTML"
-                  hx-confirm="Notiz wirklich löschen?">
+                  hx-confirm="Notiz wirklich löschen?"
+                  class="flex items-center">
               {% csrf_token %}
               <button type="submit"
-                      class="text-xs text-neutral-400 hover:text-red-600 transition-colors">
-                Löschen
+                      class="text-red-400 hover:text-red-600 transition-colors"
+                      title="Löschen">
+                <img src="{% static 'icons/delete.svg' %}" alt="Löschen" class="h-4 w-4" />
               </button>
             </form>
           </div>
