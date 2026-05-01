@@ -1,7 +1,19 @@
 from django import forms
 
 from profiles.models import Coach
-from .models import RequestToCoach
+from .models import MatchingNote, RequestToCoach
+
+
+class MatchingNoteForm(forms.ModelForm):
+    class Meta:
+        model = MatchingNote
+        fields = ["body"]
+        widgets = {
+            "body": forms.Textarea(attrs={"rows": 3, "placeholder": "Notiz hinzufügen …"}),
+        }
+        labels = {
+            "body": "Notiz",
+        }
 
 
 class RequestToCoachUpdateForm(forms.ModelForm):
