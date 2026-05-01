@@ -141,4 +141,12 @@ def build_matching_context(matching_attempt: MatchingAttempt) -> str:
     else:
         lines.append("Keine Ereignisse bisher.")
 
+    # Staff notes (oldest-first for chronological readability)
+    notes = list(ma.notes.select_related("author").order_by("created_at"))
+    if notes:
+        lines += ["", "### Notizen (Koordination)"]
+        for n in notes:
+            author = n.author.first_name if n.author else "Unbekannt"
+            lines.append(f"- {_fmt_dt(n.created_at)} ({author}): {n.body}")
+
     return "\n".join(lines)
