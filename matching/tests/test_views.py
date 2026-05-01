@@ -1364,3 +1364,129 @@ def test_matching_event_detail_payload_dict(client, staff_user, matching_attempt
     assert r.status_code == 200
     formatted = dict(r.context['formatted_payload'])
     assert '"key"' in formatted['metadata']
+
+# ──────────────────────────────────────────────────────────────────────────────
+# MatchingNote views — access control
+# ──────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+def test_note_create_anonymous(client, matching_attempt):
+    url = reverse('matching_note_create', kwargs={'pk': matching_attempt.pk})
+    r = client.post(url, data={'body': 'test'})
+    assert r.status_code == 302  # redirect to login
+
+
+@pytest.mark.django_db
+def test_note_create_plain_user(client, plain_user, matching_attempt):
+    client.force_login(plain_user)
+    url = reverse('matching_note_create', kwargs={'pk': matching_attempt.pk})
+    r = client.post(url, data={'body': 'test'})
+    assert r.status_code == 403
+
+
+@pytest.mark.django_db
+def test_note_create_staff(client, staff_user, matching_attempt):
+    client.force_login(staff_user)
+    url = reverse('matching_note_create', kwargs={'pk': matching_attempt.pk})
+    r = client.post(url, data={'body': 'a note'})
+    assert r.status_code == 200  # returns the notes partial
+
+
+@pytest.mark.django_db
+def test_note_create_superuser(client, superuser, matching_attempt):
+    client.force_login(superuser)
+    url = reverse('matching_note_create', kwargs={'pk': matching_attempt.pk})
+    r = client.post(url, data={'body': 'a note'})
+    assert r.status_code == 200
+
+
+@pytest.mark.django_db
+def test_note_delete_anonymous(client, staff_user, matching_attempt):
+    from matching.models import MatchingNote
+    note = MatchingNote.objects.create(matching_attempt=matching_attempt, author=staff_user, body='x')
+    url = reverse('matching_note_delete', kwargs={'pk': note.pk})
+    r = client.post(url)
+    assert r.status_code == 302  # redirect to login
+
+
+@pytest.mark.django_db
+def test_note_delete_plain_user(client, plain_user, staff_user, matching_attempt):
+    from matching.models import MatchingNote
+    note = MatchingNote.objects.create(matching_attempt=matching_attempt, author=staff_user, body='x')
+    client.force_login(plain_user)
+    url = reverse('matching_note_delete', kwargs={'pk': note.pk})
+    r = client.post(url)
+    assert r.status_code == 403
+
+
+@pytest.mark.django_db
+def test_note_delete_staff_own_note(client, staff_user, matching_attempt):
+    from matching.models import MatchingNote
+    note = MatchingNote.objects.create(matching_attempt=matching_attempt, author=staff_user, body='x')
+    client.force_login(staff_user)
+    url = reverse('matching_note_delete', kwargs={'pk': note.pk})
+    r = client.post(url)
+    assert r.status_code == 200
+    assert not MatchingNote.objects.filter(pk=note.pk).exists()
+
+
+@pytest.mark.django_db
+def test_note_delete_staff_other_authors_note(client, staff_user, superuser, matching_attempt):
+    """A staff user cannot delete another user's note — should get 403."""
+    from matching.models import MatchingNote
+    note = MatchingNote.objects.create(matching_attempt=matching_attempt, author=superuser, body='x')
+    client.force_login(staff_user)
+    url = reverse('matching_note_delete', kwargs={'pk': note.pk})
+    r = client.post(url)
+    assert r.status_code == 403
+    assert MatchingNote.objects.filter(pk=note.pk).exists()
+
+
+@pytest.mark.django_db
+def test_note_edit_anonymous(client, staff_user, matching_attempt):
+    from matching.models import MatchingNote
+    note = MatchingNote.objects.create(matching_attempt=matching_attempt, author=staff_user, body='x')
+    url = reverse('matching_note_edit', kwargs={'pk': note.pk})
+    r = client.get(url)
+    assert r.status_code == 302  # redirect to login
+
+
+@pytest.mark.django_db
+def test_note_edit_plain_user(client, plain_user, staff_user, matching_attempt):
+    from matching.models import MatchingNote
+    note = MatchingNote.objects.create(matching_attempt=matching_attempt, author=staff_user, body='x')
+    client.force_login(plain_user)
+    url = reverse('matching_note_edit', kwargs={'pk': note.pk})
+    r = client.get(url)
+    assert r.status_code == 403
+
+
+@pytest.mark.django_db
+def test_note_edit_staff_own_note(client, staff_user, matching_attempt):
+    from matching.models import MatchingNote
+    note = MatchingNote.objects.create(matching_attempt=matching_attempt, author=staff_user, body='x')
+    client.force_login(staff_user)
+    url = reverse('matching_note_edit', kwargs={'pk': note.pk})
+    r = client.get(url)
+    assert r.status_code == 200
+
+
+@pytest.mark.django_db
+def test_note_edit_staff_other_authors_note(client, staff_user, superuser, matching_attempt):
+    """A staff user cannot edit another user's note — should get 403."""
+    from matching.models import MatchingNote
+    note = MatchingNote.objects.create(matching_attempt=matching_attempt, author=superuser, body='x')
+    client.force_login(staff_user)
+    url = reverse('matching_note_edit', kwargs={'pk': note.pk})
+    r = client.get(url)
+    assert r.status_code == 403
+
+
+@pytest.mark.django_db
+def test_note_edit_superuser_own_note(client, superuser, matching_attempt):
+    from matching.models import MatchingNote
+    note = MatchingNote.objects.create(matching_attempt=matching_attempt, author=superuser, body='x')
+    client.force_login(superuser)
+    url = reverse('matching_note_edit', kwargs={'pk': note.pk})
+    r = client.get(url)
+    assert r.status_code == 200
