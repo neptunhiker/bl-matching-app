@@ -44,7 +44,7 @@
     <div class="flex items-start gap-2.5 my-1.5 pr-6">
       <img src="{% static 'img/bl_robot.png' %}" alt="" aria-hidden="true" class="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover">
       <div class="bg-primary-50 border border-primary-100 text-neutral-800 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm leading-relaxed">
-        Good morning everybody! Ich bin der BeginnerLuft-Roboti. Wie kann ich dir helfen?
+        Good morning everybody! Wie kann ich dir helfen?
       </div>
     </div>
   </div>
@@ -77,6 +77,7 @@
         class="flex items-end gap-2 px-4 py-3 border-t border-neutral-100 shrink-0">
     {% csrf_token %}
     <input type="hidden" name="history" id="chat-history-input" value="[]">
+    {% if matching_attempt %}<input type="hidden" name="matching_pk" value="{{ matching_attempt.pk }}">{% endif %}
     <textarea id="chat-input"
               name="message"
               rows="1"

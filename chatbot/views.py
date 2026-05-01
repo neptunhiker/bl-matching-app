@@ -8,6 +8,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.shortcuts import render
 from django.views import View
 
+from matching.models import MatchingAttempt
+
+from .matching_context import build_matching_context
 from .system_prompt import SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -37,8 +40,25 @@ class ChatView(LoginRequiredMixin, StaffRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         user_message = request.POST.get("message", "").strip()
         raw_history = request.POST.get("history", "[]")
+        matching_pk = request.POST.get("matching_pk", "").strip()
 
         error_reply = None
+
+        # Build matching-specific context block (silently skip on any error)
+        system_prompt = SYSTEM_PROMPT
+        if matching_pk:
+            try:
+                ma = MatchingAttempt.objects.select_related(
+                    "participant",
+                    "bl_contact",
+                    "matched_coach",
+                ).get(pk=matching_pk)
+                context_block = build_matching_context(ma)
+                system_prompt = system_prompt + "\n\n" + context_block
+            except Exception:
+                logger.warning(
+                    "chatbot: could not build matching context for pk=%s", matching_pk
+                )
 
         if not user_message:
             error_reply = "Bitte gib eine Nachricht ein."
@@ -64,7 +84,7 @@ class ChatView(LoginRequiredMixin, StaffRequiredMixin, View):
 
         if not error_reply:
             messages = (
-                [{"role": "system", "content": SYSTEM_PROMPT}]
+                [{"role": "system", "content": system_prompt}]
                 + history
                 + [{"role": "user", "content": user_message}]
             )
