@@ -100,6 +100,7 @@ def build_matching_context(matching_attempt: MatchingAttempt) -> str:
                 f"- Priorität {rtc.priority}: **{rtc.coach.first_name}**"
                 f" | Status: {rtc.get_state_display()}"
                 f" | Coach-Status: {rtc.coach.get_status_display()}"
+                f" | Kommunikationskanal: {rtc.coach.get_preferred_communication_channel_display()}"
                 f" | UE: {rtc.ue}"
                 f" | Antwortfrist: {_fmt_dt(rtc.deadline_at)}"
                 f" | Geantwortet: {_fmt_dt(rtc.responded_at)}"
