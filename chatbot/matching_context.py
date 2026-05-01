@@ -50,23 +50,20 @@ def build_matching_context(matching_attempt: MatchingAttempt) -> str:
     ]
 
     if ma.bl_contact:
-        lines.append(f"- **BL-Kontakt (Koordination):** {ma.bl_contact}")
+        lines.append(f"- **BL-Kontakt (Koordination):** {ma.bl_contact.user.first_name}")
 
     if ma.matched_coach:
-        lines.append(f"- **Gematchter Coach:** {ma.matched_coach.full_name}")
+        lines.append(f"- **Gematchter Coach:** {ma.matched_coach.first_name}")
 
     if ma.cancelled_at:
         lines.append(f"- **Abgebrochen am:** {_fmt_dt(ma.cancelled_at)}")
 
-    # Participant fields (no name/email per design decision)
+    # Participant fields (first name only; no email, last name, coaching target, or background info)
     p = ma.participant
     participant_lines: list[str] = []
+    participant_lines.append(f"- **Vorname:** {p.first_name}")
     if p.start_date:
         participant_lines.append(f"- **Gewünschtes Startdatum:** {_fmt_date(p.start_date)}")
-    if p.coaching_target:
-        participant_lines.append(f"- **Coaching-Ziel:** {p.coaching_target}")
-    if p.background_information:
-        participant_lines.append(f"- **Hintergrundinformationen:** {p.background_information}")
 
     if participant_lines:
         lines += ["", "### Teilnehmer:in"] + participant_lines
@@ -100,7 +97,7 @@ def build_matching_context(matching_attempt: MatchingAttempt) -> str:
             sent_count = rtc.get_sent_count()
             reminders = max(sent_count - 1, 0)
             lines.append(
-                f"- Priorität {rtc.priority}: **{rtc.coach.full_name}**"
+                f"- Priorität {rtc.priority}: **{rtc.coach.first_name}**"
                 f" | Status: {rtc.get_state_display()}"
                 f" | Coach-Status: {rtc.coach.get_status_display()}"
                 f" | UE: {rtc.ue}"
@@ -134,7 +131,7 @@ def build_matching_context(matching_attempt: MatchingAttempt) -> str:
     if events:
         for ev in events:
             if ev.triggered_by_user:
-                actor = ev.triggered_by_user.get_full_name() or ev.triggered_by_user.username
+                actor = ev.triggered_by_user.first_name or ev.triggered_by_user.username
             else:
                 actor = ev.get_triggered_by_display()
             lines.append(
