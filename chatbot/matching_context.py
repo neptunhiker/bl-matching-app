@@ -11,10 +11,10 @@ from matching.models import MatchingAttempt
 
 
 def _fmt_dt(dt) -> str:
-    """Format a datetime as DD.MM.YYYY HH:MM (UTC-based, matches server display)."""
+    """Format a datetime in Europe/Berlin local time as DD.MM.YYYY HH:MM."""
     if dt is None:
         return "—"
-    return dt.strftime("%d.%m.%Y %H:%M")
+    return timezone.localtime(dt).strftime("%d.%m.%Y %H:%M")
 
 
 def _fmt_date(d) -> str:
