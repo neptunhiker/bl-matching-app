@@ -47,6 +47,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
+    nickname = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Spitzname",
+        help_text="Optionaler Spitzname, mit dem der Chatbot die Person anspricht.",
+    )
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(default=timezone.now)
@@ -57,6 +63,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = []
     
     # property
+    @property
+    def display_name(self) -> str:
+        """Name the chatbot uses to address this user. Falls back to first_name."""
+        return self.nickname or self.first_name
+
     @property
     def german_article(self):
         if self.sex in [self.SexChoices.DIVERS, self.SexChoices.FEMALE]:

@@ -45,7 +45,8 @@ class ChatView(LoginRequiredMixin, StaffRequiredMixin, View):
         error_reply = None
 
         # Build matching-specific context block (silently skip on any error)
-        system_prompt = SYSTEM_PROMPT
+        display_name = request.user.display_name or request.user.email
+        system_prompt = SYSTEM_PROMPT + f'\n\nSprich den Benutzer durchgehend mit "{display_name}" an.'
         if matching_pk:
             try:
                 ma = MatchingAttempt.objects.select_related(
