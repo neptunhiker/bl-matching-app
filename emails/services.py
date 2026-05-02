@@ -370,6 +370,7 @@ def send_coaching_start_info_email_to_coach(matching_attempt, triggered_by: str=
     
     participant = matching_attempt.participant
     start_date = participant.start_date.strftime("%d.%m.%Y")
+    end_date = participant.end_date.strftime("%d.%m.%Y") if participant.end_date else None
     
     coach = matching_attempt.matched_coach
     context = {
@@ -378,6 +379,7 @@ def send_coaching_start_info_email_to_coach(matching_attempt, triggered_by: str=
         "participant_full_name": participant.full_name,
         "participant_email": participant.email,
         "start_date": start_date,
+        "end_date": end_date,
         "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
     }
     
@@ -404,6 +406,7 @@ def send_coaching_start_info_email_to_participant(matching_attempt, triggered_by
     
     participant = matching_attempt.participant
     start_date = participant.start_date.strftime("%d.%m.%Y")
+    end_date = participant.end_date.strftime("%d.%m.%Y") if participant.end_date else None
     
     coach = matching_attempt.matched_coach
     
@@ -414,6 +417,7 @@ def send_coaching_start_info_email_to_participant(matching_attempt, triggered_by
         "coach_email": coach.email,
         "participant_first_name": participant.first_name,
         "start_date": start_date,
+        "end_date": end_date,
         "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
     }
     

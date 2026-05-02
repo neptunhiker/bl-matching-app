@@ -6,7 +6,7 @@
 
 <p>
 schön, dass du bald mit deinem Coaching startest 😊<br>
-Dein Coaching beginnt am <strong>{{ start_date }}</strong>.<br>
+Dein Coaching beginnt am <strong>{{ start_date }}</strong>{% if end_date %} und endet am <strong>{{ end_date }}</strong>{% endif %}.<br>
 Dein Coach ist <strong>{{ coach_name }}</strong>.
 </p>
 

@@ -9,7 +9,7 @@ das Coaching mit <strong>{{ participant_full_name }}</strong> kann jetzt offizie
 </p>
 
 <p>
-Das Coaching startet am <strong>{{ start_date }}</strong>.
+Das Coaching startet am <strong>{{ start_date }}</strong>{% if end_date %} und endet am <strong>{{ end_date }}</strong>{% endif %}.
 </p>
 
 <h3 style="margin-top: 24px; margin-bottom: 8px;">Deine nächsten Schritte</h3>

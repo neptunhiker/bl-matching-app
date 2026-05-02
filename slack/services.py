@@ -527,10 +527,12 @@ def send_coaching_starting_info_slack(matching_attempt):
 
     user_id = coach.slack_user_id
     start_date = participant.start_date
+    end_date = participant.end_date
 
     participant_first_name = participant.first_name
     participant_full_name = f"{participant.first_name} {participant.last_name}".strip()
     formatted_start_date = start_date.strftime("%d.%m.%Y")
+    formatted_end_date = end_date.strftime("%d.%m.%Y") if end_date else None
 
     if not user_id:
         raise ValueError(f"Coach {coach} does not have a Slack user ID")
@@ -557,6 +559,7 @@ def send_coaching_starting_info_slack(matching_attempt):
                 "text": (
                     f"Das Coaching mit *{participant_full_name}* kann jetzt offiziell starten 😊\n"
                     f"Geplanter Start: *{formatted_start_date}*"
+                    + (f" – Geplantes Ende: *{formatted_end_date}*" if formatted_end_date else "")
                 ),
             },
         },
