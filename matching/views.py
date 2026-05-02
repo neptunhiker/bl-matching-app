@@ -44,7 +44,21 @@ class MatchingAttemptCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateVi
         ue = form.cleaned_data["ue"]
         bl_contact = form.cleaned_data.get("bl_contact")
 
+        if not participant.start_date:
+            messages.error(self.request, "Kein Matching möglich: Für den Teilnehmenden ist kein gewünschtes Startdatum für das Coaching hinterlegt. Bitte geh zum Teilnehmerprofil und ergänze ein Startdatum, bevor du ein Matching erstellst.")
+            return self.form_invalid(form)
 
+        if not participant.end_date:
+            messages.error(self.request, "Kein Matching möglich: Für den Teilnehmenden ist kein gewünschtes Enddatum für das Coaching hinterlegt. Bitte geh zum Teilnehmerprofil und ergänze ein Enddatum, bevor du ein Matching erstellst.")
+            return self.form_invalid(form)
+
+        if participant.end_date < participant.start_date:
+            messages.error(self.request, "Kein Matching möglich: Das Enddatum des Teilnehmenden liegt vor dem Startdatum. Bitte korrigiere die Daten im Teilnehmerprofil, bevor du ein Matching erstellst.")
+            return self.form_invalid(form)
+
+        if not participant.avgs_data_docs_available:
+            messages.error(self.request, "Kein Matching möglich: Ein Matching kann erst erstellt werden, wenn alle AVGS-relevanten Informationen vorliegen. Falls diese vorliegen, dann gehe zum Teilnehmerprofil und bestätige die AVGS-Dokumente.")
+            return self.form_invalid(form)
 
         if ue < 1:
             messages.error(self.request, "Die Anzahl der Unterrichtseinheiten muss mindestens 1 sein.")
