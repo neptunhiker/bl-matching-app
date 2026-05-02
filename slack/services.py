@@ -562,7 +562,7 @@ def send_coaching_starting_info_slack(matching_attempt):
                 "text": (
                     f"Das Coaching mit *{participant_full_name}* kann jetzt offiziell starten 😊\n"
                     f"Geplanter Start: *{formatted_start_date}*{formatted_end_clause}\n"
-                    f"Umfang: *{coach_ue} Unterrichtseinheiten* (1 UE = 45 Minuten)"
+                    f"Umfang deines Coaching-Auftrages: *{coach_ue} Unterrichtseinheiten* (1 UE = 45 Minuten)"
                 ),
             },
         },
