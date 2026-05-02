@@ -101,10 +101,10 @@
         </div>
 
         {# ── Actions ───────────────────────────────────────────────── #}
-        <div class="flex items-center gap-3">
-          {% include "components/_button.html" with button_text="Erstellen" button_variant="primary" button_size="md" button_type="submit" %}
+        <div class="flex justify-end items-center gap-3">
           {% url 'matching_attempt_detail' matching_attempt.pk as cancel_url %}
           {% include "components/_button.html" with button_text="Abbrechen" button_variant="ghost" button_size="md" button_href=cancel_url %}
+          {% include "components/_button.html" with button_text="Erstellen" button_variant="primary" button_size="md" button_type="submit" %}
         </div>
 
       </form>
