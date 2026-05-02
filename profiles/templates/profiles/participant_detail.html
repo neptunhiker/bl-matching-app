@@ -107,19 +107,29 @@
         <div class="bg-primary-50 rounded-lg px-4 py-4">
           <p class="text-xs font-medium uppercase tracking-widest text-primary-600 mb-2">Coaching-Ziel</p>
           <p class="text-sm leading-7 text-neutral-800 whitespace-pre-wrap">{{ participant.coaching_target|default:"—" }}</p>
+          <p class="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-primary-600 bg-primary-100 rounded-md px-2.5 py-1">
+            <span class="h-3.5 w-3.5 shrink-0">{% include 'components/icons/info.html' %}</span>
+            Diese Informationen werden auch den Coaches im Matching-Prozess zur Verfügung gestellt.
+          </p>
         </div>
 
         <div class="bg-primary-50 rounded-lg px-4 py-4">
           <p class="text-xs font-medium uppercase tracking-widest text-primary-600 mb-2">Hintergrundinformationen</p>
           <p class="text-sm leading-7 text-neutral-800 whitespace-pre-wrap">{{ participant.background_information|default:"—" }}</p>
+          <p class="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-primary-600 bg-primary-100 rounded-md px-2.5 py-1">
+            <span class="h-3.5 w-3.5 shrink-0">{% include 'components/icons/info.html' %}</span>
+            Diese Informationen werden auch den Coaches im Matching-Prozess zur Verfügung gestellt.
+          </p>
         </div>
 
-        {% if participant.notes %}
         <div class="bg-neutral-50 rounded-lg px-4 py-4">
           <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-2">Notizen</p>
           <p class="text-sm leading-7 text-neutral-800 whitespace-pre-wrap">{{ participant.notes }}</p>
+          <p class="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-neutral-500 bg-neutral-100 rounded-md px-2.5 py-1">
+            <span class="h-3.5 w-3.5 shrink-0">{% include 'components/icons/info.html' %}</span>
+            Diese Informationen verbleiben intern bei BeginnerLuft und werden nicht an Coaches weitergegeben.
+          </p>
         </div>
-        {% endif %}
       </div>
 
     </div>
