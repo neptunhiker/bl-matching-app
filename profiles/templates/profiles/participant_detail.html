@@ -113,6 +113,13 @@
           <p class="text-xs font-medium uppercase tracking-widest text-primary-600 mb-2">Hintergrundinformationen</p>
           <p class="text-sm leading-7 text-neutral-800 whitespace-pre-wrap">{{ participant.background_information|default:"—" }}</p>
         </div>
+
+        {% if participant.notes %}
+        <div class="bg-neutral-50 rounded-lg px-4 py-4">
+          <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-2">Notizen</p>
+          <p class="text-sm leading-7 text-neutral-800 whitespace-pre-wrap">{{ participant.notes }}</p>
+        </div>
+        {% endif %}
       </div>
 
     </div>
