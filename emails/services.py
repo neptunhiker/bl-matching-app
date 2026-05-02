@@ -128,7 +128,7 @@ def _build_email_context(
         "recipient_name": rtc.coach.first_name,
         "participant_name": participant.first_name,
         "ue": rtc.ue,
-        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
+        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft-Team"),
         "accept_url": accept_url,
         "decline_url": decline_url,
         "coaching_target": participant.coaching_target,
@@ -209,7 +209,7 @@ def send_intro_call_request_email(matching_attempt):
         "urgency_message": get_urgency_message(participant, start_date=participant.start_date),
         "intro_call_feedback_url": intro_call_feedback_url,
         "deadline_for_intro_call": deadline_for_intro_call,
-        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
+        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft-Team"),
     }
     
     transaction.on_commit(
@@ -242,7 +242,7 @@ def send_intro_call_reminder_email_to_coach(matching_attempt, triggered_by: str 
         "participant_email": participant.email,
         "intro_call_feedback_url": generate_intro_call_feedback_url(matching_attempt),
         "deadline_for_intro_call": matching_attempt.intro_call_deadline_at,
-        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
+        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft-Team"),
     }
 
     transaction.on_commit(
@@ -273,7 +273,7 @@ def send_intro_call_info_email_to_participant(matching_attempt, triggered_by: st
         "participant": participant,
         "coach": coach,
         "participant_email": participant.email,
-        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
+        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft-Team"),
     }
     
     transaction.on_commit(
@@ -310,7 +310,7 @@ def send_feedback_request_email_after_intro_call_to_participant(matching_attempt
         "start_coaching_url": start_coaching_url,
         "calendly_url": calendly_url,
         "deadline": matching_attempt.participant_intro_call_feedback_deadline_at,
-        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
+        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft-Team"),
     }
     
     transaction.on_commit(
@@ -345,7 +345,7 @@ def send_intro_call_feedback_reminder_email_to_participant(matching_attempt, tri
         "start_coaching_url": start_coaching_url,
         "calendly_url": calendly_url,
         "deadline": matching_attempt.participant_intro_call_feedback_deadline_at,
-        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
+        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft-Team"),
     }
 
     transaction.on_commit(
@@ -373,14 +373,17 @@ def send_coaching_start_info_email_to_coach(matching_attempt, triggered_by: str=
     end_date = participant.end_date.strftime("%d.%m.%Y") if participant.end_date else None
     
     coach = matching_attempt.matched_coach
+    ue = matching_attempt.ue
     context = {
-        "recipient_name": coach.first_name,
-        "participant_name": participant.first_name,
+        "coach_first_name": coach.first_name,
+        "coach_full_name": f"{coach.first_name} {coach.last_name}".strip(),
+        "participant_first_name": participant.first_name,
         "participant_full_name": participant.full_name,
         "participant_email": participant.email,
         "start_date": start_date,
         "end_date": end_date,
-        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
+        "ue": ue,
+        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft-Team"),
     }
     
     transaction.on_commit(
@@ -410,15 +413,16 @@ def send_coaching_start_info_email_to_participant(matching_attempt, triggered_by
     
     coach = matching_attempt.matched_coach
     
+    ue = matching_attempt.ue
     context = {
-        "recipient_name": participant.first_name,
-        "coach_name": coach,
-        "coach_first_name": coach.first_name,
-        "coach_email": coach.email,
         "participant_first_name": participant.first_name,
+        "coach_first_name": coach.first_name,
+        "coach_full_name": f"{coach.first_name} {coach.last_name}".strip(),
+        "coach_email": coach.email,
         "start_date": start_date,
         "end_date": end_date,
-        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
+        "ue": ue,
+        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft-Team"),
     }
     
     transaction.on_commit(
@@ -445,11 +449,10 @@ def send_clarification_call_booked_info_to_coach_email(matching_attempt, trigger
     coach = matching_attempt.matched_coach
 
     context = {
-        "recipient_name": coach.first_name,
         "coach_name": coach,
         "coach_first_name": coach.first_name,
         "participant": participant,
-        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
+        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft-Team"),
     }
 
     transaction.on_commit(
@@ -485,7 +488,7 @@ def send_escalation_info_email_to_staff(matching_attempt, triggered_by: str = "s
         "participant": participant,
         "coach": coach,
         "url_participant": url_participant,
-        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),
+        "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft-Team"),
     }
 
     transaction.on_commit(

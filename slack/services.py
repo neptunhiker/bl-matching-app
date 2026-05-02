@@ -528,11 +528,14 @@ def send_coaching_starting_info_slack(matching_attempt):
     user_id = coach.slack_user_id
     start_date = participant.start_date
     end_date = participant.end_date
+    ue = matching_attempt.ue
 
     participant_first_name = participant.first_name
     participant_full_name = f"{participant.first_name} {participant.last_name}".strip()
     formatted_start_date = start_date.strftime("%d.%m.%Y")
     formatted_end_date = end_date.strftime("%d.%m.%Y") if end_date else None
+    formatted_end_clause = f" – Geplantes Ende: *{formatted_end_date}*" if formatted_end_date else ""
+    planner_deadline_clause = f" bis zum {formatted_end_date}" if formatted_end_date else ""
 
     if not user_id:
         raise ValueError(f"Coach {coach} does not have a Slack user ID")
@@ -558,8 +561,8 @@ def send_coaching_starting_info_slack(matching_attempt):
                 "type": "mrkdwn",
                 "text": (
                     f"Das Coaching mit *{participant_full_name}* kann jetzt offiziell starten 😊\n"
-                    f"Geplanter Start: *{formatted_start_date}*"
-                    + (f" – Geplantes Ende: *{formatted_end_date}*" if formatted_end_date else "")
+                    f"Geplanter Start: *{formatted_start_date}*{formatted_end_clause}\n"
+                    f"Umfang: *{ue} Unterrichtseinheiten* (1 UE = 45 Minuten)"
                 ),
             },
         },
@@ -584,7 +587,7 @@ def send_coaching_starting_info_slack(matching_attempt):
                     "• Vorgabe des Jobcenters: Es müssen mindestens *2 Termine pro Woche* stattfinden.\n"
                     "• Alle UE müssen vollständig *innerhalb des Coaching-Zeitraums* absolviert werden – bitte plane frühzeitig.\n"
                     "• Bitte halte uns bei Unregelmäßigkeiten, Verzögerungen oder ausfallenden Terminen frühzeitig auf dem Laufenden.\n\n"
-                    "💡 Zur Unterstützung bei der Planung steht dir unser <https://coaching-hub.beginnerluft.de/coaching_planner/|Coaching-Planer> zur Verfügung – er hilft dir, alle UE rechtzeitig einzuplanen."
+                    f"💡 Zur Unterstützung bei der Planung steht dir unser <https://coaching-hub.beginnerluft.de/coaching_planner/|Coaching-Planer> zur Verfügung – er hilft dir, deine {ue} UE{planner_deadline_clause} rechtzeitig einzuplanen."
                 ),
             },
         },
@@ -596,7 +599,7 @@ def send_coaching_starting_info_slack(matching_attempt):
                     "*Kommunikation & Unterstützung:*\n"
                     "Du bist die zentrale Ansprechperson für alle inhaltlichen Themen im Coaching. "
                     "Bei organisatorischen Fragen oder wenn es Herausforderungen im Coaching gibt, "
-                    "melde dich bitte jederzeit bei uns."
+                    "melde dich bitte jederzeit bei uns unter <mailto:info@beginnerluft.de|info@beginnerluft.de>."
                 ),
             },
         },

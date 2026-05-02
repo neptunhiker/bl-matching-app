@@ -7,12 +7,12 @@
 <p>
 schön, dass du bald mit deinem Coaching startest 😊<br>
 Dein Coaching beginnt am <strong>{{ start_date }}</strong>{% if end_date %} und endet am <strong>{{ end_date }}</strong>{% endif %}.<br>
-Dein Coach ist <strong>{{ coach_name }}</strong>.
+Dein Coach ist <strong>{{ coach_full_name }}</strong>.
 </p>
 
 <h3 style="margin-top: 24px; margin-bottom: 8px;">Umfang deines Coachings</h3>
 <p>
-  48 Unterrichtseinheiten (1 UE = 45 Minuten)
+  {{ ue }} Unterrichtseinheiten (1 UE = 45 Minuten)
 </p>
 
 <h3 style="margin-top: 24px; margin-bottom: 8px;">Zuständigkeiten &amp; Kontakt zum BeginnerLuft-Team</h3>
@@ -62,7 +62,7 @@ unsicher bist, kannst du dich jederzeit vertrauensvoll bei Johannes oder Tabea m
 Wenn du noch Fragen hast, melde dich jederzeit gerne bei uns. Jetzt wünschen wir dir einen erfolgreichen Start in dein Coaching.
 </p>
 
-<p>
+<p style="margin-top: 16px;">
 Dein BeginnerLuft-Team
 </p>
 

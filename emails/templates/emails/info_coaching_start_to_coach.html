@@ -9,14 +9,15 @@ das Coaching mit <strong>{{ participant_full_name }}</strong> kann jetzt offizie
 </p>
 
 <p>
-Das Coaching startet am <strong>{{ start_date }}</strong>{% if end_date %} und endet am <strong>{{ end_date }}</strong>{% endif %}.
+Das Coaching startet am <strong>{{ start_date }}</strong>{% if end_date %} und endet am <strong>{{ end_date }}</strong>{% endif %}.<br>
+Umfang: <strong>{{ ue }} Unterrichtseinheiten</strong> (1 UE = 45 Minuten)
 </p>
 
 <h3 style="margin-top: 24px; margin-bottom: 8px;">Deine nächsten Schritte</h3>
 <ul style="margin: 0; padding-left: 20px;">
-	<li>Bitte nimm zeitnah Kontakt mit {{ participant_name }} auf und schlage erste Termine vor.</li>
+	<li>Bitte nimm zeitnah Kontakt mit {{ participant_first_name }} auf und schlage erste Termine vor.</li>
 	<li>Idealerweise findet der erste Termin bereits am <strong>{{ start_date }}</strong> statt.</li>
-	<li>Stimme die weiteren Termine direkt mit {{ participant_name }} ab.</li>
+	<li>Stimme die weiteren Termine direkt mit {{ participant_first_name }} ab.</li>
 </ul>
 
 <h3 style="margin-top: 24px; margin-bottom: 8px;">Rahmenbedingungen des Coachings</h3>
@@ -28,14 +29,14 @@ Das Coaching startet am <strong>{{ start_date }}</strong>{% if end_date %} und e
 </ul>
 
 <p style="margin-top: 16px;">
-  💡 Um die Planung zu erleichtern, steht dir unser <a href="https://coaching-hub.beginnerluft.de/coaching_planner/">Coaching-Planer</a> zur Verfügung. Er hilft dir, die Termine so zu verteilen, dass alle UE rechtzeitig abgeschlossen werden.
+  💡 Um die Planung zu erleichtern, steht dir unser <a href="https://coaching-hub.beginnerluft.de/coaching_planner/">Coaching-Planer</a> zur Verfügung. Er hilft dir, deine {{ ue }} UE{% if end_date %} bis zum {{ end_date }}{% endif %} so einzuplanen, dass alle Einheiten rechtzeitig abgeschlossen werden.
 </p>
 
 <h3 style="margin-top: 24px; margin-bottom: 8px;">Kommunikation &amp; Unterstützung</h3>
 <p>
 Du bist die zentrale Ansprechperson für alle inhaltlichen Themen im Coaching.
 Bei organisatorischen Fragen oder wenn es Herausforderungen im Coaching gibt,
-kannst du dich jederzeit an uns wenden.
+kannst du dich jederzeit an uns wenden: <a href="mailto:info@beginnerluft.de">info@beginnerluft.de</a>
 </p>
 
 <p>
@@ -43,14 +44,13 @@ Wenn du merkst, dass etwas im Coaching nicht stimmig läuft oder Unsicherheiten 
 melde dich bitte frühzeitig bei uns, damit wir gemeinsam eine gute Lösung finden.
 </p>
 
-
 <p style="margin-top: 24px;">
 Vielen Dank für dein Engagement – wir wünschen dir einen erfolgreichen Start in das Coaching.
 </p>
 
 <p style="margin-top: 16px;">
 Viele Grüße<br>
-{{ author }}
+Dein BeginnerLuft-Team
 </p>
 
 {% endblock %}
