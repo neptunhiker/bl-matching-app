@@ -74,9 +74,15 @@
         </div>
 
         <div class="bg-neutral-50 rounded-xl p-3">
-          <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Startdatum</dt>
+          <dt class="text-xs font-jakarta text-neutral-500 mb-0.5">Coaching-Zeitraum</dt>
           <dd class="text-sm font-semibold text-neutral-800">
-            {{ matching_attempt.participant.start_date|date:"d.m.Y" }}
+            {% if matching_attempt.participant.start_date and matching_attempt.participant.end_date %}
+              {{ matching_attempt.participant.start_date|date:"d.m." }} bis {{ matching_attempt.participant.end_date|date:"d.m.y" }}
+            {% elif matching_attempt.participant.start_date %}
+              ab {{ matching_attempt.participant.start_date|date:"d.m.y" }}
+            {% else %}
+              &mdash;
+            {% endif %}
           </dd>
         </div>
 
