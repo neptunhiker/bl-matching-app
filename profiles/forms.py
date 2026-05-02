@@ -22,15 +22,27 @@ class ParticipantForm(forms.ModelForm):
             'coaching_format_presence',
             'coaching_format_hybrid',
             'start_date',
+            'end_date',
             'background_information',
             'coaching_target',
             'avgs_data_docs_available',
         ]
         widgets = {
             'start_date': forms.DateInput(attrs={'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'type': 'date'}),
             'background_information': forms.Textarea(attrs={'rows': 4}),
             'coaching_target': forms.Textarea(attrs={'rows': 4}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+
+        if start_date and end_date and end_date < start_date:
+            self.add_error('end_date', 'Das Enddatum muss am oder nach dem Startdatum liegen.')
+
+        return cleaned_data
 
 
 class CoachForm(forms.ModelForm):

@@ -84,6 +84,12 @@
         {% include "profiles/_form_field.html" with field=form.start_date hide_label=True %}
       </div>
 
+      <!-- Desired end date -->
+      <div class="px-6 py-6">
+        <h2 class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-4">Gewünschtes Enddatum</h2>
+        {% include "profiles/_form_field.html" with field=form.end_date hide_label=True %}
+      </div>
+
       <!-- Desired start date -->
       <div class="px-6 py-6">
         <div class="flex flex-wrap gap-6">

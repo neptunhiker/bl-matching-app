@@ -56,6 +56,10 @@
           <dd class="text-sm text-neutral-700">{{ participant.start_date|date:"d.m.Y"|default:"—" }}</dd>
         </div>
         <div>
+          <dt class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-1.5">Gewünschtes Enddatum</dt>
+          <dd class="text-sm text-neutral-700">{{ participant.end_date|date:"d.m.Y"|default:"—" }}</dd>
+        </div>
+        <div>
           <dt class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-1.5">AVGS-Daten verfügbar?</dt>
           <dd>
             {% if participant.avgs_data_docs_available %}
