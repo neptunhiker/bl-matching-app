@@ -56,7 +56,6 @@ class ParticipantCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateView):
     # Q&A question texts used for prefill
     _LANGUAGE_QUESTION = "Auf welcher Sprache möchtest du das Coaching machen?"
     _COACHING_FORMAT = "Wie möchtest du dein Coaching am liebsten machen?"
-    _AVGS_QUESTION     = "Hast du schon einen AVGS Gutschein?"
 
     def get_initial(self):
         initial = super().get_initial()
@@ -101,11 +100,6 @@ class ParticipantCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateView):
             if matched.exists():
                 initial["languages"] = matched
         print(f"Prefilled languages: {initial.get('languages', [])}")
-
-        # AVGS
-        avgs_answer = qa_map.get(self._AVGS_QUESTION, "").strip().lower()
-        if avgs_answer:
-            initial["avgs_data_docs_available"] = avgs_answer.startswith("ja")
 
         return initial
 
