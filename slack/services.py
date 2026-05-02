@@ -582,8 +582,9 @@ def send_coaching_starting_info_slack(matching_attempt):
                 "text": (
                     "*Wichtige Rahmenbedingungen:*\n"
                     "• Vorgabe des Jobcenters: Es müssen mindestens *2 Termine pro Woche* stattfinden.\n"
-                    "• Die Unterrichtseinheiten sind innerhalb des vorgesehenen Coaching-Zeitraums zu absolvieren.\n"
-                    "• Bitte halte uns bei Unregelmäßigkeiten, Verzögerungen oder ausfallenden Terminen frühzeitig auf dem Laufenden."
+                    "• Alle UE müssen vollständig *innerhalb des Coaching-Zeitraums* absolviert werden – bitte plane frühzeitig.\n"
+                    "• Bitte halte uns bei Unregelmäßigkeiten, Verzögerungen oder ausfallenden Terminen frühzeitig auf dem Laufenden.\n\n"
+                    "💡 Zur Unterstützung bei der Planung steht dir unser <https://coaching-hub.beginnerluft.de/coaching_planner/|Coaching-Planer> zur Verfügung – er hilft dir, alle UE rechtzeitig einzuplanen."
                 ),
             },
         },
