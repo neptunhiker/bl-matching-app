@@ -12,7 +12,9 @@ def participant(db):
         last_name="Participant",
         email="peter_participant@example.com",
         city="Berlin",
-        start_date=datetime.date(2026, 11, 22)
+        start_date=datetime.date(2026, 11, 22),
+        end_date=datetime.date(2027, 2, 22),
+        avgs_data_docs_available=True,
     )
     
 @pytest.fixture
@@ -22,7 +24,9 @@ def participant_2(db):
         last_name="Doe",
         email="jim_doe@example.com",
         city="Hamburg",
-        start_date=datetime.date(2026, 6, 11)
+        start_date=datetime.date(2026, 6, 11),
+        end_date=datetime.date(2026, 9, 11),
+        avgs_data_docs_available=True,
 
     )
 
