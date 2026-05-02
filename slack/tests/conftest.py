@@ -81,33 +81,63 @@ def rtc_no_slack(matching_attempt, coach_no_slack):
 
 @pytest.fixture
 def matching_attempt_with_coach(participant, coach_with_slack, bl_contact):
-    return MatchingAttempt.objects.create(
+    matching_attempt = MatchingAttempt.objects.create(
         participant=participant,
         ue=48,
         matched_coach=coach_with_slack,
         bl_contact=bl_contact,
         intro_call_deadline_at=timezone.now() + datetime.timedelta(days=3),
     )
+    # Create accepted RequestToCoach for the matched coach
+    RequestToCoach.objects.create(
+        matching_attempt=matching_attempt,
+        coach=coach_with_slack,
+        priority=10,
+        ue=48,  # Coach gets the full UE in this test
+        state=RequestToCoach.State.ACCEPTED,
+        deadline_at=timezone.now() + datetime.timedelta(days=2),
+    )
+    return matching_attempt
 
 
 @pytest.fixture
 def matching_attempt_no_coach_slack(participant, coach_no_slack, bl_contact):
-    return MatchingAttempt.objects.create(
+    matching_attempt = MatchingAttempt.objects.create(
         participant=participant,
         ue=48,
         matched_coach=coach_no_slack,
         bl_contact=bl_contact,
     )
+    # Create accepted RequestToCoach for the matched coach
+    RequestToCoach.objects.create(
+        matching_attempt=matching_attempt,
+        coach=coach_no_slack,
+        priority=10,
+        ue=48,
+        state=RequestToCoach.State.ACCEPTED,
+        deadline_at=timezone.now() + datetime.timedelta(days=2),
+    )
+    return matching_attempt
 
 
 @pytest.fixture
 def matching_attempt_no_bl_slack(participant, coach_with_slack, bl_contact_no_slack):
-    return MatchingAttempt.objects.create(
+    matching_attempt = MatchingAttempt.objects.create(
         participant=participant,
         ue=48,
         matched_coach=coach_with_slack,
         bl_contact=bl_contact_no_slack,
     )
+    # Create accepted RequestToCoach for the matched coach
+    RequestToCoach.objects.create(
+        matching_attempt=matching_attempt,
+        coach=coach_with_slack,
+        priority=10,
+        ue=48,
+        state=RequestToCoach.State.ACCEPTED,
+        deadline_at=timezone.now() + datetime.timedelta(days=2),
+    )
+    return matching_attempt
 
 
 @pytest.fixture

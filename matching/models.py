@@ -350,6 +350,28 @@ class MatchingAttempt(models.Model):
             state=RequestToCoach.State.IN_PREPARATION
         ).exists()
 
+    def get_matched_coach_ue(self) -> int:
+        """Get the UE allocated to the matched coach from the accepted RequestToCoach.
+        
+        Returns the number of teaching units this specific coach will deliver,
+        which may differ from the total UE in the matching attempt.
+        
+        Raises:
+            ValueError: If no accepted RequestToCoach exists for the matched coach.
+                This indicates a data integrity issue.
+        """
+        rtc = self.coach_requests.filter(
+            coach=self.matched_coach,
+            state=RequestToCoach.State.ACCEPTED
+        ).first()
+        
+        if not rtc:
+            raise ValueError(
+                f"No accepted RequestToCoach found for matched coach {self.matched_coach} "
+                f"in matching attempt {self.id}. This indicates a data integrity issue."
+            )
+        return rtc.ue
+
     # -------------------------------------------------------
 
             

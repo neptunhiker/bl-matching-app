@@ -373,7 +373,7 @@ def send_coaching_start_info_email_to_coach(matching_attempt, triggered_by: str=
     end_date = participant.end_date.strftime("%d.%m.%Y") if participant.end_date else None
     
     coach = matching_attempt.matched_coach
-    ue = matching_attempt.ue
+    coach_ue = matching_attempt.get_matched_coach_ue()
     context = {
         "coach_first_name": coach.first_name,
         "coach_full_name": f"{coach.first_name} {coach.last_name}".strip(),
@@ -382,7 +382,7 @@ def send_coaching_start_info_email_to_coach(matching_attempt, triggered_by: str=
         "participant_email": participant.email,
         "start_date": start_date,
         "end_date": end_date,
-        "ue": ue,
+        "coach_ue": coach_ue,
         "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft-Team"),
     }
     

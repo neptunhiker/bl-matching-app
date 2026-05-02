@@ -528,7 +528,7 @@ def send_coaching_starting_info_slack(matching_attempt):
     user_id = coach.slack_user_id
     start_date = participant.start_date
     end_date = participant.end_date
-    ue = matching_attempt.ue
+    coach_ue = matching_attempt.get_matched_coach_ue()
 
     participant_first_name = participant.first_name
     participant_full_name = f"{participant.first_name} {participant.last_name}".strip()
@@ -562,7 +562,7 @@ def send_coaching_starting_info_slack(matching_attempt):
                 "text": (
                     f"Das Coaching mit *{participant_full_name}* kann jetzt offiziell starten 😊\n"
                     f"Geplanter Start: *{formatted_start_date}*{formatted_end_clause}\n"
-                    f"Umfang: *{ue} Unterrichtseinheiten* (1 UE = 45 Minuten)"
+                    f"Umfang: *{coach_ue} Unterrichtseinheiten* (1 UE = 45 Minuten)"
                 ),
             },
         },
@@ -587,7 +587,7 @@ def send_coaching_starting_info_slack(matching_attempt):
                     "• Vorgabe des Jobcenters: Es müssen mindestens *2 Termine pro Woche* stattfinden.\n"
                     "• Alle UE müssen vollständig *innerhalb des Coaching-Zeitraums* absolviert werden – bitte plane frühzeitig.\n"
                     "• Bitte halte uns bei Unregelmäßigkeiten, Verzögerungen oder ausfallenden Terminen frühzeitig auf dem Laufenden.\n\n"
-                    f"💡 Zur Unterstützung bei der Planung steht dir unser <https://coaching-hub.beginnerluft.de/coaching_planner/|Coaching-Planer> zur Verfügung – er hilft dir, deine {ue} UE{planner_deadline_clause} rechtzeitig einzuplanen."
+                    f"💡 Zur Unterstützung bei der Planung steht dir unser <https://coaching-hub.beginnerluft.de/coaching_planner/|Coaching-Planer> zur Verfügung – er hilft dir, deine {coach_ue} UE{planner_deadline_clause} rechtzeitig einzuplanen."
                 ),
             },
         },
