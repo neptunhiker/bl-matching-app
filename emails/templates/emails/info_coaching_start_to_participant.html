@@ -2,31 +2,68 @@
 
 {% block content %}
 
-<h2 style="margin-bottom:20px;">
-🤩 Dein Coaching mit Coach {{ coach_name }} kann starten
-</h2>
+<h2 style="margin-bottom: 16px;">Hallo {{ participant_first_name }},</h2>
 
 <p>
-Gute Nachrichten, {{ participant_first_name }}: Dein Coaching mit <strong>{{ coach_first_name }}</strong> kann jetzt offiziell starten.
+schön, dass du bald mit deinem Coaching startest 😊<br>
+Dein Coaching beginnt am <strong>{{ start_date }}</strong>.<br>
+Dein Coach ist <strong>{{ coach_name }}</strong>.
 </p>
 
-<p style="margin-top:16px;">
-Falls noch nicht geschehen, wird {{ coach_first_name }} sich in Kürze bei dir melden, um die ersten Coaching-Sessions zu organisieren.
-Idealerweise findet der erste Termin bereits zu Beginn des Coaching-Zeitraums am <strong>{{ start_date }}</strong> statt.
+<h3 style="margin-top: 24px; margin-bottom: 8px;">Umfang deines Coachings</h3>
+<p>
+  48 Unterrichtseinheiten (1 UE = 45 Minuten)
 </p>
 
-<p style="margin-top:20px;">
-Falls du noch Fragen hast oder Unterstützung brauchst, melde dich jederzeit gerne bei uns unter <a href="mailto:info@beginnerluft.de">info@beginnerluft.de</a>.
-Wir begleiten dich während des gesamten Coachings.
+<h3 style="margin-top: 24px; margin-bottom: 8px;">Zuständigkeiten &amp; Kontakt zum BeginnerLuft-Team</h3>
+<p>
+Für alle inhaltlichen Themen rund um dein Coaching (z. B. Ziele, Motivation,
+Bewerbungsunterlagen, Weiterbildungsrecherche) ist dein Coach {{ coach_first_name }} deine direkte Ansprechperson.
 </p>
 
-<p style="margin-top:26px;">
-Wir wünschen Dir einen erfolgreichen Start in dein Coaching.
+<p>
+Für organisatorische Fragen rund um das Jobcenter (z. B. Fahrtkostenantrag)
+kannst du dich jederzeit an unser Team wenden:<br>
+<a href="mailto:info@beginnerluft.de">info@beginnerluft.de</a>
 </p>
 
-<p style="margin-top:16px;">
-Viele Grüße<br>
-{{ author }}
+<p>
+Wenn du merkst, dass sich etwas im Coaching nicht stimmig anfühlt oder du
+unsicher bist, kannst du dich jederzeit vertrauensvoll bei Johannes oder Tabea melden:
+</p>
+<ul style="margin: 0; padding-left: 20px;">
+	<li><a href="mailto:johannes.junker@beginnerluft.de">johannes.junker@beginnerluft.de</a></li>
+	<li><a href="mailto:tabea.zabel@beginnerluft.de">tabea.zabel@beginnerluft.de</a></li>
+</ul>
+
+<h3 style="margin-top: 24px; margin-bottom: 8px;">Wichtige organisatorische Hinweise</h3>
+<ul style="margin: 0; padding-left: 20px;">
+	<li>Die Terminabstimmung erfolgt direkt mit deinem Coach. Falls nicht schon geschehen, wird sich {{ coach_first_name }} mit ersten Terminvorschlägen bei dir melden.</li>
+	<li>Laut Vorgaben des Jobcenters müssen mindestens 2 Termine pro Woche stattfinden. Zudem ist Urlaub während des Coachings nicht vorgesehen.</li>
+	<li>Wenn dir mal etwas dazwischenkommt, sag bitte so früh wie möglich ab, damit dein Coach den Termin neu vergeben kann. Wenn du weniger als 24 Stunden vor einem Termin absagst, verfällt dieser Termin leider ersatzlos und wird auf der Anwesenheitsliste an das Jobcenter als „nicht erschienen“ vermerkt.</li>
+	<li>Bei Krankheit informiere bitte deinen Coach und schreib uns eine E-Mail an <a href="mailto:info@beginnerluft.de">info@beginnerluft.de</a>. Bei längerer Krankheit sende uns bitte zusätzlich eine ärztliche Bescheinigung per E-Mail.</li>
+</ul>
+
+<h3 style="margin-top: 24px; margin-bottom: 8px;">Transparenz &amp; Datenschutz</h3>
+<p>
+  Zum Abschluss deines Coachings verlangt das Jobcenter einen Abschlussbericht. Dieser wird von deinem Coach erstellt. Weitere Inhalte aus deinen Gesprächen mit deinem Coach werden nicht ohne dein Wissen an das Jobcenter weitergegeben.
+</p>
+
+<h3 style="margin-top: 24px; margin-bottom: 8px;">Abschluss des Coachings</h3>
+<p>Am Ende deines Coachings erwarten dich folgende Schritte:</p>
+<ul style="margin: 0; padding-left: 20px;">
+	<li>Dein Coach {{ coach_first_name }} wird gegen Ende deines Coachings einen Abschlussbericht erstellen und diesen vor der Einreichung beim Jobcenter mit dir besprechen, damit du genau weißt, welche Informationen darin enthalten sind.</li>
+	<li>Du erhältst eine Anwesenheitsliste mit allen absolvierten Unterrichtseinheiten, die du digital unterschreibst.</li>
+	<li>Wir führen ein gemeinsames Abschlussgespräch mit dir.</li>
+	<li>Anschließend werden der Abschlussbericht und die Anwesenheitsliste von uns an das Jobcenter übermittelt.</li>
+</ul>
+
+<p style="margin-top: 24px;">
+Wenn du noch Fragen hast, melde dich jederzeit gerne bei uns. Jetzt wünschen wir dir einen erfolgreichen Start in dein Coaching.
+</p>
+
+<p>
+Dein BeginnerLuft-Team
 </p>
 
 {% endblock %}

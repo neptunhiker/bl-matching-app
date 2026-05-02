@@ -520,63 +520,90 @@ def send_intro_call_request_slack(matching_attempt):
         )
     
 def send_coaching_starting_info_slack(matching_attempt):
-  
     client = WebClient(token=settings.SLACK_BOT_TOKEN)
+
     coach = matching_attempt.matched_coach
     participant = matching_attempt.participant
 
     user_id = coach.slack_user_id
     start_date = participant.start_date
-    
+
+    participant_first_name = participant.first_name
+    participant_full_name = f"{participant.first_name} {participant.last_name}".strip()
+    formatted_start_date = start_date.strftime("%d.%m.%Y")
+
     if not user_id:
         raise ValueError(f"Coach {coach} does not have a Slack user ID")
 
-    logger.info(f"Sending coaching starting info Slack to coach {coach} (matching_attempt: {matching_attempt.id})")
-    subject = f"🤩 Coaching mit {participant.first_name} kann starten"
+    logger.info(
+        f"Sending coaching starting info Slack to coach {coach} "
+        f"(matching_attempt: {matching_attempt.id})"
+    )
+
+    subject = f"🤩 Coaching mit {participant_first_name} kann starten"
 
     blocks = [
         {
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": f"🤩 Coaching mit {participant.first_name} bitte starten"
-            }
+                "text": f"🤩 Coaching mit {participant_first_name} kann starten",
+            },
         },
         {
             "type": "section",
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"Es kann losgehen! Wir haben auch von {participant.first_name} eine positive Rückmeldung zu eurem Kennenlerngespräch erhalten. Dein Coaching mit *{participant.first_name}* startet jetzt also offiziell. 🙌\n\n"
-                )
-            }
+                    f"Das Coaching mit *{participant_full_name}* kann jetzt offiziell starten 😊\n"
+                    f"Geplanter Start: *{formatted_start_date}*"
+                ),
+            },
         },
         {
             "type": "section",
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"*Bitte organisiere nun die ersten Coaching-Sessions.* Am besten wäre es, wenn der erste Termin gleich am {start_date.strftime('%d.%m.%Y')} stattfindet.\n"
-                )
-            }
+                    "*Deine nächsten Schritte:*\n"
+                    f"• Bitte nimm zeitnah Kontakt mit {participant_first_name} auf und schlage erste Termine vor.\n"
+                    f"• Idealerweise findet der erste Termin bereits am *{formatted_start_date}* statt.\n"
+                    f"• Stimme die weiteren Termine direkt mit {participant_first_name} ab."
+                ),
+            },
         },
         {
             "type": "section",
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"Wichtig: Bitte denke daran, dass zwei Termine die Woche stattfinden müssen."
-                )
-            }
-        },  
+                    "*Wichtige Rahmenbedingungen:*\n"
+                    "• Vorgabe des Jobcenters: Es müssen mindestens *2 Termine pro Woche* stattfinden.\n"
+                    "• Die Unterrichtseinheiten sind innerhalb des vorgesehenen Coaching-Zeitraums zu absolvieren.\n"
+                    "• Bitte halte uns bei Unregelmäßigkeiten, Verzögerungen oder ausfallenden Terminen frühzeitig auf dem Laufenden."
+                ),
+            },
+        },
         {
             "type": "section",
             "text": {
                 "type": "mrkdwn",
                 "text": (
-                    f"Falls du noch Fragen hast oder Unterstützung brauchst, melde dich gerne jederzeit bei uns im Team! Wir sind hier, um dich zu unterstützen. 😊"
-                )
-            }
+                    "*Kommunikation & Unterstützung:*\n"
+                    "Du bist die zentrale Ansprechperson für alle inhaltlichen Themen im Coaching. "
+                    "Bei organisatorischen Fragen oder wenn es Herausforderungen im Coaching gibt, "
+                    "melde dich bitte jederzeit bei uns."
+                ),
+            },
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    "Vielen Dank für dein Engagement - wir wünschen dir einen guten Start in das Coaching 🙌"
+                ),
+            },
         },
     ]
 
@@ -585,7 +612,9 @@ def send_coaching_starting_info_slack(matching_attempt):
     try:
         dm_channel = _open_dm_channel(client, user_id)
         client.chat_postMessage(channel=dm_channel, text=subject, blocks=blocks)
+
         logger.info(f"Successfully sent coaching starting info Slack to coach {coach}")
+
         create_slack_log(
             to_coach=coach,
             subject=subject,
@@ -594,6 +623,7 @@ def send_coaching_starting_info_slack(matching_attempt):
             matching_attempt=matching_attempt,
             sent_by=SlackLog.SentBy.SYSTEM,
         )
+
     except SlackApiError as e:
         logger.error(f"Slack API error sending coaching starting info to coach {coach}: {e}")
         create_slack_log(
@@ -605,6 +635,7 @@ def send_coaching_starting_info_slack(matching_attempt):
             status=SlackLog.Status.FAILED,
             error_message=str(e),
         )
+
     except Exception as e:
         logger.error(f"Unexpected error sending coaching starting info to coach {coach}: {e}")
         create_slack_log(

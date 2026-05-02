@@ -2,38 +2,49 @@
 
 {% block content %}
 
-<h2 style="margin-bottom:20px;">
-Bitte Coaching mit {{ participant_name }} starten
-</h2>
+<h2 style="margin-bottom: 16px;">Hallo {{ coach_first_name }},</h2>
 
 <p>
-Gute Nachrichten: Das Coaching mit <strong>{{ participant_name }}</strong> kann jetzt offiziell starten.
+das Coaching mit <strong>{{ participant_full_name }}</strong> kann jetzt offiziell starten 😊
 </p>
 
-<p style="margin-top:16px;">
-Bitte organisiere nun die ersten Coaching-Sessions.
-Idealerweise findet der erste Termin bereits am <strong>{{ start_date }}</strong> statt.
+<p>
+Das Coaching startet am <strong>{{ start_date }}</strong>.
 </p>
 
-<p style="margin-top:16px;">
-Wichtig: Bitte denke daran, dass zwei Termine die Woche stattfinden müssen.
+<h3 style="margin-top: 24px; margin-bottom: 8px;">Deine nächsten Schritte</h3>
+<ul style="margin: 0; padding-left: 20px;">
+	<li>Bitte nimm zeitnah Kontakt mit {{ participant_name }} auf und schlage erste Termine vor.</li>
+	<li>Idealerweise findet der erste Termin bereits am <strong>{{ start_date }}</strong> statt.</li>
+	<li>Stimme die weiteren Termine direkt mit {{ participant_name }} ab.</li>
+</ul>
+
+<h3 style="margin-top: 24px; margin-bottom: 8px;">Rahmenbedingungen des Coachings</h3>
+<ul style="margin: 0; padding-left: 20px;">
+	<li>Vorgabe des Jobcenters: Es müssen mindestens <strong>2 Termine pro Woche</strong> stattfinden.</li>
+	<li>Die Unterrichtseinheiten sind innerhalb des vorgesehenen Coaching-Zeitraums zu absolvieren.</li>
+	<li>Bitte achte auf eine kontinuierliche Terminplanung und halte uns bei Unregelmäßigkeiten auf dem Laufenden.</li>
+	<li>Bitte informiere uns, falls Termine nicht wie geplant stattfinden können oder sich Verzögerungen ergeben.</li>
+</ul>
+
+<h3 style="margin-top: 24px; margin-bottom: 8px;">Kommunikation &amp; Unterstützung</h3>
+<p>
+Du bist die zentrale Ansprechperson für alle inhaltlichen Themen im Coaching.
+Bei organisatorischen Fragen oder wenn es Herausforderungen im Coaching gibt,
+kannst du dich jederzeit an uns wenden.
 </p>
 
-<p style="margin-top:20px;">
-Falls du noch Fragen hast oder Unterstützung brauchst, melde dich jederzeit gerne bei uns im Team! Wir sind hier, um dich zu unterstützen. 😊
+<p>
+Wenn du merkst, dass etwas im Coaching nicht stimmig läuft oder Unsicherheiten bestehen,
+melde dich bitte frühzeitig bei uns, damit wir gemeinsam eine gute Lösung finden.
 </p>
 
-{% if urgency_msg %}
-<p style="margin-top:22px; font-size:0.95rem; color:#6b7280;">
-<strong>Hinweis:</strong> {{ urgency_msg }}
-</p>
-{% endif %}
 
-<p style="margin-top:26px;">
-Vielen Dank für dein Engagement und einen erfolgreichen Start in das Coaching.
+<p style="margin-top: 24px;">
+Vielen Dank für dein Engagement – wir wünschen dir einen erfolgreichen Start in das Coaching.
 </p>
 
-<p style="margin-top:16px;">
+<p style="margin-top: 16px;">
 Viele Grüße<br>
 {{ author }}
 </p>

@@ -375,6 +375,7 @@ def send_coaching_start_info_email_to_coach(matching_attempt, triggered_by: str=
     context = {
         "recipient_name": coach.first_name,
         "participant_name": participant.first_name,
+        "participant_full_name": participant.full_name,
         "participant_email": participant.email,
         "start_date": start_date,
         "author": getattr(settings, "SYSTEM_EMAIL_NAME", "BeginnerLuft Roboti"),

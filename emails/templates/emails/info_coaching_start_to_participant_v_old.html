@@ -1,0 +1,32 @@
+{% extends "emails/base_email.html" %}
+
+{% block content %}
+
+<h2 style="margin-bottom:20px;">
+🤩 Dein Coaching mit Coach {{ coach_name }} kann starten
+</h2>
+
+<p>
+Gute Nachrichten, {{ participant_first_name }}: Dein Coaching mit <strong>{{ coach_first_name }}</strong> kann jetzt offiziell starten.
+</p>
+
+<p style="margin-top:16px;">
+Falls noch nicht geschehen, wird {{ coach_first_name }} sich in Kürze bei dir melden, um die ersten Coaching-Sessions zu organisieren.
+Idealerweise findet der erste Termin bereits zu Beginn des Coaching-Zeitraums am <strong>{{ start_date }}</strong> statt.
+</p>
+
+<p style="margin-top:20px;">
+Falls du noch Fragen hast oder Unterstützung brauchst, melde dich jederzeit gerne bei uns unter <a href="mailto:info@beginnerluft.de">info@beginnerluft.de</a>.
+Wir begleiten dich während des gesamten Coachings.
+</p>
+
+<p style="margin-top:26px;">
+Wir wünschen Dir einen erfolgreichen Start in dein Coaching.
+</p>
+
+<p style="margin-top:16px;">
+Viele Grüße<br>
+{{ author }}
+</p>
+
+{% endblock %}
