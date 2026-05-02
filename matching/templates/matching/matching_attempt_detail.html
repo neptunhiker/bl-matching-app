@@ -132,14 +132,26 @@
           <div class="bg-neutral-50 rounded-xl p-4">
             <h3 class="text-xs font-jakarta text-neutral-500 mb-1">Hintergrundinformationen zu {{ matching_attempt.participant.first_name }}</h3>
             <p class="text-sm text-neutral-800 whitespace-pre-wrap">{{ matching_attempt.participant.background_information|default:"&mdash;" }}</p>
+            <p class="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-primary-600 bg-primary-100 rounded-md px-2.5 py-1">
+              <span class="h-3.5 w-3.5 shrink-0">{% include 'components/icons/info.html' %}</span>
+              Diese Informationen werden auch den Coaches im Matching-Prozess zur Verfügung gestellt.
+            </p>
           </div>
           <div class="bg-neutral-50 rounded-xl p-4">
             <h3 class="text-xs font-jakarta text-neutral-500 mb-1">Coaching-Ziel</h3>
             <p class="text-sm text-neutral-800 whitespace-pre-wrap">{{ matching_attempt.participant.coaching_target|default:"&mdash;" }}</p>
+            <p class="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-primary-600 bg-primary-100 rounded-md px-2.5 py-1">
+              <span class="h-3.5 w-3.5 shrink-0">{% include 'components/icons/info.html' %}</span>
+              Diese Informationen werden auch den Coaches im Matching-Prozess zur Verfügung gestellt.
+            </p>
           </div>
           <div class="bg-neutral-50 rounded-xl p-4">
-            <h3 class="text-xs font-jakarta text-neutral-500 mb-1">Notizien zu {{ matching_attempt.participant.first_name }}</h3>
+            <h3 class="text-xs font-jakarta text-neutral-500 mb-1">Notizen zu {{ matching_attempt.participant.first_name }}</h3>
             <p class="text-sm text-neutral-800 whitespace-pre-wrap">{{ matching_attempt.participant.notes|default:"&mdash;" }}</p>
+            <p class="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-neutral-500 bg-neutral-100 rounded-md px-2.5 py-1">
+              <span class="h-3.5 w-3.5 shrink-0">{% include 'components/icons/info.html' %}</span>
+              Diese Informationen verbleiben intern bei BeginnerLuft und werden nicht an Coaches weitergegeben.
+            </p>
           </div>
         </div>
       </details>

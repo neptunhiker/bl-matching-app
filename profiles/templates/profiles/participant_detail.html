@@ -124,7 +124,11 @@
 
         <div class="bg-neutral-50 rounded-lg px-4 py-4">
           <p class="text-xs font-medium uppercase tracking-widest text-neutral-400 mb-2">Notizen</p>
-          <p class="text-sm leading-7 text-neutral-800 whitespace-pre-wrap">{{ participant.notes }}</p>
+          {% if participant.notes %}
+            <p class="text-sm text-neutral-800 whitespace-pre-wrap">{{ participant.notes }}</p>
+          {% else %}
+            <p class="text-sm text-neutral-400">Noch keine Notizen hinterlegt.</p>
+          {% endif %}
           <p class="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-neutral-500 bg-neutral-100 rounded-md px-2.5 py-1">
             <span class="h-3.5 w-3.5 shrink-0">{% include 'components/icons/info.html' %}</span>
             Diese Informationen verbleiben intern bei BeginnerLuft und werden nicht an Coaches weitergegeben.
