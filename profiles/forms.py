@@ -25,6 +25,7 @@ class ParticipantForm(forms.ModelForm):
             'end_date',
             'background_information',
             'coaching_target',
+            'notes',
             'avgs_data_docs_available',
         ]
         widgets = {
@@ -32,6 +33,7 @@ class ParticipantForm(forms.ModelForm):
             'end_date': forms.DateInput(attrs={'type': 'date'}),
             'background_information': forms.Textarea(attrs={'rows': 4}),
             'coaching_target': forms.Textarea(attrs={'rows': 4}),
+            'notes': forms.Textarea(attrs={'rows': 4}),
         }
 
     def clean(self):

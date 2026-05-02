@@ -113,6 +113,12 @@
         {% include "profiles/_form_field.html" with field=form.background_information hide_label=True %}
       </div>
 
+      <!-- Notes -->
+      <div class="px-6 py-6">
+        <h2 class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-4">Notizen</h2>
+        {% include "profiles/_form_field.html" with field=form.notes hide_label=True %}
+      </div>
+
     </div>
 
     <!-- Actions -->

@@ -167,6 +167,7 @@ class Participant(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     background_information = models.TextField(blank=True, verbose_name='Hintergrundinformationen')
     coaching_target = models.TextField(blank=True, verbose_name='Coaching-Ziel')
+    notes = models.TextField(blank=True, verbose_name='Notizen')
     avgs_data_docs_available = models.BooleanField(default=False, verbose_name='AVGS-Daten verfügbar', help_text='Liegen BeginnerLuft alle notwendigen AVGS-Daten vor, um mit dem Matching zu starten?')
     calendly_booking = models.OneToOneField(
         "bookings.CalendlyBooking",

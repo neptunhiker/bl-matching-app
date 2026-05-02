@@ -1,6 +1,7 @@
 import pytest
 
 from profiles.models import Coach
+from profiles.models import Participant
 from profiles.views import CoachDetailView
 
 from django.urls import reverse
@@ -148,6 +149,21 @@ class TestParticipantCreateView:
         assert response.status_code == 302
         assert '/teilnehmer/' in response.url
 
+    def test_create_persists_notes(self, client, staff_user):
+        client.force_login(staff_user)
+        data = {
+            'first_name': 'Noted',
+            'last_name': 'Person',
+            'email': 'noted_participant@example.com',
+            'city': 'Berlin',
+            'start_date': '2026-11-22',
+            'notes': 'Internal participant note',
+        }
+        response = client.post(reverse('participant_create'), data)
+        assert response.status_code == 302
+        participant = Participant.objects.get(email='noted_participant@example.com')
+        assert participant.notes == 'Internal participant note'
+
 
 @pytest.mark.django_db
 class TestParticipantUpdateView:
@@ -184,6 +200,21 @@ class TestParticipantUpdateView:
         response = client.post(reverse('participant_update', kwargs={'pk': participant.pk}), data)
         assert response.status_code == 302
         assert '/teilnehmer/' in response.url
+
+    def test_update_persists_notes(self, client, staff_user, participant):
+        client.force_login(staff_user)
+        data = {
+            'first_name': participant.first_name,
+            'last_name': participant.last_name,
+            'email': participant.email,
+            'city': participant.city,
+            'start_date': participant.start_date.strftime('%Y-%m-%d'),
+            'notes': 'Updated participant note',
+        }
+        response = client.post(reverse('participant_update', kwargs={'pk': participant.pk}), data)
+        assert response.status_code == 302
+        participant.refresh_from_db()
+        assert participant.notes == 'Updated participant note'
 
 
 @pytest.mark.django_db
