@@ -36,6 +36,20 @@ class ParticipantForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'rows': 4}),
         }
 
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip().lower()
+        if not email:
+            return email
+
+        duplicate_query = Participant.objects.filter(email__iexact=email)
+        if self.instance and self.instance.pk:
+            duplicate_query = duplicate_query.exclude(pk=self.instance.pk)
+
+        if duplicate_query.exists():
+            raise forms.ValidationError('Eine Teilnehmer:in mit dieser E-Mail existiert bereits.')
+
+        return email
+
     def clean(self):
         cleaned_data = super().clean()
         start_date = cleaned_data.get('start_date')

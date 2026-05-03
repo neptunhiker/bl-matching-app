@@ -164,6 +164,37 @@ class TestParticipantCreateView:
         participant = Participant.objects.get(email='noted_participant@example.com')
         assert participant.notes == 'Internal participant note'
 
+    def test_create_normalizes_email_to_lowercase_and_trimmed(self, client, staff_user):
+        client.force_login(staff_user)
+        data = {
+            'first_name': 'Norm',
+            'last_name': 'Case',
+            'email': '  Mixed.Case@Example.COM  ',
+            'city': 'Berlin',
+            'start_date': '2026-11-22',
+        }
+
+        response = client.post(reverse('participant_create'), data)
+
+        assert response.status_code == 302
+        participant = Participant.objects.get(first_name='Norm', last_name='Case')
+        assert participant.email == 'mixed.case@example.com'
+
+    def test_create_duplicate_email_case_insensitive_shows_friendly_error(self, client, staff_user, participant):
+        client.force_login(staff_user)
+        data = {
+            'first_name': 'Duplicate',
+            'last_name': 'Try',
+            'email': participant.email.upper(),
+            'city': 'Berlin',
+            'start_date': '2026-11-22',
+        }
+
+        response = client.post(reverse('participant_create'), data)
+
+        assert response.status_code == 200
+        assert 'Eine Teilnehmer:in mit dieser E-Mail existiert bereits.' in response.content.decode('utf-8')
+
 
 @pytest.mark.django_db
 class TestParticipantUpdateView:
@@ -215,6 +246,29 @@ class TestParticipantUpdateView:
         assert response.status_code == 302
         participant.refresh_from_db()
         assert participant.notes == 'Updated participant note'
+
+    def test_update_duplicate_email_case_insensitive_shows_friendly_error(self, client, staff_user, participant):
+        other = Participant.objects.create(
+            first_name='Other',
+            last_name='Person',
+            email='other.person@example.com',
+            city='Berlin',
+            start_date='2026-11-22',
+        )
+
+        client.force_login(staff_user)
+        data = {
+            'first_name': participant.first_name,
+            'last_name': participant.last_name,
+            'email': other.email.upper(),
+            'city': participant.city,
+            'start_date': participant.start_date.strftime('%Y-%m-%d'),
+        }
+
+        response = client.post(reverse('participant_update', kwargs={'pk': participant.pk}), data)
+
+        assert response.status_code == 200
+        assert 'Eine Teilnehmer:in mit dieser E-Mail existiert bereits.' in response.content.decode('utf-8')
 
 
 @pytest.mark.django_db
