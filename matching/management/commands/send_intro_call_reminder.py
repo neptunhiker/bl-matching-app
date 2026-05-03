@@ -2,6 +2,7 @@ import logging
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 
 from matching.models import MatchingAttempt, MatchingEvent, TriggeredByOptions
 from matching.utils import get_standard_extension_deadline
@@ -39,9 +40,14 @@ class Command(BaseCommand):
         for attempt in pending:
             try:
                 with transaction.atomic():
-                    attempt.intro_call_deadline_at = get_standard_extension_deadline(
-                        attempt.intro_call_deadline_at
+                    # If deadline has passed (due to automation disable/re-enable),
+                    # extend from now. Otherwise extend from current deadline.
+                    deadline_to_extend = (
+                        timezone.now()
+                        if attempt.intro_call_deadline_at < timezone.now()
+                        else attempt.intro_call_deadline_at
                     )
+                    attempt.intro_call_deadline_at = get_standard_extension_deadline(deadline_to_extend)
                     attempt.save(update_fields=["intro_call_deadline_at"])
 
                     create_matching_event(

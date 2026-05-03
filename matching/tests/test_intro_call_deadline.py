@@ -537,3 +537,132 @@ class TestAcceptOrDeclineSetsDeadline:
 
         ma = _fresh(rtc_awaiting_reply.matching_attempt.pk)
         assert ma.intro_call_deadline_at is None
+
+
+# ---------------------------------------------------------------------------
+# 7. NO_PAST_DEADLINES: Fix stale deadline bug when automation disabled/re-enabled
+# ---------------------------------------------------------------------------
+
+@pytest.mark.django_db
+class TestNoPastDeadlines:
+    """
+    Tests for the fix to prevent reminder commands from firing with stale deadlines
+    after automation is disabled and re-enabled.
+    """
+
+    def test_intro_call_reminder_extends_from_now_if_deadline_in_past(
+        self, attempt_awaiting_intro_call
+    ):
+        """
+        Verify that send_intro_call_reminder extends from timezone.now() if the
+        deadline has already passed. This handles the disable/re-enable scenario.
+        """
+        # Setup: Deadline is in the past (1 hour ago)
+        initial_deadline = attempt_awaiting_intro_call.intro_call_deadline_at
+        assert initial_deadline < timezone.now()
+
+        with patch(f"{_HANDLER_MODULE}.send_intro_call_reminder_slack"):
+            call_command("send_intro_call_reminder", verbosity=0)
+
+        # Verify: Deadline should be extended from now, not from past value
+        updated = _fresh(attempt_awaiting_intro_call.pk)
+        assert updated.intro_call_deadline_at > timezone.now()
+        assert updated.intro_call_deadline_at > initial_deadline
+
+        # Event should be created
+        assert MatchingEvent.objects.filter(
+            matching_attempt=attempt_awaiting_intro_call,
+            event_type=MatchingEvent.EventType.INTRO_CALL_REMINDER_SENT_TO_COACH,
+        ).exists()
+
+    def test_intro_call_reminder_not_sent_twice_after_disable_reenable(
+        self, slack_coach, bl_staff, db
+    ):
+        """
+        Scenario:
+        1. Day 1: Coach accepts RTC, intro_call_deadline_at = Day 4
+        2. Day 2: User disables automation
+        3. Day 8: User re-enables automation
+
+        Expected: Reminder fires only once with corrected deadline,
+        not twice or with stale deadline stuck in past.
+        """
+        from profiles.models import Participant
+
+        # Create matching attempt with deadline in the past (simulates Day 8 scenario)
+        participant = Participant.objects.create(
+            first_name="TestP",
+            last_name="Test",
+            email="testp@example.com",
+            city="Berlin",
+            start_date=datetime.date(2026, 1, 1),
+        )
+        attempt = MatchingAttempt.objects.create(participant=participant, ue=48)
+        
+        # Set deadline to 4 hours ago (simulates stale deadline from disabled automation)
+        past_deadline = timezone.now() - datetime.timedelta(hours=4)
+        _bypass_fsm(
+            attempt,
+            state=MatchingAttempt.State.AWAITING_INTRO_CALL_FEEDBACK_FROM_COACH,
+            automation_enabled=True,
+            matched_coach_id=slack_coach.pk,
+            intro_call_deadline_at=past_deadline,
+            bl_contact_id=bl_staff.pk,
+        )
+
+        # Run cron job once (simulates re-enabling automation and cron running)
+        with patch(f"{_HANDLER_MODULE}.send_intro_call_reminder_slack"):
+            call_command("send_intro_call_reminder", verbosity=0)
+
+        # Verify: ONE reminder event created
+        event_count = MatchingEvent.objects.filter(
+            matching_attempt=attempt,
+            event_type=MatchingEvent.EventType.INTRO_CALL_REMINDER_SENT_TO_COACH,
+        ).count()
+        assert event_count == 1
+
+        # Verify: Deadline is in future (extended from now, not stuck in past)
+        updated = _fresh(attempt.pk)
+        assert updated.intro_call_deadline_at > timezone.now()
+
+        # Run cron job again (should not fire again due to event deduplication)
+        with patch(f"{_HANDLER_MODULE}.send_intro_call_reminder_slack"):
+            call_command("send_intro_call_reminder", verbosity=0)
+
+        # Verify: Still only ONE reminder event (no duplicate)
+        final_event_count = MatchingEvent.objects.filter(
+            matching_attempt=attempt,
+            event_type=MatchingEvent.EventType.INTRO_CALL_REMINDER_SENT_TO_COACH,
+        ).count()
+        assert final_event_count == 1
+
+    def test_participant_intro_call_feedback_reminder_already_safe(
+        self, db, matching_attempt, slack_coach, bl_staff
+    ):
+        """
+        Verify that the participant feedback reminder is already using
+        the correct pattern (extends from timezone.now()) and is safe.
+        """
+        # Setup: Participant feedback deadline in the past
+        _bypass_fsm(
+            matching_attempt,
+            state=MatchingAttempt.State.AWAITING_INTRO_CALL_FEEDBACK_FROM_PARTICIPANT,
+            automation_enabled=True,
+            matched_coach_id=slack_coach.pk,
+            participant_intro_call_feedback_deadline_at=timezone.now()
+            - datetime.timedelta(hours=1),
+            bl_contact_id=bl_staff.pk,
+        )
+        attempt = _fresh(matching_attempt.pk)
+        initial_deadline = attempt.participant_intro_call_feedback_deadline_at
+        assert initial_deadline < timezone.now()
+
+        with patch(f"{_HANDLER_MODULE}.send_feedback_request_email_after_intro_call_to_participant"):
+            call_command("send_participant_intro_call_feedback_reminder", verbosity=0)
+
+        # Verify: Deadline is extended from now, not stuck in past
+        updated = _fresh(attempt.pk)
+        assert updated.participant_intro_call_feedback_deadline_at > timezone.now()
+        assert (
+            updated.participant_intro_call_feedback_deadline_at > initial_deadline
+        )
