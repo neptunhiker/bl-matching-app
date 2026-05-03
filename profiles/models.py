@@ -163,7 +163,7 @@ class Participant(models.Model):
     coaching_format_online = models.BooleanField(default=False, verbose_name='Online')
     coaching_format_presence = models.BooleanField(default=False, verbose_name='Präsenz')
     coaching_format_hybrid = models.BooleanField(default=False, verbose_name='Hybrid')
-    start_date = models.DateField(verbose_name='Gewünschtes Startdatum', help_text='Wann soll das Coaching idealerweise starten?')
+    start_date = models.DateField(verbose_name='Gewünschtes Startdatum', help_text='Wann soll das Coaching idealerweise starten?', null=True, blank=True)
     end_date = models.DateField(verbose_name='Gewünschtes Enddatum', help_text='Wann soll das Coaching idealerweise enden?', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     background_information = models.TextField(blank=True, verbose_name='Hintergrundinformationen')

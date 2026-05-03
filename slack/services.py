@@ -140,7 +140,7 @@ def send_first_coach_request_slack(rtc):
                     f"Gute Neuigkeiten, {coach.first_name}! Hättest du Lust, dieses Coaching zu übernehmen?\n\n"
                     f"*Coaching mit:* {participant}\n"
                     f"*Unterrichtseinheiten:* {ue}\n"
-                    f"*Startdatum:* {start_date.strftime('%d.%m.%Y')}\n\n"
+                    + (f"*Startdatum:* {start_date.strftime('%d.%m.%Y')}\n\n" if start_date else "\n")
                 )
             }
         },
@@ -286,7 +286,7 @@ def send_reminder_coach_request_slack(rtc):
                     f"Bitte antworte uns, ob du das Coaching übernehmen möchtest.\n\n"
                     f"*Teilnehmer:in:* {participant}\n"
                     f"*Unterrichtseinheiten:* {rtc.ue}\n"
-                    f"*Startdatum:* {start_date.strftime('%d.%m.%Y')}\n\n"
+                    + (f"*Startdatum:* {start_date.strftime('%d.%m.%Y')}\n\n" if start_date else "\n")
                 )
             }
         },
@@ -532,7 +532,7 @@ def send_coaching_starting_info_slack(matching_attempt):
 
     participant_first_name = participant.first_name
     participant_full_name = f"{participant.first_name} {participant.last_name}".strip()
-    formatted_start_date = start_date.strftime("%d.%m.%Y")
+    formatted_start_date = start_date.strftime("%d.%m.%Y") if start_date else None
     formatted_end_date = end_date.strftime("%d.%m.%Y") if end_date else None
     formatted_end_clause = f" – Geplantes Ende: *{formatted_end_date}*" if formatted_end_date else ""
     planner_deadline_clause = f" bis zum {formatted_end_date}" if formatted_end_date else ""
@@ -561,8 +561,8 @@ def send_coaching_starting_info_slack(matching_attempt):
                 "type": "mrkdwn",
                 "text": (
                     f"Das Coaching mit *{participant_full_name}* kann jetzt offiziell starten 😊\n"
-                    f"Geplanter Start: *{formatted_start_date}*{formatted_end_clause}\n"
-                    f"Umfang deines Coaching-Auftrages: *{coach_ue} Unterrichtseinheiten* (1 UE = 45 Minuten)"
+                    + (f"Geplanter Start: *{formatted_start_date}*{formatted_end_clause}\n" if formatted_start_date else "")
+                    + f"Umfang deines Coaching-Auftrages: *{coach_ue} Unterrichtseinheiten* (1 UE = 45 Minuten)"
                 ),
             },
         },
@@ -573,8 +573,8 @@ def send_coaching_starting_info_slack(matching_attempt):
                 "text": (
                     "*Deine nächsten Schritte:*\n"
                     f"• Bitte nimm zeitnah Kontakt mit {participant_first_name} auf und schlage erste Termine vor.\n"
-                    f"• Idealerweise findet der erste Termin bereits am *{formatted_start_date}* statt.\n"
-                    f"• Stimme die weiteren Termine direkt mit {participant_first_name} ab."
+                    + (f"• Idealerweise findet der erste Termin bereits am *{formatted_start_date}* statt.\n" if formatted_start_date else "")
+                    + f"• Stimme die weiteren Termine direkt mit {participant_first_name} ab."
                 ),
             },
         },

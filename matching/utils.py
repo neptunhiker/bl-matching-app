@@ -82,6 +82,9 @@ def build_notifications(email_logs, slack_logs):
 def get_urgency_message(participant: Participant, current_date: datetime.date = timezone.now().date(), start_date: datetime.date = None):
     """Generate an urgency message for the coach based on how soon the coaching should start."""
     
+    if start_date is None:
+        return f"Bitte melde dich so zeitnah wie möglich bei {participant.first_name}, damit ihr das Coaching starten könnt."
+    
     time_until_start = (start_date - current_date).days
     
     if time_until_start < 0:

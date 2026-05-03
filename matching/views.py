@@ -52,7 +52,7 @@ class MatchingAttemptCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateVi
             messages.error(self.request, "Kein Matching möglich: Für den Teilnehmenden ist kein gewünschtes Enddatum für das Coaching hinterlegt. Bitte geh zum Teilnehmerprofil und ergänze ein Enddatum, bevor du ein Matching erstellst.")
             return self.form_invalid(form)
 
-        if participant.end_date < participant.start_date:
+        if participant.start_date and participant.end_date < participant.start_date:
             messages.error(self.request, "Kein Matching möglich: Das Enddatum des Teilnehmenden liegt vor dem Startdatum. Bitte korrigiere die Daten im Teilnehmerprofil, bevor du ein Matching erstellst.")
             return self.form_invalid(form)
 
