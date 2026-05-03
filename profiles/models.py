@@ -2,6 +2,7 @@ import uuid
 from django.conf import settings
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.db.models.functions import Lower
 
 
 class Language(models.Model):
@@ -190,6 +191,12 @@ class Participant(models.Model):
         ordering = ['last_name', 'first_name']
         verbose_name = 'Teilnehmer:in'
         verbose_name_plural = 'Teilnehmer:innen'
+        constraints = [
+            models.UniqueConstraint(
+                Lower('email'),
+                name='profiles_participant_email_ci_unique',
+            )
+        ]
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
