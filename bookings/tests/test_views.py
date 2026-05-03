@@ -9,6 +9,7 @@ from django.urls import reverse
 
 from bookings.models import CalendlyBooking
 from matching.models import MatchingAttempt, MatchingEvent, ClarificationCallBooking
+from profiles.models import Participant
 
 class TestBookingsDetailView:
     @pytest.mark.django_db
@@ -44,6 +45,47 @@ class TestBookingsDetailView:
         response = client.get(reverse("calendly_booking_detail", args=[calendly_booking.id]))
 
         assert response.status_code == 200
+
+    @pytest.mark.django_db
+    def test_booking_detail_context_shows_create_button_when_no_participant_exists(self, client, staff_user, calendly_booking):
+        client.force_login(staff_user)
+
+        response = client.get(reverse("calendly_booking_detail", args=[calendly_booking.id]))
+
+        assert response.status_code == 200
+        assert response.context["booking_email_normalized"] == "rzbjy@example.com"
+        assert response.context["existing_participant"] is None
+        assert response.context["show_create_participant_button"] is True
+
+    @pytest.mark.django_db
+    def test_booking_detail_context_resolves_existing_participant_case_insensitive(self, client, staff_user, calendly_booking):
+        participant = Participant.objects.create(
+            first_name="Max",
+            last_name="Mustermann",
+            email="rzbjy@example.com",
+            city="Berlin",
+            start_date="2026-11-22",
+        )
+
+        client.force_login(staff_user)
+        response = client.get(reverse("calendly_booking_detail", args=[calendly_booking.id]))
+
+        assert response.status_code == 200
+        assert response.context["existing_participant"].pk == participant.pk
+        assert response.context["show_create_participant_button"] is False
+
+    @pytest.mark.django_db
+    def test_booking_detail_context_hides_create_button_when_email_missing(self, client, staff_user, calendly_booking):
+        calendly_booking.invitee_email = ""
+        calendly_booking.save(update_fields=["invitee_email"])
+
+        client.force_login(staff_user)
+        response = client.get(reverse("calendly_booking_detail", args=[calendly_booking.id]))
+
+        assert response.status_code == 200
+        assert response.context["booking_email_normalized"] == ""
+        assert response.context["existing_participant"] is None
+        assert response.context["show_create_participant_button"] is False
 
 class TestBookingsListView:
     @pytest.mark.django_db

@@ -365,3 +365,30 @@ class CalendlyBookingDetailView(LoginRequiredMixin, StaffRequiredMixin, DetailVi
     model = CalendlyBooking
     template_name = "bookings/calendly_booking_detail.html"
     context_object_name = "booking"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        from profiles.models import Participant
+
+        booking_email_normalized = (self.object.invitee_email or "").strip().lower()
+        existing_participant = None
+        show_create_participant_button = False
+
+        if booking_email_normalized:
+            existing_participant = (
+                Participant.objects
+                .filter(email__iexact=booking_email_normalized)
+                .order_by("created_at", "id")
+                .first()
+            )
+            show_create_participant_button = existing_participant is None
+
+        context.update(
+            {
+                "booking_email_normalized": booking_email_normalized,
+                "existing_participant": existing_participant,
+                "show_create_participant_button": show_create_participant_button,
+            }
+        )
+        return context
