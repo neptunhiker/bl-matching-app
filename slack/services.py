@@ -598,8 +598,7 @@ def send_coaching_starting_info_slack(matching_attempt):
                 "text": (
                     "*Kommunikation & Unterstützung:*\n"
                     "Du bist die zentrale Ansprechperson für alle inhaltlichen Themen im Coaching. "
-                    "Bei organisatorischen Fragen oder wenn es Herausforderungen im Coaching gibt, "
-                    "melde dich bitte jederzeit bei uns unter <mailto:info@beginnerluft.de|info@beginnerluft.de>."
+                    "Bei organisatorischen Fragen oder wenn es Herausforderungen im Coaching gibt, schreib bitte @Johannes Junker direkt in deinem BeginnerLuft Slack-Channel an."
                 ),
             },
         },
