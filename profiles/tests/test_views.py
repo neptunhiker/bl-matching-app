@@ -1,4 +1,5 @@
 import pytest
+from django.db import IntegrityError
 
 from profiles.models import Coach
 from profiles.models import Participant
@@ -337,6 +338,26 @@ class TestCoachListView:
     def test_format_presence_filter(self, client, staff_user):
         client.force_login(staff_user)
         assert client.get(reverse('coach_list'), {'format_presence': '1'}).status_code == 200
+
+
+@pytest.mark.django_db(transaction=True)
+def test_participant_email_constraint_rejects_case_insensitive_duplicate():
+    Participant.objects.create(
+        first_name='Case',
+        last_name='First',
+        email='duplicate@example.com',
+        city='Berlin',
+        start_date='2026-11-22',
+    )
+
+    with pytest.raises(IntegrityError):
+        Participant.objects.create(
+            first_name='Case',
+            last_name='Second',
+            email='DUPLICATE@example.com',
+            city='Berlin',
+            start_date='2026-11-22',
+        )
 
     def test_format_hybrid_filter(self, client, staff_user):
         client.force_login(staff_user)

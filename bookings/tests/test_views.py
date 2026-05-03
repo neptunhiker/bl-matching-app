@@ -87,6 +87,49 @@ class TestBookingsDetailView:
         assert response.context["existing_participant"] is None
         assert response.context["show_create_participant_button"] is False
 
+    @pytest.mark.django_db
+    def test_booking_detail_renders_create_button_when_no_participant_exists(self, client, staff_user, calendly_booking):
+        client.force_login(staff_user)
+
+        response = client.get(reverse("calendly_booking_detail", args=[calendly_booking.id]))
+        html = response.content.decode("utf-8")
+
+        assert response.status_code == 200
+        assert "als TN anlegen" in html
+        assert "Zum bestehenden TN" not in html
+
+    @pytest.mark.django_db
+    def test_booking_detail_renders_existing_participant_link_when_participant_exists(self, client, staff_user, calendly_booking):
+        participant = Participant.objects.create(
+            first_name="Max",
+            last_name="Mustermann",
+            email="rzbjy@example.com",
+            city="Berlin",
+            start_date="2026-11-22",
+        )
+
+        client.force_login(staff_user)
+        response = client.get(reverse("calendly_booking_detail", args=[calendly_booking.id]))
+        html = response.content.decode("utf-8")
+
+        assert response.status_code == 200
+        assert "Zum bestehenden TN" in html
+        assert reverse("participant_detail", args=[participant.pk]) in html
+        assert "als TN anlegen" not in html
+
+    @pytest.mark.django_db
+    def test_booking_detail_renders_no_participant_action_when_email_missing(self, client, staff_user, calendly_booking):
+        calendly_booking.invitee_email = ""
+        calendly_booking.save(update_fields=["invitee_email"])
+
+        client.force_login(staff_user)
+        response = client.get(reverse("calendly_booking_detail", args=[calendly_booking.id]))
+        html = response.content.decode("utf-8")
+
+        assert response.status_code == 200
+        assert "als TN anlegen" not in html
+        assert "Zum bestehenden TN" not in html
+
 class TestBookingsListView:
     @pytest.mark.django_db
     def test_bookings_list_redirects_anonymous_to_login(self, client):
