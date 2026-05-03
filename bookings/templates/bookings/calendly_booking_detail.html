@@ -14,16 +14,21 @@
   </nav>
 
   <div class="text-right mb-3">
-    {% url 'participant_create' as create_base_url %}
-    {% with pk_str=booking.pk|stringformat:"s" %}
-      {% with create_url=create_base_url|add:"?booking="|add:pk_str %}
-        {% with name=booking.invitee_first_name|lower|capfirst %}
-          {% with btn_text="+ "|add:name|add:" als TN anlegen" %}
-            {% include "components/_button.html" with button_href=create_url button_text=btn_text button_size="sm" %}
+    {% if show_create_participant_button %}
+      {% url 'participant_create' as create_base_url %}
+      {% with pk_str=booking.pk|stringformat:"s" %}
+        {% with create_url=create_base_url|add:"?booking="|add:pk_str %}
+          {% with name=booking.invitee_first_name|lower|capfirst %}
+            {% with btn_text="+ "|add:name|add:" als TN anlegen" %}
+              {% include "components/_button.html" with button_href=create_url button_text=btn_text button_size="sm" %}
+            {% endwith %}
           {% endwith %}
         {% endwith %}
       {% endwith %}
-    {% endwith %}
+    {% elif existing_participant %}
+      {% url 'participant_detail' existing_participant.pk as participant_detail_url %}
+      {% include "components/_button.html" with button_href=participant_detail_url button_text="Zum bestehenden TN" button_size="sm" %}
+    {% endif %}
   </div>
 
 
